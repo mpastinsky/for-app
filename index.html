@@ -41,6 +41,18 @@ button:disabled{opacity:.45}
 #top button{background:rgba(255,255,255,.12);border-color:transparent;color:#fff}
 #top .hole small{color:rgba(255,255,255,.75)!important}
 #start{position:fixed;inset:0;z-index:2000;background:linear-gradient(170deg,#0f3d2b 0%,#14583c 55%,#1d7a50 100%);color:#fff;display:flex;flex-direction:column;padding:calc(var(--safe-t) + 28px) 20px calc(var(--safe-b) + 24px);overflow:auto}
+#st-1,#st-2{display:flex;flex-direction:column;min-height:100%}
+#st-search{width:100%;margin:18px 0 10px;font:inherit;font-size:1rem;padding:12px 14px;border-radius:12px;border:0;background:rgba(255,255,255,.95);color:#14211a}
+#st-list{display:flex;flex-direction:column;gap:8px}
+.crs{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:rgba(255,255,255,.1);border:0;color:#fff;border-radius:14px;padding:12px 14px;min-height:62px}
+.crs div{flex:1;line-height:1.25}
+.crs small{display:block;opacity:.75;font-weight:500;font-size:.85rem}
+.crs .tag{font-size:.75rem;font-weight:700;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.15);white-space:nowrap}
+.crs.on{background:#fff;color:#0f3d2b}
+.crs.on .tag{background:#0f6b4a;color:#fff}
+.crs:disabled{opacity:.6}
+#start .foot{opacity:.7;font-size:.85rem;margin:14px 0 0}
+#start .back{align-self:flex-start;background:transparent;color:#fff;border:0;padding:0 0 14px;min-height:0;font-size:1rem}
 #start .logo{display:flex;align-items:center;gap:12px}
 #start .logo img{width:52px;height:52px;border-radius:14px}
 #start .logo b{font-size:2.2rem;letter-spacing:.02em}
@@ -131,8 +143,17 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
 </head>
 <body>
 <div id="start" hidden>
+ <div id="st-1">
   <div class="logo"><img src="icon-192.png" alt=""><b>Fór</b></div>
-  <p class="club">Apex Golf, Báč · <span id="st-date"></span></p>
+  <p class="club">Kde dnes hráš? · <span id="st-date"></span></p>
+  <input id="st-search" type="search" placeholder="Hľadať ihrisko alebo obec" autocomplete="off">
+  <div id="st-list"></div>
+  <p class="foot">Zatiaľ funguje iba Apex Golf. Ďalšie ihriská postupne pribudnú.</p>
+ </div>
+ <div id="st-2" hidden>
+  <button class="back" id="st-back">‹ Ihriská</button>
+  <div class="logo"><img src="icon-192.png" alt=""><b>Apex Golf</b></div>
+  <p class="club">Báč · 18 jamiek · par 72</p>
   <div class="live">
     <h3>Na ihrisku</h3>
     <div><span>Hlásenia za posledné 4 h</span><b id="st-rep">0</b></div>
@@ -146,6 +167,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
     <button class="no" id="st-no">Nie, len info o ihrisku</button>
     <label>Odpaľujem z <select id="st-tee"></select></label>
   </div>
+ </div>
 </div>
 <header id="top">
   <button id="prev" aria-label="Predošlá jamka">‹</button>
@@ -273,7 +295,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
       <p class="small muted" id="mode-txt"></p>
       <div class="btns"><button id="b-home">Úvodná obrazovka / nová hra</button></div>
     </div>
-    <p class="small muted">Fór · testovacia verzia 0.2. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
+    <p class="small muted">Fór · testovacia verzia 0.3. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
   </section>
 </main>
 
@@ -626,6 +648,34 @@ function showView(id){
 }
 document.querySelector("nav").onclick=e=>{const b=e.target.closest("button[data-v]");if(b)showView(b.dataset.v)};
 
+/* ---------- zoznam ihrísk (SK) ---------- */
+// Zoznam na overenie (zdroje: Slovakia.travel, hrajgolf.sk, slovenskycestovatel.sk). Funkčný je zatiaľ len Apex.
+const COURSES=[
+  {id:"apex",n:"Apex Golf Club",p:"Báč",h:"18 jamiek",active:true},
+  {n:"Black River Golf Resort",p:"Bernolákovo",h:"18 jamiek"},
+  {n:"Black Stork Golf Resort",p:"Veľká Lomnica",h:"18 jamiek"},
+  {n:"Eurovalley Golf Park",p:"Malacky",h:"18 jamiek"},
+  {n:"Golf Alpinka",p:"Košice",h:"ihrisko"},
+  {n:"Golf & Country Club Piešťany",p:"Piešťany",h:"9 jamiek"},
+  {n:"Golf Club Pegas",p:"Lozorno",h:"9 jamiek"},
+  {n:"Golf Club Red Fox",p:"Malá Ida",h:"9 jamiek"},
+  {n:"Golf Club Skalica",p:"Skalica",h:"18 jamiek"},
+  {n:"Golf Park Rajec",p:"Rajec",h:"ihrisko"},
+  {n:"Golf Resort Tri Duby",p:"Badín",h:"18 jamiek"},
+  {n:"Gray Bear Golf Resort",p:"Tále",h:"18 + 9 jamiek"},
+  {n:"Green Resort Hrubá Borša",p:"Hrubá Borša",h:"18 + 9 jamiek"},
+  {n:"Penati Golf Resort",p:"Šajdíkove Humence",h:"2 × 18 jamiek"},
+  {n:"Sedin Golf Resort",p:"Kráľová pri Senci",h:"18 jamiek"}];
+const norm=t=>t.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+function renderCourses(){
+  const q=norm($("st-search").value||"");
+  $("st-list").innerHTML=COURSES.filter(c=>!q||norm(c.n+" "+c.p).includes(q)).map(c=>
+    `<button class="crs ${c.active?"on":""}" ${c.active?`data-c="${c.id}"`:"disabled"}><div><b>${c.n}</b><small>${c.p} · ${c.h}</small></div><span class="tag">${c.active?"Hrať":"čoskoro"}</span></button>`).join("")||'<p class="foot">Nič sa nenašlo.</p>';
+}
+$("st-search").oninput=renderCourses;
+$("st-list").onclick=e=>{const b=e.target.closest("button[data-c]");if(!b)return;$("st-1").hidden=true;$("st-2").hidden=false;$("start").scrollTop=0};
+$("st-back").onclick=()=>{$("st-2").hidden=true;$("st-1").hidden=false};
+
 /* ---------- úvodná obrazovka a režim ---------- */
 let modeSt=store.get("mode",null); // {score:bool,t:ms}
 function applyMode(){document.body.classList.toggle("noscore",!(modeSt&&modeSt.score))}
@@ -637,6 +687,7 @@ function showStart(n){forceNew=n===true;
   $("st-greens").textContent=course.greens.filter(Boolean).length+" / 18";
   $("st-gps").textContent=me?"± "+Math.round(meAccM)+" m":"hľadám…";
   $("st-tee").innerHTML=Object.keys(TEES).map(t=>`<option value="${t}" ${t===course.tee?"selected":""}>${TEES[t]}</option>`).join("");
+  $("st-search").value="";renderCourses();$("st-2").hidden=true;$("st-1").hidden=false;
   $("start").hidden=false;
 }
 $("st-tee").onchange=e=>{course.tee=e.target.value;saveCourse();render()};
@@ -655,7 +706,8 @@ $("st-yes").onclick=()=>choose(true);
 $("st-no").onclick=()=>choose(false);
 $("b-home").onclick=()=>showStart(true);
 applyMode();
-if(!modeSt||Date.now()-modeSt.t>6*3600e3)showStart();
+// pri spustení vždy zoznam ihrísk, okrem rozohranej hry so skóre (napr. po znovunačítaní počas kola)
+if(!(modeSt&&modeSt.score&&Date.now()-modeSt.t<6*3600e3))showStart();
 
 if(recording)wake(true);
 render();renderGps();
