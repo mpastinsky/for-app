@@ -369,9 +369,11 @@ const REPORTS=[
   {k:"bunker",i:"🏖️",t:"Bunker treba upraviť"},
   {k:"other",i:"❗",t:"Iné"}];
 const TEES={black:"čierne",white:"biele",yellow:"žlté",blue:"modré",red:"červené"};
-// Akadémia: pary a dĺžky zatiaľ nepoznáme, predvolene par 3, dajú sa zmeniť vo Viac.
-const DEFAULT_AKAD={name:"Apex Akadémia",tee:"yellow",par:[3,3,3],si:null,len:null,greens:[null,null,null]};
+// Akadémia: jamka 1 = par 3, ~133 m ku stredu greenu (Garmin, 16.11.). Jamky 2 a 3 zatiaľ nepoznáme (par 3).
+const AKAD_LEN=[133,0,0];
+const DEFAULT_AKAD={name:"Apex Akadémia",tee:"yellow",par:[3,3,3],si:null,len:{black:AKAD_LEN,white:AKAD_LEN,yellow:AKAD_LEN,blue:AKAD_LEN,red:AKAD_LEN},greens:[null,null,null]};
 let course=Object.assign(JSON.parse(JSON.stringify(AKAD?DEFAULT_AKAD:DEFAULT_COURSE)),store.get("course",{}));
+if(!course.len)course.len=JSON.parse(JSON.stringify((AKAD?DEFAULT_AKAD:DEFAULT_COURSE).len));
 let round=store.get("round",{hole:0,strokes:Array(HOLES).fill(0),start:null,holeStart:null,holeTimes:Array(HOLES).fill(null)});
 let track=store.get("track",[]);
 let recording=store.get("recording",false);
