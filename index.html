@@ -645,10 +645,10 @@ $("b-report").onclick=openReport;
 $("rep-x").onclick=()=>{$("rep").hidden=true};
 $("rep").onclick=e=>{if(e.target.id==="rep")$("rep").hidden=true};
 drawReports();
-if(AKAD)$("b-plan").hidden=true;
+if(AKAD){$("b-plan").textContent="3D";$("b-plan").setAttribute("aria-label","3D mapa jamky")}
 drawFeatures();
 
-$("b-plan").onclick=()=>{$("plan-img").src="holes/jamka-"+String(round.hole+1).padStart(2,"0")+".jpg";$("plan").hidden=false};
+$("b-plan").onclick=()=>{if(AKAD){location.href="3d/?h="+(round.hole+1);return}$("plan-img").src="holes/jamka-"+String(round.hole+1).padStart(2,"0")+".jpg";$("plan").hidden=false};
 $("plan-x").onclick=()=>{$("plan").hidden=true};
 $("plan").onclick=e=>{if(e.target.id==="plan")$("plan").hidden=true};
 $("c-export").onclick=()=>download("for-ihrisko-apex.json",JSON.stringify(course,null,1),"application/json");
