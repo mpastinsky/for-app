@@ -32,6 +32,7 @@ import {OrbitControls} from "./lib/OrbitControls.js";
 
 // Akadémia Apex: tvary podľa náhľadu jamiek v Garmin fenix (16.11.2026), v metroch.
 // x = vpravo, y = dopredu od odpaliska. Ilustračné, nie GPS zameranie.
+const D2=v=>v; // pomocník na čitateľnosť
 const HOLES={
  1:{par:3,c:133,f:121,b:146,dir:"na východ",
    green:[[-3,121],[5,122],[10,127],[11,135],[8,142],[2,146],[-5,145],[-10,139],[-11,131],[-8,124]],
@@ -40,11 +41,16 @@ const HOLES={
  2:{par:3,c:100,f:90,b:109,dir:"na sever",
    green:[[-3,90.5],[5,92],[8,98],[7,105],[1,109],[-6,107],[-8,101],[-12,95],[-13,88],[-7,86]],
    fairway:[[-9,25],[-10,50],[-10,72],[-9,82],[4,84],[8,74],[10,50],[9,25]],
-   bunkers:[[[12,99],[15,102],[18,98],[16,93],[17,88],[14,85],[11,89],[13,94]]]},
+   bunkers:[[[12,99],[15,102],[18,98],[16,93],[17,88],[14,85],[11,89],[13,94]]],
+   // podľa videa z odpaliska (16.11.): hustý pás listnatých stromov za greenom, trávnaté vlny vľavo aj vpravo od greenu
+   video:{treeline:[-120,120,D2(150),D2(175)],mounds:[[-26,96,12,20,1.6],[25,104,10,16,1.4],[-5,128,32,7,1.3]],openSides:true,note:"Jamka spresnená podľa tvojho videa: hustý pás stromov za greenom, trávnaté vlny pri greene. Stále ilustračné."}},
  3:{par:3,c:136,f:122,b:146,dir:"na západ",
    green:[[-4,123],[4,122],[9,127],[8,134],[10,140],[6,146],[-2,146],[-7,141],[-6,133],[-8,127]],
    fairway:[[-7,30],[-8,60],[-6,90],[-5,112],[3,118],[7,95],[8,65],[7,30]],
-   bunkers:["c:-18,140,3.5","c:-15,80,3.5"]}
+   bunkers:["c:-18,140,3.5","c:-15,80,3.5"],
+   // podľa videa (16.11.): veľký listnatý strom vľavo pri odpalisku, dva mladé riedke stromy vpravo pred greenom,
+   // trávnaté valy s kvetmi za greenom a vľavo, hrá sa proti zapadajúcemu slnku, okolie otvorené
+   video:{note:"Jamka spresnená podľa tvojho videa: veľký strom pri odpalisku, mladé stromy vpravo pred greenom, valy za greenom. Stále ilustračné.",big:[[-16,-2,6,15]],young:[[13,108],[19,117],[24,126]],mounds:[[0,162,38,8,2.2],[-30,150,10,18,1.8],[28,158,14,7,1.5]],sunWest:true,openSides:true}}
 };
 const hNum=Math.min(3,Math.max(1,parseInt(new URLSearchParams(location.search).get("h"))||1));
 const D=HOLES[hNum];
@@ -63,7 +69,7 @@ const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.5,2000);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;document.body.prepend(renderer.domElement);
-scene.add(new THREE.HemisphereLight(0xdff1ff,0x3a5a2a,1.1));
+const hemi=new THREE.HemisphereLight(0xdff1ff,0x3a5a2a,1.1);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffffff,1.6);sun.position.set(-120,220,80);sun.castShadow=true;
 Object.assign(sun.shadow.camera,{left:-260,right:260,top:260,bottom:-260,far:700});sun.shadow.mapSize.set(2048,2048);scene.add(sun);
 sun.target.position.set(0,0,-150);scene.add(sun.target);
@@ -103,11 +109,29 @@ for(const b of H.bunkers){const m=shapeMesh(b,0xeadcae,0.05,{lift:0.12,rough:1})
 const trunkM=new THREE.MeshStandardMaterial({color:0x6b4a2b}),leafM=[0x2f6b2c,0x3b7d33,0x285e27].map(c=>new THREE.MeshStandardMaterial({color:c,roughness:.95}));
 function inPoly(pt,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if(((b>pt[1])!==(e>pt[1]))&&(pt[0]<(d-a)*(pt[1]-b)/(e-b)+a))c=!c}return c}
 let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const V=D.video||null;
 for(let k=0;k<90;k++){const side=k%3; // línia stromov za greenom a po bokoch (ilustračne)
-  const pt=side===0?[-90+rnd()*180,D.c+45+rnd()*25]:[(side===1?-1:1)*(55+rnd()*20),-10+rnd()*(D.c+60)];
+  const far=V&&V.openSides?1:0;
+  const pt=side===0?[-140+rnd()*280,D.c+(far?140:45)+rnd()*25]:[(side===1?-1:1)*((far?110:55)+rnd()*25),-10+rnd()*(D.c+60)];
   const h=9+rnd()*8,r=3+rnd()*2.5;
   const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.5,h*.45,6),trunkM);tr.position.copy(toWorld(pt[0],pt[1],h*.22));tr.castShadow=true;scene.add(tr);
   const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.y=1.25;cr.position.copy(toWorld(pt[0],pt[1],h*.45+r*.9));cr.castShadow=true;scene.add(cr);}
+if(V){
+  for(const [x,y,r,h] of V.big||[]){const tr=new THREE.Mesh(new THREE.CylinderGeometry(.6,.9,h*.5,8),trunkM);tr.position.copy(toWorld(x,y,h*.25));tr.castShadow=true;scene.add(tr);
+    for(let k=0;k<6;k++){const cr=new THREE.Mesh(new THREE.SphereGeometry(r*(.55+rnd()*.25),12,10),leafM[1]);cr.position.copy(toWorld(x+(rnd()-.5)*r*1.2,y+(rnd()-.5)*r*1.2,h*.55+rnd()*r*.6));cr.castShadow=true;scene.add(cr)}}
+  const thinM=new THREE.MeshStandardMaterial({color:0x8fbf5a,roughness:.9,transparent:true,opacity:.75});
+  for(const [x,y] of V.young||[]){const h=7+rnd()*2;const tr=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,h,6),trunkM);tr.position.copy(toWorld(x,y,h/2));scene.add(tr);
+    const cr=new THREE.Mesh(new THREE.ConeGeometry(1.8,h*.7,8),thinM);cr.position.copy(toWorld(x,y,h*.62));cr.castShadow=true;scene.add(cr)}
+  const moundM=new THREE.MeshStandardMaterial({color:0x7da24a,roughness:1});
+  for(const [x,y,rx,ry,h] of V.mounds||[]){const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,12,0,Math.PI*2,0,Math.PI/2),moundM);m.scale.set(rx,h,ry);m.position.copy(toWorld(x,y,-0.2));m.receiveShadow=true;scene.add(m);
+    for(let k=0;k<rx*ry/4;k++){const a=rnd()*6.283,rr=Math.sqrt(rnd());const dx=Math.cos(a)*rr*rx*.9,dy=Math.sin(a)*rr*ry*.9;const hh=h*Math.sqrt(Math.max(0,1-rr*rr))-0.1;
+      const f=new THREE.Mesh(new THREE.SphereGeometry(.12,4,3),new THREE.MeshBasicMaterial({color:0xffffff}));f.position.copy(toWorld(x+dx,y+dy,hh));scene.add(f)}}
+  if(V.sunWest){sun.position.copy(toWorld(-10,D.c+260,60));sun.target.position.copy(toWorld(0,D.c*.5,0));sun.color.set(0xfff1d6);sun.intensity=1.2;hemi.intensity=2.1;scene.background.set(0xc9dbe8);scene.fog.color.set(0xc9dbe8)}
+  if(V.treeline){const[x0,x1,y0,y1]=V.treeline;for(let k=0;k<160;k++){const pt=[x0+rnd()*(x1-x0),y0+rnd()*(y1-y0)];const h=12+rnd()*8,r=3.5+rnd()*2.5;
+    const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.y=1.3;cr.position.copy(toWorld(pt[0],pt[1],h*.5+r));cr.castShadow=true;scene.add(cr);
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.5,h*.5,6),trunkM);tr.position.copy(toWorld(pt[0],pt[1],h*.25));scene.add(tr)}}
+  document.getElementById("note").textContent=V.note;
+}
 // vlajka
 const pin=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,6,8),new THREE.MeshStandardMaterial({color:0xffffff}));pin.position.copy(toWorld(G[0],G[1],3.9));pin.castShadow=true;scene.add(pin);
 const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.1),new THREE.MeshStandardMaterial({color:0xe0312b,side:THREE.DoubleSide}));flag.position.copy(toWorld(G[0]+0.9,G[1],6.3));scene.add(flag);
