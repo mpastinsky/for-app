@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f3d2b">
+<title>Fór 3D jamka</title>
+<style>
+:root{--font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{margin:0;height:100%;background:#9fc6e8;font-family:var(--font);overflow:hidden;overscroll-behavior:none}
+canvas{display:block;touch-action:none}
+#top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:linear-gradient(#0f3d2bee,#0f3d2b00);color:#fff;display:flex;align-items:center;gap:10px;pointer-events:none}
+#top a{pointer-events:auto;color:#fff;text-decoration:none;font-size:1.4rem;background:rgba(255,255,255,.15);border-radius:10px;width:42px;height:42px;display:grid;place-items:center}
+#top b{font-size:1.3rem}#top small{display:block;opacity:.85}
+#bar{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:flex;gap:8px}
+#bar button{flex:1;font:600 .95rem var(--font);min-height:48px;border:0;border-radius:12px;background:#fff;color:#14211a;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+#bar button.on{background:#0f6b4a;color:#fff}
+#note{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 68px);color:#fff;font-size:.8rem;text-shadow:0 1px 3px #000;opacity:.9}
+.lab{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:3px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35);pointer-events:none}
+.lab.arc{background:rgba(0,0,0,.55);color:#fff;font-weight:600}
+</style>
+<script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="top"><a href="../" aria-label="Späť do appky">‹</a><div><b>Jamka 2 · Par 4</b><small>309 m z čiernych · HCP 15 · ukážka 3D</small></div></div>
+<div id="note">Ilustračná 3D mapa podľa plánu jamky Apexu, nie presné GPS zameranie. Otáčaj a približuj prstami.</div>
+<div id="bar"><button id="v-tee" class="on">Z odpaliska</button><button id="v-fly">Let ku greenu</button><button id="v-top">Zhora</button></div>
+<script type="module">
+import * as THREE from "three";
+import {OrbitControls} from "./lib/OrbitControls.js";
+
+// Jamka 2 obkreslená z plánu apexgolf.sk (pixely 500×640), mierka podľa 309 m odpalisko → green.
+const TEE=[150,500],GREEN=[228,148];
+const S=309/Math.hypot(GREEN[0]-TEE[0],GREEN[1]-TEE[1]);
+const P=([x,y])=>[(x-TEE[0])*S,(TEE[1]-y)*S]; // x vpravo, y dopredu (m)
+const H={
+  fairway:[[178,185],[205,180],[222,195],[230,230],[225,262],[215,280],[208,300],[210,330],[215,360],[212,390],[210,420],[200,440],[170,448],[152,440],[148,410],[152,380],[155,340],[160,300],[165,270],[160,240],[165,205]],
+  green:[[210,130],[225,123],[245,128],[250,145],[240,160],[230,170],[218,160],[210,145]],
+  bunkers:[
+    [[202,138],[212,135],[216,150],[212,168],[204,160]],
+    [[247,152],[257,151],[260,160],[253,166],[246,161]],
+    [[210,180],[219,179],[221,188],[212,191]],
+    [[238,233],[250,231],[256,244],[246,258],[236,250]],
+    [[168,270],[182,267],[188,284],[181,300],[168,293],[165,281]],
+    [[172,302],[182,300],[184,312],[174,314]]],
+  trees:[
+    [[120,150],[150,120],[190,90],[212,80],[216,100],[192,130],[160,150],[130,166]],
+    [[268,180],[290,165],[312,175],[330,195],[310,206],[285,208],[268,200]],
+    [[236,315],[256,310],[266,330],[258,352],[240,350],[234,332]],
+    [[106,358],[134,352],[142,390],[136,436],[112,440],[104,400]],
+    [[200,424],[222,422],[232,445],[220,462],[202,456]],
+    [[182,452],[200,450],[206,470],[190,478],[180,468]],
+    [[180,484],[206,480],[212,505],[200,522],[182,515]]]
+};
+const G=P(GREEN);
+
+// --- scéna
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9fc6e8);scene.fog=new THREE.Fog(0x9fc6e8,500,1200);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.5,2000);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xdff1ff,0x3a5a2a,1.1));
+const sun=new THREE.DirectionalLight(0xffffff,1.6);sun.position.set(-120,220,80);sun.castShadow=true;
+Object.assign(sun.shadow.camera,{left:-260,right:260,top:260,bottom:-260,far:700});sun.shadow.mapSize.set(2048,2048);scene.add(sun);
+sun.target.position.set(0,0,-150);scene.add(sun.target);
+
+// Svet: X = vpravo, Z = -dopredu, Y = výška
+const W=([x,y])=>new THREE.Vector2(x,y);
+const toWorld=(x,y,h=0)=>new THREE.Vector3(x,h,-y);
+function shapeMesh(px,color,h,{rough=0.9,lift=0}={}){
+  const shape=new THREE.Shape(px.map(P).map(W));
+  const geo=new THREE.ExtrudeGeometry(shape,{depth:Math.max(h,0.05),bevelEnabled:true,bevelThickness:Math.min(0.6,Math.max(h,0.05)),bevelSize:1.2,bevelSegments:3,curveSegments:8});
+  geo.rotateX(-Math.PI/2);
+  const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,roughness:rough}));
+  m.position.y=lift;m.receiveShadow=true;scene.add(m);return m;
+}
+// rough (terén s jemným vlnením)
+const ground=new THREE.PlaneGeometry(900,900,90,90);ground.rotateX(-Math.PI/2);
+const pos=ground.attributes.position;for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);pos.setY(i,Math.sin(x*.03)*.15+Math.cos(z*.025)*.15-0.4)}
+ground.computeVertexNormals();
+const gm=new THREE.Mesh(ground,new THREE.MeshStandardMaterial({color:0x4e7a33,roughness:1}));gm.position.z=-160;gm.receiveShadow=true;scene.add(gm);
+
+// fairway pruhy
+const fw=shapeMesh(H.fairway,0x79b84f,0.15,{lift:0.35});
+const stripes=new THREE.CanvasTexture((()=>{const c=document.createElement("canvas");c.width=64;c.height=64;const x=c.getContext("2d");
+  x.fillStyle="#5fa63c";x.fillRect(0,0,64,64);x.fillStyle="#529833";x.fillRect(0,0,64,32);return c})());
+stripes.colorSpace=THREE.SRGBColorSpace;stripes.wrapS=stripes.wrapT=THREE.RepeatWrapping;stripes.repeat.set(1,1);
+fw.material=new THREE.MeshStandardMaterial({map:stripes,roughness:.9});
+// UV pre pruhy: podľa svetovej Z
+{const g=fw.geometry,p=g.attributes.position,uv=new Float32Array(p.count*2);for(let i=0;i<p.count;i++){uv[i*2]=p.getX(i)/24;uv[i*2+1]=p.getZ(i)/24}g.setAttribute("uv",new THREE.BufferAttribute(uv,2))}
+// green (mierne vyvýšený)
+shapeMesh(H.green,0xa6dc5c,0.5,{lift:0.4,rough:.7});
+// predgreen / odpalisko
+const tee=new THREE.Mesh(new THREE.BoxGeometry(10,0.6,14),new THREE.MeshStandardMaterial({color:0x8ccd5f}));tee.position.copy(toWorld(0,0,0.3));tee.receiveShadow=true;scene.add(tee);
+const teeMk=new THREE.Mesh(new THREE.SphereGeometry(.45,12,12),new THREE.MeshStandardMaterial({color:0x111111}));teeMk.position.copy(toWorld(-1.5,2,0.9));scene.add(teeMk);
+// bunkre (znížené, piesok)
+for(const b of H.bunkers){const m=shapeMesh(b,0xeadcae,0.05,{lift:0.12,rough:1});}
+// stromy v plochách
+const trunkM=new THREE.MeshStandardMaterial({color:0x6b4a2b}),leafM=[0x2f6b2c,0x3b7d33,0x285e27].map(c=>new THREE.MeshStandardMaterial({color:c,roughness:.95}));
+function inPoly(pt,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if(((b>pt[1])!==(e>pt[1]))&&(pt[0]<(d-a)*(pt[1]-b)/(e-b)+a))c=!c}return c}
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+for(const t of H.trees){const poly=t.map(P);const xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]);
+  const [x0,x1,y0,y1]=[Math.min(...xs),Math.max(...xs),Math.min(...ys),Math.max(...ys)];
+  const n=Math.round((x1-x0)*(y1-y0)/90);
+  for(let k=0;k<n;k++){const pt=[x0+rnd()*(x1-x0),y0+rnd()*(y1-y0)];if(!inPoly(pt,poly))continue;
+    const h=9+rnd()*8,r=3+rnd()*2.5;
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.5,h*.45,6),trunkM);tr.position.copy(toWorld(pt[0],pt[1],h*.22));tr.castShadow=true;scene.add(tr);
+    const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.y=1.25;cr.position.copy(toWorld(pt[0],pt[1],h*.45+r*.9));cr.castShadow=true;scene.add(cr);}}
+// vlajka
+const pin=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,6,8),new THREE.MeshStandardMaterial({color:0xffffff}));pin.position.copy(toWorld(G[0],G[1],3.9));pin.castShadow=true;scene.add(pin);
+const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.1),new THREE.MeshStandardMaterial({color:0xe0312b,side:THREE.DoubleSide}));flag.position.copy(toWorld(G[0]+0.9,G[1],6.3));scene.add(flag);
+// oblúky 50/100/150 m od greenu
+const arcs=[];
+for(const d of [50,100,150]){const pts=[];const dir=Math.atan2(-G[1],-G[0]);
+  for(let a=-0.5;a<=0.5;a+=0.05){pts.push(toWorld(G[0]+Math.cos(dir+a)*d,G[1]+Math.sin(dir+a)*d,0.8))}
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.75})));
+  arcs.push({d,pos:toWorld(G[0]+Math.cos(dir+.5)*d,G[1]+Math.sin(dir+.5)*d,1.5)})}
+// línia hry
+const line=[toWorld(0,0,1),toWorld(...P([212,330]),1),toWorld(G[0],G[1],1)];
+scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(line),new THREE.LineDashedMaterial({color:0xd23b2a,dashSize:4,gapSize:3})).computeLineDistances());
+
+// štítky
+const labels=[];
+function label(text,v,cls=""){const el=document.createElement("div");el.className="lab "+cls;el.textContent=text;document.body.appendChild(el);labels.push({el,v});}
+label("Green · 309 m",toWorld(G[0],G[1],8));
+for(const a of arcs)label(a.d+" m",a.pos,"arc");
+function placeLabels(){for(const l of labels){const p=l.v.clone().project(camera);
+  const vis=p.z<1&&Math.abs(p.x)<1.1&&Math.abs(p.y)<1.1;l.el.style.display=vis?"block":"none";
+  if(vis){l.el.style.left=((p.x+1)/2*innerWidth)+"px";l.el.style.top=((1-p.y)/2*innerHeight)+"px"}}}
+
+// kamera
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.47;controls.minDistance=20;controls.maxDistance=600;
+const views={
+  tee:{pos:toWorld(-2,-28,14),target:toWorld(G[0]*.6,G[1]*.55,0)},
+  top:{pos:toWorld(G[0]*.5,G[1]*.5-60,560),target:toWorld(G[0]*.5,G[1]*.5,0)}
+};
+function go(v){camera.position.copy(v.pos);controls.target.copy(v.target);controls.update()}
+go(views.tee);
+let fly=null;
+const btns={tee:document.getElementById("v-tee"),fly:document.getElementById("v-fly"),top:document.getElementById("v-top")};
+function setOn(k){for(const b in btns)btns[b].classList.toggle("on",b===k)}
+btns.tee.onclick=()=>{fly=null;go(views.tee);setOn("tee")};
+btns.top.onclick=()=>{fly=null;go(views.top);setOn("top")};
+btns.fly.onclick=()=>{fly={t0:performance.now()};setOn("fly")};
+const curve=new THREE.CatmullRomCurve3([toWorld(-2,-28,16),toWorld(...P([200,380]),45),toWorld(...P([215,260]),40),toWorld(G[0]-4,G[1]-45,18)]);
+renderer.domElement.addEventListener("pointerdown",()=>{if(fly){fly=null;setOn("")}});
+
+function loop(now){
+  if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+    camera.position.copy(curve.getPoint(e));controls.target.copy(toWorld(G[0],G[1],0));if(k>=1)fly=null}
+  controls.update();renderer.render(scene,camera);placeLabels();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
