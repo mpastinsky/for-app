@@ -371,9 +371,12 @@ const REPORTS=[
 const TEES={black:"čierne",white:"biele",yellow:"žlté",blue:"modré",red:"červené"};
 // Akadémia podľa Garminu (16.11.): jamka 1 par 3 / 133 m, jamka 2 par 3 / 100 m, jamka 3 par 3 / 136 m.
 const AKAD_LEN=[133,100,136]; // stred greenu; predok/zadok: 121/146, 90/109, 122/146
-const DEFAULT_AKAD={name:"Apex Akadémia",tee:"yellow",par:[3,3,3],si:null,len:{black:AKAD_LEN,white:AKAD_LEN,yellow:AKAD_LEN,blue:AKAD_LEN,red:AKAD_LEN},greens:[null,null,null]};
+const DEFAULT_AKAD={name:"Apex Akadémia",tee:"yellow",par:[3,3,3],si:null,len:{black:AKAD_LEN,white:AKAD_LEN,yellow:AKAD_LEN,blue:AKAD_LEN,red:AKAD_LEN},greens:[[48.0007065,17.368905],[48.0011505,17.369466],[48.001338,17.367775]],
+  // z GPS záznamu Garmin 20.5.2025 (miesta pateovania), odpalisko 1 je odhad (133 m pred greenom)
+  tees:[[48.001062,17.3672],[48.000287,17.369506],[48.001397,17.369621]]};
 let course=Object.assign(JSON.parse(JSON.stringify(AKAD?DEFAULT_AKAD:DEFAULT_COURSE)),store.get("course",{}));
 course.len=JSON.parse(JSON.stringify((AKAD?DEFAULT_AKAD:DEFAULT_COURSE).len));
+{const dg=(AKAD?DEFAULT_AKAD:DEFAULT_COURSE).greens;course.greens=course.greens.map((g,i)=>g||dg[i]||null);if(AKAD)course.tees=DEFAULT_AKAD.tees}
 let round=store.get("round",{hole:0,strokes:Array(HOLES).fill(0),start:null,holeStart:null,holeTimes:Array(HOLES).fill(null)});
 let track=store.get("track",[]);
 let recording=store.get("recording",false);
