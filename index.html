@@ -52,6 +52,9 @@ button:disabled{opacity:.45}
 .crs.on .tag{background:#0f6b4a;color:#fff}
 .crs:disabled{opacity:.6}
 #start .foot{opacity:.7;font-size:.85rem;margin:14px 0 0}
+#start .lay{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:76px;background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:16px;padding:12px 16px;margin-bottom:12px;text-align:left}
+#start .lay b{font-size:1.15rem}#start .lay small{opacity:.8;font-weight:500}
+#start .lay.cur{background:#fff;color:#0f3d2b;border-color:#fff}
 #start .back{align-self:flex-start;background:transparent;color:#fff;border:0;padding:0 0 14px;min-height:0;font-size:1rem}
 #start .logo{display:flex;align-items:center;gap:12px}
 #start .logo img{width:52px;height:52px;border-radius:14px}
@@ -150,10 +153,19 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
   <div id="st-list"></div>
   <p class="foot">Zatiaľ funguje iba Apex Golf. Ďalšie ihriská postupne pribudnú.</p>
  </div>
- <div id="st-2" hidden>
-  <button class="back" id="st-back">‹ Ihriská</button>
+ <div id="st-l" hidden>
+  <button class="back" id="st-lback">‹ Ihriská</button>
   <div class="logo"><img src="icon-192.png" alt=""><b>Apex Golf</b></div>
-  <p class="club">Báč · 18 jamiek · par 72</p>
+  <p class="club">Báč · Čo dnes hráš?</p>
+  <div class="q">
+    <button class="lay" data-l="full"><b>18-jamkové ihrisko</b><small>par 72 · 6 169 m z čiernych</small></button>
+    <button class="lay" data-l="akad"><b>3-jamková akadémia</b><small>krátke kolo, tréning</small></button>
+  </div>
+ </div>
+ <div id="st-2" hidden>
+  <button class="back" id="st-back">‹ Výber okruhu</button>
+  <div class="logo"><img src="icon-192.png" alt=""><b id="st-name">Apex Golf</b></div>
+  <p class="club" id="st-sub">Báč · 18 jamiek · par 72</p>
   <div class="live">
     <h3>Na ihrisku</h3>
     <div><span>Hlásenia za posledné 4 h</span><b id="st-rep">0</b></div>
@@ -295,7 +307,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
       <p class="small muted" id="mode-txt"></p>
       <div class="btns"><button id="b-home">Úvodná obrazovka / nová hra</button></div>
     </div>
-    <p class="small muted">Fór · testovacia verzia 0.3. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
+    <p class="small muted">Fór · testovacia verzia 0.4. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
   </section>
 </main>
 
@@ -312,14 +324,18 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
 (()=>{
 "use strict";
 const $=id=>document.getElementById(id);
-const HOLES=18;
+let LAYOUT="full";try{LAYOUT=localStorage.getItem("for.layout")||"full"}catch(e){}
+const AKAD=LAYOUT==="akad";
+const HOLES=AKAD?3:18;
+const PER_LAYOUT=["course","round","track","recording"];
 const COURSE_CENTER=[48.0070,17.3640]; // Apex Golf Báč, podľa GPX z 14.11.
 const PLAN_MIN={3:11,4:14,5:17};
 
 /* ---------- úložisko ---------- */
 const store={
-  get(k,d){try{const v=localStorage.getItem("for."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
-  set(k,v){try{localStorage.setItem("for."+k,JSON.stringify(v))}catch(e){}}
+  key(k){return "for."+(AKAD&&PER_LAYOUT.includes(k)?"akad.":"")+k},
+  get(k,d){try{const v=localStorage.getItem(this.key(k));return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(this.key(k),JSON.stringify(v))}catch(e){}}
 };
 // Ihrisko Apex Golf Báč podľa scorekarty z apexgolf.sk (par 72). Greeny nastaví hráč na mape.
 const DEFAULT_COURSE={name:"Apex Golf Báč",tee:"yellow",
@@ -336,7 +352,9 @@ const REPORTS=[
   {k:"bunker",i:"🏖️",t:"Bunker treba upraviť"},
   {k:"other",i:"❗",t:"Iné"}];
 const TEES={black:"čierne",white:"biele",yellow:"žlté",blue:"modré",red:"červené"};
-let course=Object.assign(JSON.parse(JSON.stringify(DEFAULT_COURSE)),store.get("course",{}));
+// Akadémia: pary a dĺžky zatiaľ nepoznáme, predvolene par 3, dajú sa zmeniť vo Viac.
+const DEFAULT_AKAD={name:"Apex Akadémia",tee:"yellow",par:[3,3,3],si:null,len:null,greens:[null,null,null]};
+let course=Object.assign(JSON.parse(JSON.stringify(AKAD?DEFAULT_AKAD:DEFAULT_COURSE)),store.get("course",{}));
 let round=store.get("round",{hole:0,strokes:Array(HOLES).fill(0),start:null,holeStart:null,holeTimes:Array(HOLES).fill(null)});
 let track=store.get("track",[]);
 let recording=store.get("recording",false);
@@ -377,7 +395,7 @@ function greenPt(){return course.greens[round.hole]}
 
 function renderMap(){
   const h=round.hole,par=course.par[h];
-  $("h-title").textContent="Jamka "+(h+1);
+  $("h-title").textContent=(AKAD?"Akadémia · jamka ":"Jamka ")+(h+1);
   const ln=course.len&&course.len[course.tee]?course.len[course.tee][h]:null;
   $("h-sub").textContent="Par "+par+(ln?" · "+ln+" m":"")+(course.si?" · HCP "+course.si[h]:"");
   $("s-n").textContent=round.strokes[h];
@@ -552,6 +570,7 @@ $("b-report").onclick=openReport;
 $("rep-x").onclick=()=>{$("rep").hidden=true};
 $("rep").onclick=e=>{if(e.target.id==="rep")$("rep").hidden=true};
 drawReports();
+if(AKAD)$("b-plan").hidden=true;
 
 $("b-plan").onclick=()=>{$("plan-img").src="holes/jamka-"+String(round.hole+1).padStart(2,"0")+".jpg";$("plan").hidden=false};
 $("plan-x").onclick=()=>{$("plan").hidden=true};
@@ -670,11 +689,17 @@ const norm=t=>t.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 function renderCourses(){
   const q=norm($("st-search").value||"");
   $("st-list").innerHTML=COURSES.filter(c=>!q||norm(c.n+" "+c.p).includes(q)).map(c=>
-    `<button class="crs ${c.active?"on":""}" ${c.active?`data-c="${c.id}"`:"disabled"}><div><b>${c.n}</b><small>${c.p} · ${c.h}</small></div><span class="tag">${c.active?"Hrať":"čoskoro"}</span></button>`).join("")||'<p class="foot">Nič sa nenašlo.</p>';
+    `<button class="crs ${c.active?"on":""}" ${c.active?`data-c="${c.id}"`:"disabled"}><div><b>${c.n}</b><small>${c.p} · ${c.h}</small></div><span class="tag">${c.active?"Spustiť":"čoskoro"}</span></button>`).join("")||'<p class="foot">Nič sa nenašlo.</p>';
 }
 $("st-search").oninput=renderCourses;
-$("st-list").onclick=e=>{const b=e.target.closest("button[data-c]");if(!b)return;$("st-1").hidden=true;$("st-2").hidden=false;$("start").scrollTop=0};
-$("st-back").onclick=()=>{$("st-2").hidden=true;$("st-1").hidden=false};
+const stStep=id=>{["st-1","st-l","st-2"].forEach(x=>$(x).hidden=x!==id);$("start").scrollTop=0};
+$("st-list").onclick=e=>{const b=e.target.closest("button[data-c]");if(b)stStep("st-l")};
+$("st-lback").onclick=()=>stStep("st-1");
+$("st-back").onclick=()=>stStep("st-l");
+document.querySelectorAll("#start .lay").forEach(b=>b.onclick=()=>{
+  if(b.dataset.l===LAYOUT){stStep("st-2");return}
+  try{localStorage.setItem("for.layout",b.dataset.l);sessionStorage.setItem("for.next","q")}catch(e){}
+  location.reload()});
 
 /* ---------- úvodná obrazovka a režim ---------- */
 let modeSt=store.get("mode",null); // {score:bool,t:ms}
@@ -684,10 +709,14 @@ let forceNew=false;
 function showStart(n){forceNew=n===true;
   const d=new Date();$("st-date").textContent=d.toLocaleDateString("sk",{weekday:"long",day:"numeric",month:"numeric"});
   $("st-rep").textContent=reports.filter(r=>Date.now()-r.t<4*3600e3).length;
-  $("st-greens").textContent=course.greens.filter(Boolean).length+" / 18";
+  $("st-greens").textContent=course.greens.filter(Boolean).length+" / "+HOLES;
+  $("st-name").textContent=AKAD?"Apex Akadémia":"Apex Golf";
+  $("st-tee").parentElement.hidden=AKAD;
+  $("st-sub").textContent=AKAD?"Báč · 3 jamky":"Báč · 18 jamiek · par 72";
+  document.querySelectorAll("#start .lay").forEach(b=>b.classList.toggle("cur",b.dataset.l===LAYOUT));
   $("st-gps").textContent=me?"± "+Math.round(meAccM)+" m":"hľadám…";
   $("st-tee").innerHTML=Object.keys(TEES).map(t=>`<option value="${t}" ${t===course.tee?"selected":""}>${TEES[t]}</option>`).join("");
-  $("st-search").value="";renderCourses();$("st-2").hidden=true;$("st-1").hidden=false;
+  $("st-search").value="";renderCourses();stStep("st-1");
   $("start").hidden=false;
 }
 $("st-tee").onchange=e=>{course.tee=e.target.value;saveCourse();render()};
@@ -707,7 +736,9 @@ $("st-no").onclick=()=>choose(false);
 $("b-home").onclick=()=>showStart(true);
 applyMode();
 // pri spustení vždy zoznam ihrísk, okrem rozohranej hry so skóre (napr. po znovunačítaní počas kola)
-if(!(modeSt&&modeSt.score&&Date.now()-modeSt.t<6*3600e3))showStart();
+let nextQ=false;try{nextQ=sessionStorage.getItem("for.next")==="q";sessionStorage.removeItem("for.next")}catch(e){}
+if(nextQ){showStart();stStep("st-2")}
+else if(!(modeSt&&modeSt.score&&Date.now()-modeSt.t<6*3600e3))showStart();
 
 if(recording)wake(true);
 render();renderGps();
