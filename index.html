@@ -84,10 +84,20 @@ section.view.on{display:block}
 #map{position:absolute;inset:0;background:#24331f}
 
 /* panel diaľkomera */
+#edbar{position:absolute;left:10px;right:10px;bottom:10px;z-index:600;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.edtypes{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
+.edtypes button{flex:0 0 auto;min-height:38px;padding:6px 10px;font-size:.9rem;display:flex;align-items:center;gap:6px}
+.edtypes button i{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.3)}
+.edtypes button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:-1px}
+.edinfo{color:var(--muted);margin:4px 2px 8px}
+.edbtns{display:flex;gap:6px;margin-top:6px}.edbtns button{flex:1;min-height:42px;padding:6px}
+body.editing #dist{display:none}
+#dist .fb{display:flex;gap:10px;font-size:.85rem;color:var(--muted);margin-top:2px}#dist .fb b{color:var(--fg)}
 #dist{position:absolute;left:10px;right:10px;bottom:10px;z-index:500;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
 #dist .row{display:flex;align-items:center;gap:12px}
 #dist .big{font-size:3.2rem;font-weight:800;line-height:1;letter-spacing:-.02em}
 #dist .big small{font-size:1.2rem;font-weight:600;color:var(--muted);margin-left:2px}
+#dist .meta>div:first-child{}
 #dist .meta{flex:1;font-size:.9rem;color:var(--muted);line-height:1.35}
 #dist .meta b{color:var(--fg)}
 .strokes{display:flex;align-items:center;gap:6px}
@@ -196,6 +206,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
       <button id="b-green" aria-label="Zobraziť green">⛳</button>
       <button id="b-plan" aria-label="Plán jamky">🗺</button>
       <button id="b-report" aria-label="Nahlásiť">⚠️</button>
+      <button id="b-edit" aria-label="Kresliť jamku">✏️</button>
     </div>
     <div id="rep" hidden>
       <div class="sheet">
@@ -207,12 +218,18 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
       </div>
     </div>
     <div id="plan" hidden><img id="plan-img" alt="Plán jamky"><button id="plan-x">Zavrieť</button></div>
+    <div id="edbar" hidden>
+      <div class="edtypes" id="ed-types"></div>
+      <div class="edinfo small" id="ed-info"></div>
+      <div class="edbtns"><button id="ed-undo">↶ Bod</button><button id="ed-cancel">Zrušiť tvar</button><button class="primary" id="ed-done">Uložiť tvar</button></div>
+      <div class="edbtns"><button id="ed-exit">Koniec kreslenia</button></div>
+    </div>
     <div id="dist">
       <div class="row">
         <div>
           <div class="big num" id="d-green">–<small>m</small></div>
         </div>
-        <div class="meta" id="d-meta">ku stredu greenu</div>
+        <div class="meta"><div id="d-meta">ku stredu greenu</div><div class="fb" id="d-fb"></div></div>
         <div class="scoreonly">
           <div class="strokes">
             <button id="s-minus" aria-label="Menej úderov">−</button>
@@ -307,7 +324,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
       <p class="small muted" id="mode-txt"></p>
       <div class="btns"><button id="b-home">Úvodná obrazovka / nová hra</button></div>
     </div>
-    <p class="small muted">Fór · testovacia verzia 0.4. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
+    <p class="small muted">Fór · testovacia verzia 0.5. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
   </section>
 </main>
 
@@ -393,6 +410,58 @@ let tapPt=null;
 function hasGreen(){return !!course.greens[round.hole]}
 function greenPt(){return course.greens[round.hole]}
 
+/* ---------- vlastná mapa jamiek (obrysy) ---------- */
+const FT={tee:{n:"Odpalisko",c:"#7bd389"},fairway:{n:"Fairway",c:"#4fbf5a"},green:{n:"Green",c:"#b6f07a"},bunker:{n:"Bunker",c:"#f1e2a9"},water:{n:"Voda",c:"#3d8bfd"},trees:{n:"Stromy",c:"#1f6b33"},ob:{n:"Out (OB)",c:"#ffffff"}};
+if(!Array.isArray(course.feat)||course.feat.length!==HOLES)course.feat=Array.from({length:HOLES},()=>[]);
+const featLayer=L.layerGroup().addTo(map);
+let edit=null; // {type, pts:[]}
+const draftLine=L.polyline([],{color:"#fff",weight:2,dashArray:"4 4"});
+const draftPts=L.layerGroup();
+function drawFeatures(){
+  featLayer.clearLayers();
+  course.feat.forEach((list,h)=>list.forEach((f,i)=>{
+    const st=FT[f.t]||FT.ob,cur=h===round.hole;
+    const poly=L.polygon(f.p,{color:f.t==="ob"?"#fff":st.c,weight:f.t==="ob"?2:1.5,dashArray:f.t==="ob"?"6 5":null,fillColor:st.c,fillOpacity:f.t==="ob"?0:(cur?.45:.25),opacity:cur?1:.6,interactive:!!edit});
+    if(edit&&cur)poly.on("click",ev=>{L.DomEvent.stop(ev);if(edit.pts.length)return;
+      if(confirm("Zmazať tento tvar ("+st.n+")?")){course.feat[h].splice(i,1);saveCourse();autoGreen(h);drawFeatures();renderMap()}});
+    poly.addTo(featLayer)}));
+}
+function centroid(pts){let a=0,x=0,y=0;for(let i=0;i<pts.length;i++){const[p1,q1]=pts[i],[p2,q2]=pts[(i+1)%pts.length],c=p1*q2-p2*q1;a+=c;x+=(p1+p2)*c;y+=(q1+q2)*c}
+  if(Math.abs(a)<1e-12)return pts[0];return[x/(3*a),y/(3*a)]}
+function greenPoly(h){const g=course.feat[h].filter(f=>f.t==="green");return g.length?g[g.length-1].p:null}
+function autoGreen(h){const gp=greenPoly(h);if(gp&&(!course.greens[h]||course.greensAuto&&course.greensAuto[h])){
+  const c=centroid(gp);course.greens[h]=[+c[0].toFixed(7),+c[1].toFixed(7)];(course.greensAuto=course.greensAuto||[])[h]=true;saveCourse()}}
+// predok a zadok greenu po línii od hráča cez stred greenu
+function frontBack(from,gp,center){
+  const r=Math.PI/180,k=111320,cos=Math.cos(from[0]*r);
+  const xy=p=>[(p[1]-from[1])*k*cos,(p[0]-from[0])*k];
+  const c=xy(center),L0=Math.hypot(c[0],c[1]);if(L0<1)return null;const ux=c[0]/L0,uy=c[1]/L0;
+  let mn=1e9,mx=-1e9;
+  for(let i=0;i<gp.length;i++){const a=xy(gp[i]),b=xy(gp[(i+1)%gp.length]);
+    // priesečník úsečky a-b s priamkou cez počiatok v smere u
+    const dx=b[0]-a[0],dy=b[1]-a[1],den=dx*uy-dy*ux;if(Math.abs(den)<1e-9)continue;
+    const t=(a[1]*ux-a[0]*uy)/den;if(t<0||t>1)continue;
+    const px=a[0]+t*dx,py=a[1]+t*dy,al=px*ux+py*uy;if(al>0){mn=Math.min(mn,al);mx=Math.max(mx,al)}}
+  return mn<1e9?{f:mn,b:mx}:null}
+function renderEdit(){
+  document.body.classList.toggle("editing",!!edit);$("edbar").hidden=!edit;
+  if(!edit){draftLine.remove();draftPts.remove();return}
+  $("ed-types").innerHTML=Object.entries(FT).map(([k,v])=>`<button data-t="${k}" aria-pressed="${k===edit.type}"><i style="background:${v.c}"></i>${v.n}</button>`).join("");
+  $("ed-info").textContent=edit.pts.length?`${FT[edit.type].n}: ${edit.pts.length} bodov. Ťukaj po obvode, potom Uložiť tvar.`:`Jamka ${round.hole+1}: vyber typ a ťukaj po obvode na mape. Ťuknutím na hotový tvar ho zmažeš.`;
+  draftLine.setLatLngs(edit.pts.length>2?[...edit.pts,edit.pts[0]]:edit.pts).addTo(map);
+  draftPts.clearLayers();edit.pts.forEach(p=>L.circleMarker(p,{radius:4,color:"#fff",weight:2,fillColor:FT[edit.type].c,fillOpacity:1,interactive:false}).addTo(draftPts));draftPts.addTo(map);
+  $("ed-done").disabled=edit.pts.length<3;$("ed-undo").disabled=!edit.pts.length;
+}
+$("b-edit").onclick=()=>{edit=edit?null:{type:"green",pts:[]};mode=null;tapPt=null;renderTap();drawFeatures();renderEdit();
+  if(edit&&hasGreen())map.setView(greenPt(),Math.max(map.getZoom(),18))};
+$("ed-types").onclick=e=>{const b=e.target.closest("button[data-t]");if(b){edit.type=b.dataset.t;renderEdit()}};
+$("ed-undo").onclick=()=>{edit.pts.pop();renderEdit()};
+$("ed-cancel").onclick=()=>{edit.pts=[];renderEdit()};
+$("ed-done").onclick=()=>{if(edit.pts.length<3)return;
+  course.feat[round.hole].push({t:edit.type,p:edit.pts.map(p=>[+p[0].toFixed(7),+p[1].toFixed(7)])});edit.pts=[];
+  saveCourse();autoGreen(round.hole);drawFeatures();renderEdit();renderMap()};
+$("ed-exit").onclick=()=>{if(edit.pts.length>=3&&confirm("Uložiť rozkreslený tvar?"))$("ed-done").onclick();edit=null;drawFeatures();renderEdit();renderMap()};
+
 function renderMap(){
   const h=round.hole,par=course.par[h];
   $("h-title").textContent=(AKAD?"Akadémia · jamka ":"Jamka ")+(h+1);
@@ -409,6 +478,9 @@ function renderMap(){
   else if(!me){meta="ku stredu greenu · čakám na GPS";}
   else{const d=dist(me,greenPt());big=d>2000?"&gt;2k":Math.round(d);
     meta="ku stredu greenu";}
+  let fb="";const gp=greenPoly(h);
+  if(me&&hasGreen()&&gp){const r=frontBack(me,gp,greenPt());if(r)fb=`<span>predok <b>${Math.round(r.f)}</b></span><span>zadok <b>${Math.round(r.b)}</b></span>`}
+  $("d-fb").innerHTML=fb;
   $("d-green").innerHTML=big+"<small>m</small>";
   $("d-meta").innerHTML=meta;
   if(me&&hasGreen()){lineMeGreen.setLatLngs([me,greenPt()]).addTo(map)}else lineMeGreen.remove();
@@ -434,7 +506,8 @@ function renderTap(){
 
 map.on("click",e=>{
   const p=[e.latlng.lat,e.latlng.lng];
-  if(mode==="setGreen"){course.greens[round.hole]=[+p[0].toFixed(7),+p[1].toFixed(7)];saveCourse();mode=null;tapPt=null;render();return}
+  if(edit){edit.pts.push(p);renderEdit();return}
+  if(mode==="setGreen"){course.greens[round.hole]=[+p[0].toFixed(7),+p[1].toFixed(7)];if(course.greensAuto)course.greensAuto[round.hole]=false;saveCourse();mode=null;tapPt=null;render();return}
   tapPt=tapPt&&map.distance(tapPt,p)<15?null:p; // ťuk blízko bodu ho zruší
   renderTap();
 });
@@ -456,7 +529,7 @@ function goHole(n){
   const now=Date.now();
   if(round.start&&round.holeStart!=null&&n===round.hole+1){round.holeTimes[round.hole]=now-round.holeStart}
   if(round.start)round.holeStart=now;
-  round.hole=n;tapPt=null;mode=null;saveRound();render();
+  round.hole=n;tapPt=null;mode=null;if(edit)edit.pts=[];saveRound();render();drawFeatures();renderEdit();
   if(hasGreen()){if(me&&dist(me,greenPt())<700)map.fitBounds([me,greenPt()],{padding:[60,60],maxZoom:18});else map.setView(greenPt(),17)}
 }
 $("prev").onclick=()=>goHole(round.hole-1);
@@ -571,6 +644,7 @@ $("rep-x").onclick=()=>{$("rep").hidden=true};
 $("rep").onclick=e=>{if(e.target.id==="rep")$("rep").hidden=true};
 drawReports();
 if(AKAD)$("b-plan").hidden=true;
+drawFeatures();
 
 $("b-plan").onclick=()=>{$("plan-img").src="holes/jamka-"+String(round.hole+1).padStart(2,"0")+".jpg";$("plan").hidden=false};
 $("plan-x").onclick=()=>{$("plan").hidden=true};
