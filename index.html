@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f6b4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fór">
+<title>Fór</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="leaflet/leaflet.css">
+<style>
+:root{
+  --bg:#f3f5f0;--surface:#fff;--fg:#14211a;--muted:#5d6b62;--line:#d6ddd3;
+  --accent:#0f6b4a;--accent-fg:#fff;--warn:#c46a00;--bad:#c62f1f;--good:#0f7a3c;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1512;--surface:#18201c;--fg:#e8eee9;--muted:#9aa89f;--line:#2c3831;
+  --accent:#3fbf86;--accent-fg:#06140d;--warn:#f0a440;--bad:#ff6a57;--good:#5fd18f;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1512;--surface:#18201c;--fg:#e8eee9;--muted:#9aa89f;--line:#2c3831;
+  --accent:#3fbf86;--accent-fg:#06140d;--warn:#f0a440;--bad:#ff6a57;--good:#5fd18f;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;overscroll-behavior:none}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+button{font:inherit;font-weight:600;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-height:44px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.45}
+.num{font-variant-numeric:tabular-nums}
+
+/* horná lišta: jamka */
+#top{display:flex;align-items:center;gap:8px;padding:calc(var(--safe-t) + 8px) 12px 8px;background:var(--surface);border-bottom:1px solid var(--line);z-index:5}
+#top .hole{flex:1;text-align:center;line-height:1.15}
+#top .hole b{font-size:1.35rem}
+#top .hole small{display:block;color:var(--muted);font-size:.85rem}
+#top button{min-width:52px;font-size:1.3rem;padding:6px 0}
+
+main{flex:1;position:relative;min-height:0}
+section.view{position:absolute;inset:0;overflow:auto;display:none;padding:14px 14px 24px}
+section.view.on{display:block}
+#v-map{padding:0;overflow:hidden}
+#map{position:absolute;inset:0;background:#24331f}
+
+/* panel diaľkomera */
+#dist{position:absolute;left:10px;right:10px;bottom:10px;z-index:500;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+#dist .row{display:flex;align-items:center;gap:12px}
+#dist .big{font-size:3.2rem;font-weight:800;line-height:1;letter-spacing:-.02em}
+#dist .big small{font-size:1.2rem;font-weight:600;color:var(--muted);margin-left:2px}
+#dist .meta{flex:1;font-size:.9rem;color:var(--muted);line-height:1.35}
+#dist .meta b{color:var(--fg)}
+.strokes{display:flex;align-items:center;gap:6px}
+.strokes button{width:46px;height:46px;padding:0;font-size:1.5rem;border-radius:50%}
+.strokes .n{min-width:34px;text-align:center;font-size:1.6rem;font-weight:800}
+.strokes-l{font-size:.75rem;color:var(--muted);text-align:center}
+#hint{margin-top:8px;font-size:.9rem;padding:8px 10px;border-radius:10px;background:var(--bg);display:none}
+#hint.on{display:block}
+#mapbtns{position:absolute;right:10px;top:10px;z-index:500;display:flex;flex-direction:column;gap:8px}
+#mapbtns button{width:48px;height:48px;padding:0;font-size:1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#gpsbadge{position:absolute;left:10px;top:10px;z-index:500;background:var(--surface);border-radius:10px;padding:6px 10px;font-size:.85rem;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#gpsbadge .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);margin-right:6px}
+#gpsbadge.good .dot{background:var(--good)}#gpsbadge.mid .dot{background:var(--warn)}#gpsbadge.bad .dot{background:var(--bad)}
+#plan{position:absolute;inset:0;z-index:700;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px}
+#plan img{max-width:100%;max-height:calc(100% - 70px);border-radius:12px;object-fit:contain}
+#rep{position:absolute;inset:0;z-index:700;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}
+#rep .sheet{width:100%;max-height:100%;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:16px 14px 18px}
+.repgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.repgrid button{min-height:64px;display:flex;align-items:center;gap:8px;text-align:left;font-size:.95rem;line-height:1.2}
+.repgrid button span{font-size:1.5rem}
+.repitem{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+.repitem div{flex:1}
+.repmk{font-size:22px;line-height:1;text-shadow:0 0 3px #fff,0 0 6px #000}
+#rec-ind{display:none;color:var(--bad);margin-left:8px}#rec-ind.on{display:inline}
+
+/* spodné záložky */
+nav{display:flex;background:var(--surface);border-top:1px solid var(--line);padding-bottom:var(--safe-b);z-index:5}
+nav button{flex:1;border:0;border-radius:0;background:none;padding:8px 0 10px;font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px}
+nav button span{font-size:1.25rem;line-height:1}
+nav button[aria-selected="true"]{color:var(--accent)}
+
+h2{font-size:1.05rem;margin:4px 0 10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--bg);border-radius:10px;padding:10px}
+.stat .v{font-size:1.5rem;font-weight:800}
+.stat .l{font-size:.8rem;color:var(--muted)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.btns button{flex:1 1 auto}
+
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 4px;text-align:center;border-bottom:1px solid var(--line)}
+th{font-size:.8rem;color:var(--muted);font-weight:600}
+tr.cur td{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+td.sc{font-weight:800;font-size:1.05rem}
+.under{color:var(--good)}.over{color:var(--bad)}
+td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
+.parsel{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.green-ok{color:var(--good)}.green-no{color:var(--muted)}
+.leaflet-control-attribution{font-size:9px!important;opacity:.7}
+.lbl{background:var(--surface);color:var(--fg);border-radius:8px;padding:3px 7px;font:700 13px/1.2 var(--font);white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35);border:0}
+.lbl:before{display:none}
+</style>
+</head>
+<body>
+<header id="top">
+  <button id="prev" aria-label="Predošlá jamka">‹</button>
+  <div class="hole"><b id="h-title">Jamka 1</b><small id="h-sub">Par 4</small></div>
+  <button id="next" aria-label="Ďalšia jamka">›</button>
+</header>
+
+<main>
+  <section class="view on" id="v-map">
+    <div id="map"></div>
+    <div id="gpsbadge"><span class="dot"></span><span id="gpstxt">Hľadám GPS…</span><span id="rec-ind">● REC</span></div>
+    <div id="mapbtns">
+      <button id="b-me" aria-label="Moja poloha">◎</button>
+      <button id="b-green" aria-label="Zobraziť green">⛳</button>
+      <button id="b-plan" aria-label="Plán jamky">🗺</button>
+      <button id="b-report" aria-label="Nahlásiť">⚠️</button>
+    </div>
+    <div id="rep" hidden>
+      <div class="sheet">
+        <h2 id="rep-title">Nahlásiť</h2>
+        <p class="small muted" id="rep-where"></p>
+        <div class="repgrid" id="rep-grid"></div>
+        <div class="btns"><button id="rep-list-b">Moje hlásenia</button><button id="rep-x">Zavrieť</button></div>
+        <div id="rep-list" hidden></div>
+      </div>
+    </div>
+    <div id="plan" hidden><img id="plan-img" alt="Plán jamky"><button id="plan-x">Zavrieť</button></div>
+    <div id="dist">
+      <div class="row">
+        <div>
+          <div class="big num" id="d-green">–<small>m</small></div>
+        </div>
+        <div class="meta" id="d-meta">ku stredu greenu</div>
+        <div>
+          <div class="strokes">
+            <button id="s-minus" aria-label="Menej úderov">−</button>
+            <div class="n num" id="s-n">0</div>
+            <button id="s-plus" aria-label="Pridať úder">+</button>
+          </div>
+          <div class="strokes-l">údery</div>
+        </div>
+      </div>
+      <div id="hint"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-score">
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><div class="v num" id="sc-total">0</div><div class="l">údery spolu</div></div>
+        <div class="stat"><div class="v num" id="sc-topar">E</div><div class="l">voči paru (dohrané jamky)</div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:6px 8px">
+      <table><thead><tr><th>Jamka</th><th>Par</th><th></th><th>Údery</th><th></th></tr></thead><tbody id="sc-body"></tbody></table>
+    </div>
+    <div class="btns"><button class="danger" id="sc-reset">Nové kolo (vymazať skóre a čas)</button></div>
+  </section>
+
+  <section class="view" id="v-pace">
+    <div class="card">
+      <h2>Tempo hry</h2>
+      <div class="stats">
+        <div class="stat"><div class="v num" id="p-elapsed">0:00</div><div class="l">čas kola</div></div>
+        <div class="stat"><div class="v num" id="p-hole">0:00</div><div class="l">na tejto jamke</div></div>
+        <div class="stat"><div class="v num" id="p-diff">–</div><div class="l">voči plánu</div></div>
+        <div class="stat"><div class="v num" id="p-finish">–</div><div class="l">odhad konca</div></div>
+      </div>
+      <p class="small muted" id="p-note">Plán: par 3 = 11 min, par 4 = 14 min, par 5 = 17 min (spolu asi 4 h 15 min na 18 jamiek). Čas jamky sa zapíše, keď prepneš na ďalšiu.</p>
+      <div class="btns"><button class="primary" id="p-start">Začať kolo</button></div>
+    </div>
+    <div class="card" style="padding:6px 8px">
+      <table><thead><tr><th>Jamka</th><th>Čas</th><th>Plán</th><th>Rozdiel</th></tr></thead><tbody id="p-body"></tbody></table>
+    </div>
+  </section>
+
+  <section class="view" id="v-gps">
+    <div class="card">
+      <h2>Záznam GPS (test presnosti)</h2>
+      <p class="small muted">Nahrá trasu telefónu počas kola. Na konci ju stiahni ako GPX a pošli mi ju spolu s GPX z hodiniek. Porovnám ich.</p>
+      <div class="stats">
+        <div class="stat"><div class="v num" id="g-pts">0</div><div class="l">bodov</div></div>
+        <div class="stat"><div class="v num" id="g-acc">–</div><div class="l">priem. presnosť</div></div>
+        <div class="stat"><div class="v num" id="g-km">0,00</div><div class="l">km</div></div>
+        <div class="stat"><div class="v num" id="g-gap">–</div><div class="l">najdlhší výpadok</div></div>
+      </div>
+      <div class="btns">
+        <button class="primary" id="g-rec">Spustiť záznam</button>
+        <button id="g-export" disabled>Stiahnuť GPX</button>
+      </div>
+      <div class="btns"><button class="danger" id="g-clear" disabled>Vymazať záznam</button></div>
+    </div>
+    <div class="card">
+      <h2>Displej</h2>
+      <p class="small muted">iPhone aj Android prestanú posielať polohu, keď zhasne displej alebo prepneš do inej appky. Pri teste nechaj Fór otvorený.</p>
+      <div class="btns"><button id="g-wake">Nezhasínať displej: vypnuté</button></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-set">
+    <div class="card">
+      <h2>Ihrisko: Apex Golf, Báč</h2>
+      <p><label>Odpaľujem z: <select class="parsel" id="tee-sel"></select></label></p>
+      <p class="small muted">Greeny nastavíš na mape: prejdi na jamku, ťukni na ⛳ a potom na stred greenu. Dá sa to urobiť aj doma zo satelitnej mapy. Pary a dĺžky sú zo scorekarty Apexu.</p>
+      <table><thead><tr><th>Jamka</th><th>Par</th><th>Green</th></tr></thead><tbody id="set-body"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>Zálohovať ihrisko</h2>
+      <p class="small muted">Nastavené greeny a pary sú uložené len v tomto telefóne. Zálohu mi môžeš poslať a ja ich zapracujem natrvalo do appky.</p>
+      <div class="btns"><button id="c-export">Stiahnuť ihrisko (.json)</button><button id="c-import">Načítať zo súboru</button></div>
+      <input type="file" id="c-file" accept=".json,application/json" hidden>
+    </div>
+    <p class="small muted">Fór · testovacia verzia 0.1. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
+  </section>
+</main>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-v="v-map"><span>⛳</span>Mapa</button>
+  <button role="tab" aria-selected="false" data-v="v-score"><span>📝</span>Skóre</button>
+  <button role="tab" aria-selected="false" data-v="v-pace"><span>⏱</span>Tempo</button>
+  <button role="tab" aria-selected="false" data-v="v-gps"><span>📡</span>GPS test</button>
+  <button role="tab" aria-selected="false" data-v="v-set"><span>⚙︎</span>Ihrisko</button>
+</nav>
+
+<script src="leaflet/leaflet.js"></script>
+<script>
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const HOLES=18;
+const COURSE_CENTER=[48.0070,17.3640]; // Apex Golf Báč, podľa GPX z 14.11.
+const PLAN_MIN={3:11,4:14,5:17};
+
+/* ---------- úložisko ---------- */
+const store={
+  get(k,d){try{const v=localStorage.getItem("for."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem("for."+k,JSON.stringify(v))}catch(e){}}
+};
+// Ihrisko Apex Golf Báč podľa scorekarty z apexgolf.sk (par 72). Greeny nastaví hráč na mape.
+const DEFAULT_COURSE={name:"Apex Golf Báč",tee:"yellow",
+  par:[4,4,5,4,3,4,4,3,5,4,4,5,3,5,4,4,3,4],
+  si:[7,15,5,3,13,11,17,9,1,4,14,12,18,2,10,8,16,6],
+  len:{black:[355,309,518,361,169,356,320,200,484,354,364,476,182,480,332,345,165,399],white:[334,287,499,343,161,330,300,192,468,336,346,453,170,456,301,322,148,379],yellow:[311,263,474,324,154,305,277,168,431,317,325,440,159,427,277,308,139,355],blue:[295,250,448,300,136,293,256,147,417,302,298,419,130,404,261,290,128,330],red:[268,226,435,289,130,269,235,128,384,275,275,387,123,376,240,268,115,310]},
+  greens:Array(HOLES).fill(null)};
+const REPORTS=[
+  {k:"slow",i:"🐢",t:"Pomalá skupina"},
+  {k:"wet",i:"💧",t:"Mokré / močiar"},
+  {k:"pitch",i:"⛳",t:"Pitchmarky na greene"},
+  {k:"divot",i:"🟫",t:"Divoty"},
+  {k:"mole",i:"🐀",t:"Krtince"},
+  {k:"bunker",i:"🏖️",t:"Bunker treba upraviť"},
+  {k:"other",i:"❗",t:"Iné"}];
+const TEES={black:"čierne",white:"biele",yellow:"žlté",blue:"modré",red:"červené"};
+let course=Object.assign(JSON.parse(JSON.stringify(DEFAULT_COURSE)),store.get("course",{}));
+let round=store.get("round",{hole:0,strokes:Array(HOLES).fill(0),start:null,holeStart:null,holeTimes:Array(HOLES).fill(null)});
+let track=store.get("track",[]);
+let recording=store.get("recording",false);
+const saveCourse=()=>store.set("course",course);
+const saveRound=()=>store.set("round",round);
+let trackDirty=false;
+setInterval(()=>{if(trackDirty){store.set("track",track);trackDirty=false}},5000);
+
+/* ---------- geometria ---------- */
+function dist(a,b){const R=6371000,r=Math.PI/180;
+  const dLa=(b[0]-a[0])*r,dLo=(b[1]-a[1])*r;
+  const s=Math.sin(dLa/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s))}
+const fmtDur=ms=>{if(ms==null||ms<0)return"–";const m=Math.floor(ms/60000);return Math.floor(m/60)+":"+String(m%60).padStart(2,"0")};
+const fmtSigned=min=>min==null?"–":(min>0?"+":min<0?"−":"±")+Math.abs(Math.round(min))+" min";
+
+/* ---------- mapa ---------- */
+const map=L.map("map",{zoomControl:false,attributionControl:true,tap:true}).setView(COURSE_CENTER,16);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  {maxZoom:20,maxNativeZoom:19,attribution:"Esri, Maxar"}).addTo(map);
+const meLayer=L.layerGroup().addTo(map);
+const meAcc=L.circle(COURSE_CENTER,{radius:1,color:"#4aa3ff",weight:1,fillOpacity:.15});
+const meDot=L.circleMarker(COURSE_CENTER,{radius:8,color:"#fff",weight:3,fillColor:"#1a7cff",fillOpacity:1});
+const greenMk=L.circleMarker(COURSE_CENTER,{radius:9,color:"#fff",weight:3,fillColor:"#e0312b",fillOpacity:1});
+const lineMeGreen=L.polyline([],{color:"#fff",weight:2,dashArray:"6 6",opacity:.9});
+const tapMk=L.circleMarker(COURSE_CENTER,{radius:7,color:"#111",weight:2,fillColor:"#ffd400",fillOpacity:1});
+const tapLines=L.polyline([],{color:"#ffd400",weight:3,opacity:.95});
+const trackLine=L.polyline([],{color:"#ff7a00",weight:3,opacity:.8});
+greenMk.bindTooltip("",{permanent:true,direction:"top",className:"lbl",offset:[0,-8]});
+tapMk.bindTooltip("",{permanent:true,direction:"top",className:"lbl",offset:[0,-8]});
+
+let me=null,meAccM=null,lastFix=0;
+let mode=null; // "setGreen"
+let tapPt=null;
+
+function hasGreen(){return !!course.greens[round.hole]}
+function greenPt(){return course.greens[round.hole]}
+
+function renderMap(){
+  const h=round.hole,par=course.par[h];
+  $("h-title").textContent="Jamka "+(h+1);
+  const ln=course.len&&course.len[course.tee]?course.len[course.tee][h]:null;
+  $("h-sub").textContent="Par "+par+(ln?" · "+ln+" m":"")+(course.si?" · HCP "+course.si[h]:"");
+  $("s-n").textContent=round.strokes[h];
+  $("prev").disabled=h===0;$("next").disabled=h===HOLES-1;
+  // green
+  if(hasGreen()){greenMk.setLatLng(greenPt()).addTo(map);greenMk.setTooltipContent("Green "+(h+1))}
+  else greenMk.remove();
+  // diaľka
+  let big="–",meta="";
+  if(!hasGreen()){meta="<b>Green nie je nastavený.</b> Ťukni na ⛳ a potom na stred greenu.";}
+  else if(!me){meta="ku stredu greenu · čakám na GPS";}
+  else{const d=dist(me,greenPt());big=d>2000?"&gt;2k":Math.round(d);
+    meta="ku stredu greenu";}
+  $("d-green").innerHTML=big+"<small>m</small>";
+  $("d-meta").innerHTML=meta;
+  if(me&&hasGreen()){lineMeGreen.setLatLngs([me,greenPt()]).addTo(map)}else lineMeGreen.remove();
+  renderTap();
+  renderHint();
+}
+function renderHint(){
+  const h=round.hole,hint=$("hint");
+  if(mode==="setGreen"){hint.className="on";hint.innerHTML="Ťukni na mape na <b>stred greenu jamky "+(h+1)+"</b>. <button id='cancelSet' style='min-height:32px;padding:4px 10px;margin-left:6px'>Zrušiť</button>";
+    $("cancelSet").onclick=e=>{e.stopPropagation();mode=null;render()};}
+  else if(!showToast.t)hint.className="";
+}
+function render(){renderMap();renderScore();renderPace();renderSet()}
+function renderTap(){
+  if(!tapPt){tapMk.remove();tapLines.remove();return}
+  const parts=[],pts=[];
+  if(me){parts.push("ty "+Math.round(dist(me,tapPt))+" m");pts.push(me)}
+  pts.push(tapPt);
+  if(hasGreen()){parts.push("green "+Math.round(dist(tapPt,greenPt()))+" m");pts.push(greenPt())}
+  tapMk.setLatLng(tapPt).addTo(map);tapMk.setTooltipContent(parts.join(" · ")||"bod");
+  tapLines.setLatLngs(pts).addTo(map);
+}
+
+map.on("click",e=>{
+  const p=[e.latlng.lat,e.latlng.lng];
+  if(mode==="setGreen"){course.greens[round.hole]=[+p[0].toFixed(7),+p[1].toFixed(7)];saveCourse();mode=null;tapPt=null;render();return}
+  tapPt=tapPt&&map.distance(tapPt,p)<15?null:p; // ťuk blízko bodu ho zruší
+  renderTap();
+});
+$("b-green").onclick=()=>{
+  if(hasGreen()&&mode!=="setGreen"){
+    // druhé ťuknutie: posunúť green
+    if(confirmMove){mode="setGreen";confirmMove=false;render();return}
+    map.setView(greenPt(),18);confirmMove=true;
+    showToast("Ťukni na ⛳ ešte raz, ak chceš green presunúť.");setTimeout(()=>confirmMove=false,4000);return}
+  mode=mode==="setGreen"?null:"setGreen";render();
+};
+let confirmMove=false;
+$("b-me").onclick=()=>{if(me){map.setView(me,Math.max(map.getZoom(),17));if(hasGreen())map.fitBounds([me,greenPt()],{padding:[60,60],maxZoom:18})}else showToast("Poloha ešte nie je známa.")};
+function showToast(t){const h=$("hint");h.className="on";h.textContent=t;clearTimeout(showToast.t);showToast.t=setTimeout(()=>{showToast.t=null;if(mode!=="setGreen")h.className=""},3500)}
+
+/* ---------- jamky a údery ---------- */
+function goHole(n){
+  if(n<0||n>=HOLES||n===round.hole)return;
+  const now=Date.now();
+  if(round.start&&round.holeStart!=null&&n===round.hole+1){round.holeTimes[round.hole]=now-round.holeStart}
+  if(round.start)round.holeStart=now;
+  round.hole=n;tapPt=null;mode=null;saveRound();render();
+  if(hasGreen()){if(me&&dist(me,greenPt())<700)map.fitBounds([me,greenPt()],{padding:[60,60],maxZoom:18});else map.setView(greenPt(),17)}
+}
+$("prev").onclick=()=>goHole(round.hole-1);
+$("next").onclick=()=>goHole(round.hole+1);
+function addStroke(h,d){round.strokes[h]=Math.max(0,round.strokes[h]+d);
+  if(d>0&&!round.start){round.start=Date.now();round.holeStart=round.start}
+  saveRound();render()}
+$("s-plus").onclick=()=>addStroke(round.hole,1);
+$("s-minus").onclick=()=>addStroke(round.hole,-1);
+
+function renderScore(){
+  const b=$("sc-body");let tot=0,diff=0,html="";
+  for(let i=0;i<HOLES;i++){const s=round.strokes[i],p=course.par[i];tot+=s;if(s>0&&(i!==round.hole||i===HOLES-1))diff+=s-p;
+    const cls=s===0?"":s<p?"under":s>p?"over":"";
+    html+=`<tr class="${i===round.hole?"cur":""}"><td>${i+1}</td><td>${p}</td><td><button class="mini" data-h="${i}" data-d="-1">−</button></td><td class="sc ${cls}">${s||"·"}</td><td><button class="mini" data-h="${i}" data-d="1">+</button></td></tr>`;
+    if(i===8){const out=round.strokes.slice(0,9).reduce((a,c)=>a+c,0);html+=`<tr><td class="muted small">Out</td><td class="muted small">${course.par.slice(0,9).reduce((a,c)=>a+c,0)}</td><td></td><td class="sc">${out||"·"}</td><td></td></tr>`}
+  }
+  const inn=round.strokes.slice(9).reduce((a,c)=>a+c,0);
+  html+=`<tr><td class="muted small">In</td><td class="muted small">${course.par.slice(9).reduce((a,c)=>a+c,0)}</td><td></td><td class="sc">${inn||"·"}</td><td></td></tr>`;
+  b.innerHTML=html;
+  $("sc-total").textContent=tot;
+  $("sc-topar").textContent=diff===0?"E":(diff>0?"+":"−")+Math.abs(diff);
+  $("sc-topar").className="v num "+(diff<0?"under":diff>0?"over":"");
+}
+$("sc-body").onclick=e=>{const t=e.target.closest("button[data-h]");if(t)addStroke(+t.dataset.h,+t.dataset.d)};
+$("sc-reset").onclick=()=>{if(!confirm("Vymazať skóre a čas kola? Greeny a GPS záznam ostanú."))return;
+  round={hole:0,strokes:Array(HOLES).fill(0),start:null,holeStart:null,holeTimes:Array(HOLES).fill(null)};saveRound();render()};
+
+/* ---------- tempo ---------- */
+function renderPace(){
+  const now=Date.now(),started=!!round.start;
+  $("p-start").textContent=started?"Kolo beží":"Začať kolo";$("p-start").disabled=started;
+  $("p-elapsed").textContent=started?fmtDur(now-round.start):"0:00";
+  $("p-hole").textContent=started&&round.holeStart?fmtDur(now-round.holeStart):"0:00";
+  let html="",planDone=0,actDone=0;
+  for(let i=0;i<HOLES;i++){const plan=PLAN_MIN[course.par[i]]||14,t=round.holeTimes[i];
+    if(t!=null){planDone+=plan;actDone+=t/60000}
+    html+=`<tr class="${i===round.hole?"cur":""}"><td>${i+1}</td><td>${t!=null?fmtDur(t):i===round.hole&&started?"beží":"·"}</td><td>${plan}</td><td class="${t!=null?(t/60000>plan+2?"over":t/60000<plan-2?"under":""):""}">${t!=null?fmtSigned(t/60000-plan):""}</td></tr>`}
+  $("p-body").innerHTML=html;
+  if(started){
+    // plán po začiatok aktuálnej jamky vs skutočný čas
+    let planToNow=0;for(let i=0;i<round.hole;i++)planToNow+=PLAN_MIN[course.par[i]]||14;
+    const curPlan=PLAN_MIN[course.par[round.hole]]||14,inHole=(now-round.holeStart)/60000;
+    planToNow+=Math.min(inHole,curPlan);
+    const d=(now-round.start)/60000-planToNow;
+    $("p-diff").textContent=fmtSigned(d);$("p-diff").className="v num "+(d>5?"over":d<-2?"under":"");
+    let rest=0;for(let i=round.hole;i<HOLES;i++)rest+=PLAN_MIN[course.par[i]]||14;
+    rest-=Math.min(inHole,curPlan);
+    const fin=new Date(now+rest*60000);$("p-finish").textContent=fin.getHours()+":"+String(fin.getMinutes()).padStart(2,"0");
+  }else{$("p-diff").textContent="–";$("p-finish").textContent="–"}
+}
+$("p-start").onclick=()=>{if(!round.start){round.start=Date.now();round.holeStart=round.start;saveRound();render()}};
+setInterval(()=>{if(document.querySelector("#v-pace.on"))renderPace()},15000);
+
+/* ---------- nastavenia ihriska ---------- */
+function renderSet(){
+  let html="";
+  for(let i=0;i<HOLES;i++){
+    html+=`<tr><td>${i+1}</td><td><select class="parsel" data-h="${i}">${[3,4,5,6].map(p=>`<option ${p===course.par[i]?"selected":""}>${p}</option>`).join("")}</select></td>
+    <td>${course.greens[i]?`<span class="green-ok">✓</span> <button class="mini" data-go="${i}">ukáž</button>`:`<button class="mini" data-go="${i}">nastaviť</button>`}</td></tr>`}
+  $("set-body").innerHTML=html;
+  $("tee-sel").innerHTML=Object.keys(TEES).map(t=>`<option value="${t}" ${t===course.tee?"selected":""}>${TEES[t]}</option>`).join("");
+}
+$("set-body").onchange=e=>{const s=e.target.closest("select");if(s){course.par[+s.dataset.h]=+s.value;saveCourse();render()}};
+$("set-body").onclick=e=>{const b=e.target.closest("button[data-go]");if(!b)return;const i=+b.dataset.go;
+  round.hole=i;saveRound();showView("v-map");
+  if(course.greens[i]){map.setView(course.greens[i],18);mode=null}else{mode="setGreen";map.setView(map.getCenter(),Math.max(map.getZoom(),16))}
+  render()};
+$("tee-sel").onchange=e=>{course.tee=e.target.value;saveCourse();render()};
+/* ---------- hlásenia ---------- */
+let reports=store.get("reports",[]);
+const repLayer=L.layerGroup().addTo(map);
+const repInfo=k=>REPORTS.find(r=>r.k===k)||REPORTS[REPORTS.length-1];
+function drawReports(){repLayer.clearLayers();
+  for(const r of reports){const ri=repInfo(r.k);
+    L.marker([r.lat,r.lon],{icon:L.divIcon({className:"",html:`<div class="repmk">${ri.i}</div>`,iconSize:[24,24],iconAnchor:[12,12]})})
+      .bindPopup(`<b>${ri.t}</b><br>Jamka ${r.hole} · ${new Date(r.t).toLocaleTimeString("sk",{hour:"2-digit",minute:"2-digit"})}`).addTo(repLayer)}}
+function repWhere(){return tapPt?{p:tapPt,src:"na bode, ktorý si označil na mape"}:me?{p:me,src:"na tvojej polohe"}:null}
+function openReport(){
+  const w=repWhere();
+  $("rep-title").textContent="Nahlásiť · jamka "+(round.hole+1);
+  $("rep-where").textContent=w?"Hlásenie sa uloží "+w.src+". Iné miesto: zavri, ťukni na mapu a otvor ⚠️ znova.":"Poloha nie je známa. Ťukni na mapu na miesto problému a otvor ⚠️ znova.";
+  $("rep-grid").innerHTML=REPORTS.map(r=>`<button data-k="${r.k}" ${w?"":"disabled"}><span>${r.i}</span>${r.t}</button>`).join("");
+  $("rep-list").hidden=true;$("rep").hidden=false;
+}
+$("rep-grid").onclick=e=>{const b=e.target.closest("button[data-k]");if(!b)return;const w=repWhere();if(!w)return;
+  reports.push({k:b.dataset.k,t:Date.now(),hole:round.hole+1,lat:+w.p[0].toFixed(6),lon:+w.p[1].toFixed(6)});
+  store.set("reports",reports);drawReports();$("rep").hidden=true;tapPt=null;renderTap();
+  showToast(repInfo(b.dataset.k).t+": uložené ("+reports.length+" hlásení). Pošli ich správcovi cez „Moje hlásenia“.")};
+function renderRepList(){
+  const l=$("rep-list");
+  if(!reports.length){l.innerHTML='<p class="small muted">Zatiaľ žiadne hlásenia.</p>';return}
+  l.innerHTML=reports.map((r,i)=>{const ri=repInfo(r.k);return `<div class="repitem"><span>${ri.i}</span><div><b>${ri.t}</b><br><span class="muted">Jamka ${r.hole} · ${new Date(r.t).toLocaleString("sk",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"})}</span></div><button class="mini" data-show="${i}">mapa</button><button class="mini danger" data-del="${i}">✕</button></div>`}).join("")+
+   '<div class="btns"><button class="primary" id="rep-send">Poslať správcovi</button></div><p class="small muted">Kým appka nemá server, hlásenia odošleš ako správu (WhatsApp, SMS, e-mail) s odkazmi na mapu.</p>';
+  $("rep-send").onclick=sendReports;
+}
+$("rep-list-b").onclick=()=>{const l=$("rep-list");l.hidden=!l.hidden;if(!l.hidden)renderRepList()};
+$("rep-list").onclick=e=>{const d=e.target.closest("button[data-del]"),sh=e.target.closest("button[data-show]");
+  if(d){reports.splice(+d.dataset.del,1);store.set("reports",reports);drawReports();renderRepList()}
+  if(sh){const r=reports[+sh.dataset.show];$("rep").hidden=true;map.setView([r.lat,r.lon],18)}};
+async function sendReports(){
+  const txt="Fór · hlásenia z ihriska Apex Báč\n\n"+reports.map(r=>{const ri=repInfo(r.k);
+    return `${ri.i} ${ri.t} – jamka ${r.hole}, ${new Date(r.t).toLocaleTimeString("sk",{hour:"2-digit",minute:"2-digit"})}\nhttps://maps.google.com/?q=${r.lat},${r.lon}`}).join("\n\n");
+  try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e&&e.name==="AbortError")return}
+  try{await navigator.clipboard.writeText(txt);showToast("Text hlásení je skopírovaný, vlož ho do správy.")}catch(e){download("for-hlasenia.txt",txt,"text/plain")}
+}
+$("b-report").onclick=openReport;
+$("rep-x").onclick=()=>{$("rep").hidden=true};
+$("rep").onclick=e=>{if(e.target.id==="rep")$("rep").hidden=true};
+drawReports();
+
+$("b-plan").onclick=()=>{$("plan-img").src="holes/jamka-"+String(round.hole+1).padStart(2,"0")+".jpg";$("plan").hidden=false};
+$("plan-x").onclick=()=>{$("plan").hidden=true};
+$("plan").onclick=e=>{if(e.target.id==="plan")$("plan").hidden=true};
+$("c-export").onclick=()=>download("for-ihrisko-apex.json",JSON.stringify(course,null,1),"application/json");
+$("c-import").onclick=()=>$("c-file").click();
+$("c-file").onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  try{const c=JSON.parse(await f.text());if(!Array.isArray(c.par)||c.par.length!==HOLES)throw 0;course=c;saveCourse();render();showToast("Ihrisko načítané.")}
+  catch(err){alert("Súbor sa nedá načítať.")}};
+
+/* ---------- GPS ---------- */
+function onPos(pos){
+  const c=pos.coords;me=[c.latitude,c.longitude];meAccM=c.accuracy;lastFix=Date.now();
+  meDot.setLatLng(me).addTo(meLayer);meAcc.setLatLng(me).setRadius(c.accuracy).addTo(meLayer);
+  const b=$("gpsbadge");b.className=c.accuracy<=8?"good":c.accuracy<=20?"mid":"bad";
+  $("gpstxt").textContent="GPS ± "+Math.round(c.accuracy)+" m";
+  if(recording){
+    const last=track[track.length-1],t=pos.timestamp||Date.now();
+    if(!last||t-last.t>=900){track.push({t,lat:+c.latitude.toFixed(7),lon:+c.longitude.toFixed(7),acc:Math.round(c.accuracy*10)/10,ele:c.altitude!=null?Math.round(c.altitude*10)/10:null});trackDirty=true;
+      if(track.length%5===0||track.length<3)renderGps();trackLine.addLatLng(me)}
+  }
+  if(!onPos.centered){onPos.centered=true;if(dist(me,COURSE_CENTER)<3000)map.setView(me,17)}
+  renderMap();
+}
+function onErr(err){
+  const b=$("gpsbadge");b.className="bad";
+  $("gpstxt").textContent=err.code===1?"Poloha zakázaná":"GPS nedostupné";
+  if(err.code===1)showToast("Povoľ polohu pre tento web: na iPhone Nastavenia → Súkromie → Polohové služby → Safari, na Androide ikonka zámku vedľa adresy.");
+}
+if("geolocation" in navigator){
+  navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:30000});
+}else onErr({code:2});
+setInterval(()=>{if(lastFix&&Date.now()-lastFix>20000){$("gpsbadge").className="mid";$("gpstxt").textContent="GPS: posledná poloha pred "+Math.round((Date.now()-lastFix)/1000)+" s"}},5000);
+
+function trackStats(){
+  let km=0,gap=0,accSum=0;
+  for(let i=0;i<track.length;i++){accSum+=track[i].acc;
+    if(i){km+=dist([track[i-1].lat,track[i-1].lon],[track[i].lat,track[i].lon])/1000;gap=Math.max(gap,track[i].t-track[i-1].t)}}
+  return{km,gap,acc:track.length?accSum/track.length:null}
+}
+function renderGps(){
+  const s=trackStats();
+  $("g-pts").textContent=track.length;
+  $("g-acc").textContent=s.acc==null?"–":"± "+s.acc.toFixed(1).replace(".",",")+" m";
+  $("g-km").textContent=s.km.toFixed(2).replace(".",",");
+  $("g-gap").textContent=track.length>1?(s.gap<120000?Math.round(s.gap/1000)+" s":fmtDur(s.gap)):"–";
+  $("g-rec").textContent=recording?"Zastaviť záznam":(track.length?"Pokračovať v zázname":"Spustiť záznam");
+  $("g-rec").className=recording?"danger":"primary";
+  $("g-export").disabled=!track.length;$("g-clear").disabled=!track.length||recording;
+  $("rec-ind").className=recording?"on":"";
+}
+$("g-rec").onclick=()=>{recording=!recording;store.set("recording",recording);if(recording)wake(true);store.set("track",track);renderGps()};
+$("g-clear").onclick=()=>{if(!confirm("Vymazať celý GPS záznam?"))return;track=[];store.set("track",track);trackLine.setLatLngs([]);renderGps()};
+$("g-export").onclick=()=>{
+  const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const first=track[0]?new Date(track[0].t):new Date();
+  const name="Fór telefón "+first.toISOString().slice(0,16).replace("T"," ");
+  let x=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="For test 0.1" xmlns="http://www.topografix.com/GPX/1/1">\n<metadata><name>${esc(name)}</name><desc>${esc(navigator.userAgent)}</desc></metadata>\n<trk><name>${esc(name)}</name><trkseg>\n`;
+  for(const p of track)x+=`<trkpt lat="${p.lat}" lon="${p.lon}">${p.ele!=null?`<ele>${p.ele}</ele>`:""}<time>${new Date(p.t).toISOString()}</time><hdop>${p.acc}</hdop><desc>acc=${p.acc}</desc></trkpt>\n`;
+  x+="</trkseg></trk>\n</gpx>\n";
+  download("for-telefon-"+first.toISOString().slice(0,10)+".gpx",x,"application/gpx+xml");
+};
+trackLine.setLatLngs(track.map(p=>[p.lat,p.lon])).addTo(map);
+
+async function download(name,text,type){
+  const blob=new Blob([text],{type});
+  try{const file=new File([blob],name,{type});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+}
+
+/* ---------- nezhasínať displej ---------- */
+let wakeLock=null,wantWake=false;
+async function wake(on){
+  wantWake=on;
+  try{if(on&&"wakeLock" in navigator){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null;renderWake()})}
+    else if(!on&&wakeLock){await wakeLock.release();wakeLock=null}}catch(e){}
+  renderWake();
+}
+function renderWake(){$("g-wake").textContent="Nezhasínať displej: "+(wakeLock?"zapnuté":wantWake?"nepodporované":"vypnuté")}
+$("g-wake").onclick=()=>wake(!wakeLock);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&wantWake&&!wakeLock)wake(true)});
+
+/* ---------- záložky ---------- */
+function showView(id){
+  document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on",s.id===id));
+  document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===id));
+  if(id==="v-map")setTimeout(()=>map.invalidateSize(),50);
+  if(id==="v-gps")renderGps();
+  if(id==="v-pace")renderPace();
+}
+document.querySelector("nav").onclick=e=>{const b=e.target.closest("button[data-v]");if(b)showView(b.dataset.v)};
+
+if(recording)wake(true);
+render();renderGps();
+if(hasGreen())map.setView(greenPt(),17);
+
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+})();
+</script>
+</body>
+</html>
