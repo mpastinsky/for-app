@@ -37,7 +37,11 @@ const HOLES={
  1:{par:3,c:133,f:121,b:146,dir:"na východ",
    green:[[-3,121],[5,122],[10,127],[11,135],[8,142],[2,146],[-5,145],[-10,139],[-11,131],[-8,124]],
    fairway:[[-11,35],[-13,60],[-12,85],[-9,105],[-6,116],[6,117],[11,104],[14,80],[13,55],[10,35]],
-   bunkers:[[[-17,130],[-14,128],[-13,134],[-15,138],[-13,143],[-15,149],[-18,147],[-17,141],[-19,136]],"c:15,123,4"]},
+   bunkers:[[[-17,130],[-14,128],[-13,134],[-15,138],[-13,143],[-15,149],[-18,147],[-17,141],[-19,136]],"c:15,123,4"],
+   // podľa videa z odpaliska (16.11.): suchý žltkastý rough, okrúhle vyvýšené predné odpalisko kúsok vpredu,
+   // trávnaté valy pri greene, jeden mladý strom vpravo, stromy až ďaleko v pozadí
+   video:{note:"Jamka spresnená podľa tvojho videa: suchý rough, predné okrúhle odpalisko, valy pri greene, mladý strom vpravo. Stále ilustračné.",
+     dry:true,disc:[[-4,20,8]],young:[[24,62]],mounds:[[-30,140,14,10,1.8],[26,150,16,8,1.6],[0,172,36,8,1.5]],treeline:[-160,160,270,300],openSides:true}},
  2:{par:3,c:100,f:90,b:109,dir:"na sever",
    green:[[-3,90.5],[5,92],[8,98],[7,105],[1,109],[-6,107],[-8,101],[-12,95],[-13,88],[-7,86]],
    fairway:[[-9,25],[-10,50],[-10,72],[-9,82],[4,84],[8,74],[10,50],[9,25]],
@@ -127,6 +131,8 @@ if(V){
     for(let k=0;k<rx*ry/4;k++){const a=rnd()*6.283,rr=Math.sqrt(rnd());const dx=Math.cos(a)*rr*rx*.9,dy=Math.sin(a)*rr*ry*.9;const hh=h*Math.sqrt(Math.max(0,1-rr*rr))-0.1;
       const f=new THREE.Mesh(new THREE.SphereGeometry(.12,4,3),new THREE.MeshBasicMaterial({color:0xffffff}));f.position.copy(toWorld(x+dx,y+dy,hh));scene.add(f)}}
   if(V.sunWest){sun.position.copy(toWorld(-10,D.c+260,60));sun.target.position.copy(toWorld(0,D.c*.5,0));sun.color.set(0xfff1d6);sun.intensity=1.2;hemi.intensity=2.1;scene.background.set(0xc9dbe8);scene.fog.color.set(0xc9dbe8)}
+  if(V.dry)gm.material.color.set(0x9c9a52);
+  for(const [x,y,r] of V.disc||[]){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r+1.2,0.6,32),new THREE.MeshStandardMaterial({color:0x8fcf62,roughness:.9}));m.position.copy(toWorld(x,y,0.1));m.receiveShadow=true;scene.add(m)}
   if(V.treeline){const[x0,x1,y0,y1]=V.treeline;for(let k=0;k<160;k++){const pt=[x0+rnd()*(x1-x0),y0+rnd()*(y1-y0)];const h=12+rnd()*8,r=3.5+rnd()*2.5;
     const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.y=1.3;cr.position.copy(toWorld(pt[0],pt[1],h*.5+r));cr.castShadow=true;scene.add(cr);
     const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.5,h*.5,6),trunkM);tr.position.copy(toWorld(pt[0],pt[1],h*.25));scene.add(tr)}}
