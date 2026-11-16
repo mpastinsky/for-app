@@ -369,8 +369,8 @@ const REPORTS=[
   {k:"bunker",i:"🏖️",t:"Bunker treba upraviť"},
   {k:"other",i:"❗",t:"Iné"}];
 const TEES={black:"čierne",white:"biele",yellow:"žlté",blue:"modré",red:"červené"};
-// Akadémia podľa Garminu (16.11.): jamka 1 par 3 / 133 m, jamka 2 par 3 / 100 m, jamka 3 zatiaľ neznáma (par 3).
-const AKAD_LEN=[133,100,0]; // jamka 2: par 3, 100 m (predok 90, zadok 109)
+// Akadémia podľa Garminu (16.11.): jamka 1 par 3 / 133 m, jamka 2 par 3 / 100 m, jamka 3 par 3 / 136 m.
+const AKAD_LEN=[133,100,136]; // stred greenu; predok/zadok: 121/146, 90/109, 122/146
 const DEFAULT_AKAD={name:"Apex Akadémia",tee:"yellow",par:[3,3,3],si:null,len:{black:AKAD_LEN,white:AKAD_LEN,yellow:AKAD_LEN,blue:AKAD_LEN,red:AKAD_LEN},greens:[null,null,null]};
 let course=Object.assign(JSON.parse(JSON.stringify(AKAD?DEFAULT_AKAD:DEFAULT_COURSE)),store.get("course",{}));
 course.len=JSON.parse(JSON.stringify((AKAD?DEFAULT_AKAD:DEFAULT_COURSE).len));
