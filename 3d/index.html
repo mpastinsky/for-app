@@ -255,7 +255,7 @@ const REPORTS=[
   {k:"mole",i:"🐀",t:"Krtince",g:"course",w:["krt"]},
   {k:"branch",i:"🌳",t:"Zlomená vetva / strom",g:"course",w:["konar","vetv","strom","spadn"]},
   {k:"tee",i:"📍",t:"Chýba kolík / značka",g:"course",w:["kolik","znack","odpalisk"]},
-  {k:"bunker",i:"🏖️",t:"Bunker treba upraviť",w:["bunker","piesok","hrabl"]},
+  {k:"bunker",i:"🏖️",t:"Neupravený bunker",w:["bunker","piesok","hrabl"]},
   {k:"trash",i:"🗑️",t:"Neporiadok / odpadky",w:["neporiad","smet","odpad","spina","spinav","flas","plechov","papier","nedopal","bordel","necist"]},
   {k:"animal",off:1,i:"🦌",t:"Zvieratá na ihrisku",w:["zvier","srn","diviak","zajac","pes ","psy","had","bazant","lisk"]},
   {k:"drink",off:1,i:"🥤",t:"Chýba občerstvenie",w:["obcerstv","pitie","piti","napoj","bufet","automat"]},
@@ -345,8 +345,8 @@ const NOT_IN_BUNKER=["divot","mole","pitch","greenbad"];
 function inBunker(){const w=where();if(w.k==="approx")return false;const[x,y]=loc(toEN(...w.p));return bunkersL.some(B=>sdist(x,y,B)<0)}
 const allowed=k=>!(k==="bunker"&&!bunkerOk())&&!(NOT_IN_BUNKER.includes(k)&&inBunker());
 let level=null;
-const DIAL={top:["mic","g:pace","g:green","g:info","g:course"],pace:["slow","fast"],green:["trash","wet","greenbad","divot","mole","other"],info:["ball","help","text"],course:["bunker","pitch","flag","branch","tee","great"]};
-const DG={pace:{i:"⏱️",t:"Tempo hry"},green:{i:"🟢",t:"Green"},info:{i:"ℹ️",t:"Info"},course:{i:"🌳",t:"Ihrisko"}};
+const DIAL={top:["mic","g:pace","g:green","g:info"],pace:["slow","fast"],green:["trash","wet","greenbad","divot","mole","bunker","other"],info:["ball","help","text"]};
+const DG={pace:{i:"⏱️",t:"Tempo hry"},green:{i:"🌳",t:"Ihrisko"},info:{i:"ℹ️",t:"Info"}};
 function tile(k){if(k==="mic")return SR?`<button data-mic="1" class="mic ${rec?"on":""}"><span>🎤</span><em>${rec?"Počúvam…":"Povedať hlasom"}</em></button>`:"";
   if(k==="back")return `<button data-back="1"><span>‹</span><em>Späť</em></button>`;
   if(k.startsWith("g:")){const g=DG[k.slice(2)];return `<button data-g="${k.slice(2)}" class="grp ${g.hot?"hot":""}"><span>${g.i}</span><em>${g.t} ›</em></button>`}
@@ -356,7 +356,7 @@ function renderSheet(){const w=where();
   $3("r3where").innerHTML="📍 "+w.src+(repAt&&meLL?'<button id="r3me">moja poloha</button>':"");if($3("r3me"))$3("r3me").onclick=()=>{repAt=null;renderSheet()}}
 function askText(k){stopVoice();const ri=repInfo(k);
   $3("r3grid").innerHTML=`<button data-back="1"><span>‹</span><em>Späť</em></button><div id="r3txt" style="background:#fff;border-radius:14px;padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.35);width:min(230px,62vw);box-sizing:border-box;margin-right:2px">
-    <div style="font:700 .85rem var(--font);margin-bottom:6px">${ri.i} ${k==="other"?"Iné na greene":"Vlastný text"}</div>
+    <div style="font:700 .85rem var(--font);margin-bottom:6px">${ri.i} ${k==="other"?"Iné na ihrisku":"Vlastný text"}</div>
     <textarea id="r3in" maxlength="120" rows="3" placeholder="Napíš krátko, čo sa deje…" style="width:100%;box-sizing:border-box;font:16px var(--font);border:1px solid #d6ddd3;border-radius:10px;padding:6px"></textarea>
     <button id="r3ok" style="width:100%;margin-top:6px;min-height:40px;border:0;border-radius:10px;background:#0f6b4a;color:#fff;font:700 .95rem var(--font)">Uložiť</button></div>`;
   const inp=$3("r3in");setTimeout(()=>inp.focus(),50);
