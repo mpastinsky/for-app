@@ -209,14 +209,24 @@ const trunkM=new THREE.MeshStandardMaterial({color:0x6b4a2b}),leafM=[0x2f6b2c,0x
 const inside=(x,y)=>x>X0+2&&x<X1-2&&y>Y0+2&&y<Y1-2;
 const seeM=new THREE.MeshStandardMaterial({color:0x3b7d33,roughness:.95,transparent:true,opacity:.32,depthWrite:false});
 // stromy, ktoré stoja v ploche hrania (medzi odpaliskom a greenom), sú priesvitné, aby bolo vidno cez ne
+// stromy medzi kamerou a tým, na čo sa pozeráme, sa priebežne zprehľadnia
+const FADE=[];let PIN_V=null;
+function fadeTrees(){const cp=camera.position,goals=[controls.target,...(PIN_V||(PIN_V=[[0,c],[GB.x0+2,(GB.y0+GB.y1)/2],[GB.x1-2,(GB.y0+GB.y1)/2],[0,GB.y0+1],[0,GB.y1-1]].map(([x,y])=>W(x,y,hL(x,y)+.5))))];
+  for(const f of FADE){let hit=false;const dc=f.c.distanceTo(cp);if(dc<f.r+4)hit=true;
+    else for(const g of goals){const d=g.clone().sub(cp),L=d.length();d.divideScalar(L);
+      for(const[pt,rr]of[[f.c,f.r+1.2],[f.b,1.6]]){const s=pt.clone().sub(cp).dot(d);if(s>0&&s<L-1){const q=cp.clone().addScaledVector(d,s);if(q.distanceTo(pt)<rr){hit=true;break}}}if(hit)break}
+    const to=hit?.28:1;if(Math.abs(f.op-to)<.01)continue;f.op+=(to-f.op)*.18;if(Math.abs(f.op-to)<.02)f.op=to;
+    for(const m of f.m){const M=m.material,tr=f.op<1;if(M.transparent!==tr){M.transparent=tr;M.depthWrite=!tr;M.needsUpdate=true}M.opacity=f.op}}}
 const inPlay=(x,y,r)=>y>-2&&y<c-5&&Math.abs(x)<r+9;
 // pás stromov a kríkov (napr. vpravo od dvojky): husté koruny až po zem, bez kmeňov
 function bush(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);
-  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.set(1.15,(h*.5)/r,1.15);cr.position.copy(W(x,y,z+h*.45));cr.castShadow=true;scene.add(cr);
-  const lo=new THREE.Mesh(new THREE.SphereGeometry(r*.9,8,6),leafM[(k+1)%3]);lo.scale.y=.7;lo.position.copy(W(x+(rnd()-.5)*r,y+(rnd()-.5)*r,z+r*.45));scene.add(lo)}
+  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3].clone());cr.scale.set(1.15,(h*.5)/r,1.15);cr.position.copy(W(x,y,z+h*.45));cr.castShadow=true;scene.add(cr);
+  const lo=new THREE.Mesh(new THREE.SphereGeometry(r*.9,8,6),leafM[(k+1)%3].clone());lo.scale.y=.7;lo.position.copy(W(x+(rnd()-.5)*r,y+(rnd()-.5)*r,z+r*.45));scene.add(lo);
+  FADE.push({m:[cr,lo],c:cr.position.clone(),b:W(x,y,z+1),r:Math.max(r*1.15,h*.5),op:1})}
 function tree(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);const see=inPlay(x,y,r);
   const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.55,h*.5,6),trunkM);tr.position.copy(W(x,y,z+h*.25));tr.castShadow=true;scene.add(tr);
-  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),see?seeM:leafM[k%3]);cr.scale.y=1.2;cr.position.copy(W(x,y,z+h*.5+r*.8));cr.castShadow=!see;scene.add(cr)}
+  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),see?seeM:leafM[k%3].clone());cr.scale.y=1.2;cr.position.copy(W(x,y,z+h*.5+r*.8));cr.castShadow=!see;scene.add(cr);
+  if(!see)FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.25),r:r*1.15,op:1})}
 DATA.trees.forEach(([e,n,r,h],k)=>{const[x,y]=loc([e,n]);tree(x,y,r,h,k)});
 {const thin=new THREE.MeshStandardMaterial({color:0x6f9f45,roughness:.9});
  DATA.row.forEach(p=>{const[x,y]=loc(p);if(!inside(x,y))return;const z=hL(x,y),h=6+rnd()*2;
@@ -647,7 +657,7 @@ function loop(now){const dt=Math.min(.05,lastT?(now-lastT)/1000:0);lastT=now;
   waveFlag(now/1000);if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
-     const cp=camera.position,gh=hL(cp.x,-cp.z)+1.5;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}renderer.render(scene,camera);placeLabels();repTick();requestAnimationFrame(loop)}
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+1.5;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}fadeTrees();renderer.render(scene,camera);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // nová verzia appky: service worker sa hneď aktualizuje a stránka sa raz obnoví
