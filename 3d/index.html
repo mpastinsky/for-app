@@ -18,7 +18,7 @@ canvas{display:block;touch-action:none}
 #bar button.on{background:#0f6b4a;color:#fff}
 #tees{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 70px);display:flex;gap:6px;align-items:center;color:#fff;font-size:.85rem;text-shadow:0 1px 3px #000}
 #tees a{color:#14211a;background:rgba(255,255,255,.85);border-radius:999px;padding:7px 12px;text-decoration:none;font-weight:600;text-shadow:none}#tees a.on{background:#0f6b4a;color:#fff}#tees i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;border:1px solid #0005;vertical-align:-1px}
-#note{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 68px);color:#fff;font-size:.8rem;text-shadow:0 1px 3px #000;opacity:.9}
+#note{position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);color:#fff;font-size:9px;text-shadow:0 1px 2px #000;opacity:.6;pointer-events:none}
 .lab{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:3px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35);pointer-events:none}
 .lab.arc{background:rgba(0,0,0,.55);color:#fff;font-weight:600}
 #top b{white-space:nowrap}#top small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top>div:nth-child(2){min-width:0}
@@ -94,7 +94,7 @@ document.getElementById("h-t").textContent="Jamka "+hNum+" · Par 3";
 document.getElementById("h-s").textContent=TEE_N[tIdx]+" · "+f+" / "+c+" / "+b+" m";
 document.querySelectorAll("#holes a").forEach(a=>{a.href="?h="+a.dataset.h+"&t="+tIdx;a.classList.toggle("on",+a.dataset.h===hNum)});
 document.querySelectorAll("#tees a").forEach(a=>{a.href="?h="+hNum+"&t="+a.dataset.t;a.classList.toggle("on",+a.dataset.t===tIdx)});
-const dh=hG;document.getElementById("note").textContent="Skutočný terén z výškového modelu DMR 5.0 (ÚGKK SR, CC BY 4.0). Green je "+(Math.abs(dh)<0.15?"v rovine s odpaliskom":(dh>0?"o "+dh.toFixed(1).replace(".",",")+" m vyššie":"o "+(-dh).toFixed(1).replace(".",",")+" m nižšie")+" ako odpalisko")+". Tvary zo satelitu.";
+document.getElementById("note").textContent="Terén © ÚGKK SR, DMR 5.0 (CC BY 4.0)";
 
 // --- scéna
 const scene=new THREE.Scene();
@@ -309,7 +309,7 @@ if(PLAY){
    <div id="p-res" hidden></div>`;
   document.body.appendChild(hud);
   const st=document.createElement("style");st.textContent=`
-   body.playing #bar,body.playing #note{display:none}body.started #tees,body.done #p-row,body.done #p-hit{display:none}
+   body.playing #bar{display:none}body.playing #note{bottom:calc(env(safe-area-inset-bottom,0px) + 136px)}body.started #tees,body.done #p-row,body.done #p-hit{display:none}
    #play{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:flex;flex-direction:column;gap:8px;font-family:var(--font)}
    #p-row{display:flex;gap:8px}#p-row>button,#p-club button{font:700 1.2rem var(--font);min-width:52px;min-height:48px;border:0;border-radius:12px;background:#fff;color:#14211a;box-shadow:0 3px 12px rgba(0,0,0,.25)}
    #p-club{flex:1;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.92);border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.25)}
