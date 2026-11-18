@@ -33,6 +33,8 @@ import {OrbitControls} from "./lib/OrbitControls.js";
 // Akadémia Apex: tvary podľa náhľadu jamiek v Garmin fenix (16.11.2026), v metroch.
 // x = vpravo, y = dopredu od odpaliska. Ilustračné, nie GPS zameranie.
 const D2=v=>v; // pomocník na čitateľnosť
+// Tvary greenov, bunkrov a stromov obkreslené zo satelitnej snímky (18.11.), usadené na GPS greeny z Garminu.
+const SAT={"1":{"green":[[-2.7,120.9],[-6.8,125.3],[-8.9,131.6],[-9.2,137.9],[-7.4,142.5],[-3.4,144.7],[1.7,144.8],[6.4,141.0],[9.3,134.9],[9.5,128.4],[7.0,123.8],[2.2,121.3]],"others":[[[-65.5,156.3],[-68.9,160.2],[-70.4,165.9],[-68.6,171.1],[-63.9,174.2],[-58.9,174.4],[-55.2,171.2],[-53.9,165.3],[-56.0,160.4],[-60.1,157.0]],[[-43.9,24.6],[-47.9,29.4],[-49.6,36.1],[-47.9,41.7],[-43.7,44.0],[-38.8,42.7],[-35.5,37.7],[-34.5,31.5],[-36.8,26.5],[-40.2,24.4]]],"bunkers":[[[14.9,113.2],[17.3,114.3],[17.4,115.4],[17.0,118.3],[16.5,118.5],[15.1,121.5],[10.5,120.2],[10.0,118.8],[11.0,115.4],[12.6,114.4],[13.0,113.7],[13.6,113.9]],[[-71.1,183.1],[-70.5,181.2],[-69.9,180.5],[-66.4,179.6],[-64.4,180.0],[-62.8,178.3],[-62.5,178.4],[-61.6,177.8],[-60.1,178.3],[-60.4,179.5],[-61.2,179.9],[-61.0,180.6],[-59.9,180.7],[-60.2,180.2],[-59.7,178.6],[-58.4,179.0],[-56.8,180.3],[-56.3,181.3],[-57.0,183.9],[-57.7,184.5],[-60.0,184.5],[-64.0,183.1],[-65.1,183.2],[-65.8,184.0],[-67.0,184.3],[-67.1,184.9],[-68.5,185.4],[-70.5,184.8]],[[-28.7,36.5],[-28.4,34.7],[-27.6,34.1],[-27.2,32.8],[-25.0,31.9],[-23.1,32.5],[-22.2,33.8],[-21.5,34.2],[-22.5,37.6],[-23.2,37.8],[-23.4,38.6],[-24.2,39.2],[-24.8,39.0],[-26.0,39.5],[-27.2,39.1],[-27.6,37.1]],[[-48.6,78.7],[-47.3,75.7],[-45.4,74.9],[-43.0,75.2],[-41.4,75.9],[-40.9,77.6],[-42.1,80.8],[-43.8,81.8],[-44.9,81.9],[-47.3,81.2],[-47.9,80.6]],[[-16.4,123.5],[-17.1,127.1],[-17.3,129.8],[-16.5,132.2],[-16.0,134.8],[-16.5,138.1],[-16.5,141.1],[-14.8,142.2],[-12.6,141.4],[-11.9,138.4],[-11.8,135.2],[-12.4,132.7],[-12.3,129.6],[-12.0,126.3],[-13.4,123.9]]],"trees":[[-35.5,9.1,4,10],[-61.5,0.3,4,10],[-66.7,10.4,4,10],[-70.1,24.3,3.5,9],[-13.4,-15.2,4,10],[-12.4,-4.3,4,10],[2.3,-18.2,3.5,9],[7.8,-15.1,3.5,9],[-28.9,78.6,4.5,11],[-25.1,83.3,3.5,9],[-76.7,65.9,4,10],[-84.0,79.7,4,10],[-87.1,89.6,4.5,11],[-91.0,103.5,5,12],[-27.0,106.1,4,10],[-28.1,102.6,3,8],[-75.9,109.7,4.5,11],[-78.9,107.1,3.5,9],[-72.1,138.4,4,10],[-66.5,142.6,4,10],[-59.1,143.3,4,10],[-10.9,154.4,2.5,6],[2.0,155.1,2.5,6],[-5.6,155.8,2,5]],"row":[[17.0,-0.9],[11.8,9.3],[17.9,12.5],[22.2,32.3],[23.9,43.2],[25.4,53.0],[26.6,59.3],[24.3,71.4],[21.5,76.5],[23.4,82.8],[24.6,88.9],[23.8,92.4],[19.3,98.1],[25.1,104.5],[25.5,109.5],[27.4,114.8],[27.6,120.3],[23.3,127.8],[29.4,134.3],[23.3,137.8],[21.7,140.9],[22.1,146.1],[22.2,150.8],[22.7,154.8],[20.5,159.3]],"woods":[[[-79.7,187.2],[-87.0,197.5],[-57.7,206.2],[13.6,215.8],[17.6,202.2],[-27.4,189.9],[-44.1,196.0]],[[-114.7,161.9],[-122.2,187.1],[-92.9,195.8],[-98.7,176.2],[-105.2,165.8]]],"tees":[[32.6,194.5],[-91.1,165.6]]},"2":{"green":[[-8.0,105.9],[-3.2,108.1],[2.7,107.8],[7.2,104.5],[8.8,99.2],[7.5,94.2],[3.4,91.6],[-2.8,92.1],[-6.8,95.6],[-8.8,100.5]],"others":[[[-60.6,55.8],[-55.2,58.4],[-48.5,58.6],[-42.3,57.1],[-38.4,54.0],[-37.4,49.4],[-38.9,44.5],[-43.9,41.1],[-50.7,40.1],[-57.0,41.8],[-60.7,45.5],[-61.7,50.9]],[[-141.4,123.9],[-135.6,126.3],[-128.6,126.0],[-123.7,122.7],[-122.7,118.0],[-125.4,113.7],[-131.2,111.9],[-137.6,112.8],[-141.6,116.5],[-142.6,120.4]]],"bunkers":[[[-73.3,41.1],[-72.9,38.4],[-71.8,38.0],[-69.0,37.6],[-68.6,38.0],[-65.3,38.4],[-65.2,43.3],[-66.5,44.1],[-69.9,44.2],[-71.4,42.9],[-72.2,42.7],[-72.2,42.1]],[[19.5,103.4],[17.5,103.4],[16.7,103.0],[14.8,99.9],[14.6,97.9],[12.5,96.9],[12.5,96.5],[11.7,95.8],[11.6,94.2],[12.9,94.2],[13.5,94.8],[14.1,94.4],[13.9,93.4],[13.5,93.8],[11.8,93.8],[11.8,92.4],[12.6,90.5],[13.5,89.7],[16.1,89.6],[17.0,90.0],[17.6,92.3],[17.4,96.6],[17.8,97.6],[18.9,98.0],[19.5,99.1],[20.1,99.1],[20.9,100.3],[21.0,102.3]],[[-134.3,105.7],[-136.2,106.0],[-137.0,105.4],[-138.5,105.4],[-139.9,103.5],[-139.9,101.5],[-138.9,100.2],[-138.7,99.4],[-135.2,99.4],[-134.8,100.0],[-134.0,100.0],[-133.2,100.6],[-133.1,101.2],[-132.3,102.2],[-132.3,103.5],[-134.1,104.5]],[[-87.8,112.5],[-91.1,112.1],[-92.4,110.5],[-92.8,108.1],[-92.6,106.4],[-91.2,105.4],[-87.7,105.5],[-86.3,107.0],[-85.8,108.0],[-85.8,110.5],[-86.2,111.3]],[[-54.1,68.3],[-50.4,67.8],[-47.8,67.2],[-45.7,65.7],[-43.3,64.5],[-40.0,64.0],[-37.1,63.2],[-36.5,61.1],[-38.0,59.3],[-41.0,59.5],[-44.1,60.4],[-46.4,61.6],[-49.4,62.5],[-52.7,63.1],[-54.6,65.2]]],"trees":[[-158.9,120.3,4,10],[-159.7,148.1,4,10],[-148.3,150.0,4,10],[-134.0,149.3,3.5,9],[-188.8,106.2,4,10],[-178.5,102.0,4,10],[-196.3,91.9,3.5,9],[-194.9,85.7,3.5,9],[-93.8,93.5,4.5,11],[-90.3,88.5,3.5,9],[-91.9,143.4,4,10],[-76.5,146.3,4,10],[-66.0,146.4,4.5,11],[-51.4,146.1,5,12],[-67.8,83.6,4,10],[-70.8,85.7,3,8],[-49.9,129.7,4.5,11],[-51.5,133.4,3.5,9],[-23.3,117.5,4,10],[-20.9,110.9,4,10],[-22.4,103.5,4,10],[-25.9,53.8,2.5,6],[-29.1,41.1,2.5,6],[-26.1,48.3,2,5]],"row":[[-183.9,72.7],[-172.6,74.6],[-171.2,67.8],[-153.5,57.8],[-143.4,53.0],[-134.4,48.6],[-128.7,45.7],[-116.4,44.4],[-110.6,45.5],[-105.1,41.8],[-99.6,38.9],[-95.9,38.6],[-89.1,41.2],[-84.6,33.8],[-79.9,31.9],[-75.4,28.6],[-70.1,26.7],[-61.7,28.7],[-57.2,20.8],[-52.0,25.7],[-48.5,26.3],[-43.6,24.4],[-39.1,22.9],[-35.4,21.3],[-30.5,22.0]],"woods":[[[26.0,110.5],[38.1,114.5],[37.9,83.7],[26.1,12.1],[11.8,12.2],[13.2,59.3],[24.0,73.5]],[[11.9,151.7],[38.4,151.5],[38.2,120.7],[21.0,132.1],[12.9,141.4]]],"tees":[[-178.1,88.8],[8.6,127.8]]},"3":{"green":[[4.9,144.1],[6.9,138.4],[6.3,131.7],[2.8,127.2],[-1.8,126.5],[-5.8,129.4],[-7.2,135.0],[-6.0,141.1],[-2.1,144.8],[1.7,145.5]],"others":[[[-65.1,70.5],[-62.9,65.2],[-63.1,58.7],[-64.9,52.9],[-68.1,49.4],[-72.5,48.7],[-77.2,50.4],[-80.2,55.4],[-80.7,61.9],[-78.7,67.9],[-74.9,71.2],[-69.7,71.9]],[[-20.1,17.1],[-18.2,12.5],[-18.8,6.8],[-22.3,2.6],[-27.5,1.4],[-32.2,2.9],[-34.4,7.0],[-33.6,12.9],[-30.0,16.6],[-25.2,18.3]]],"bunkers":[[[-78.4,83.5],[-81.0,83.3],[-81.5,82.4],[-82.1,79.6],[-81.7,79.2],[-81.5,76.0],[-76.8,75.7],[-75.9,76.8],[-75.7,80.2],[-76.8,81.6],[-76.9,82.4],[-77.5,82.5]],[[-24.1,-9.1],[-24.0,-7.1],[-24.3,-6.3],[-27.1,-4.3],[-29.1,-4.0],[-29.9,-2.0],[-30.3,-1.9],[-30.9,-1.1],[-32.4,-1.0],[-32.5,-2.2],[-32.0,-2.8],[-32.4,-3.4],[-33.4,-3.1],[-33.0,-2.8],[-32.8,-1.2],[-34.2,-1.1],[-36.0,-1.7],[-36.9,-2.5],[-37.1,-5.0],[-36.7,-5.9],[-34.6,-6.6],[-30.5,-6.7],[-29.5,-7.2],[-29.2,-8.2],[-28.2,-8.8],[-28.3,-9.4],[-27.1,-10.3],[-25.2,-10.4]],[[-12.9,138.4],[-12.5,140.1],[-13.1,141.0],[-13.0,142.3],[-14.7,143.8],[-16.6,144.0],[-17.9,143.1],[-18.7,142.9],[-18.9,139.6],[-18.4,139.2],[-18.4,138.4],[-17.9,137.5],[-17.3,137.5],[-16.4,136.6],[-15.2,136.6],[-14.1,138.3]],[[-9.1,93.4],[-9.2,96.6],[-10.7,97.8],[-13.1,98.4],[-14.7,98.3],[-15.7,97.0],[-15.8,93.6],[-14.5,92.2],[-13.5,91.7],[-11.2,91.5],[-10.4,91.9]],[[-53.5,63.6],[-54.1,60.1],[-54.9,57.6],[-56.4,55.7],[-57.8,53.4],[-58.4,50.3],[-59.4,47.6],[-61.4,47.1],[-63.0,48.6],[-62.6,51.6],[-61.6,54.5],[-60.3,56.6],[-59.3,59.5],[-58.5,62.6],[-56.4,64.2]]],"trees":[[2.6,161.1,4,10],[29.2,160.2,4,10],[30.4,149.2,4,10],[28.9,135.5,3.5,9],[-9.2,190.6,4,10],[-13.9,181.0,4,10],[-22.5,198.6,3.5,9],[-28.6,197.7,3.5,9],[-27.0,100.2,4.5,11],[-32.0,97.1,3.5,9],[20.8,95.5,4,10],[22.7,80.5,4,10],[22.2,70.4,4.5,11],[21.0,56.5,5,12],[-38.0,75.8,4,10],[-35.8,78.6,3,8],[5.2,56.0,4.5,11],[8.8,57.3,3.5,9],[-8.0,31.1,4,10],[-14.5,29.2,4,10],[-21.5,31.1,4,10],[-69.0,37.4,2.5,6],[-81.0,41.2,2.5,6],[-74.3,37.9,2,5]],"row":[[-41.7,187.9],[-40.5,176.9],[-47.1,176.0],[-57.7,159.5],[-62.9,150.2],[-67.7,141.8],[-70.8,136.5],[-72.8,124.7],[-72.0,119.1],[-75.9,114.1],[-79.0,108.9],[-79.5,105.4],[-77.4,98.7],[-84.8,94.9],[-86.9,90.5],[-90.3,86.3],[-92.4,81.3],[-91.0,73.1],[-98.8,69.3],[-94.4,64.1],[-94.1,60.7],[-96.2,56.1],[-97.9,51.8],[-99.7,48.4],[-99.2,43.6]],"woods":[[[-17.6,-15.7],[-14.5,-27.6],[-44.0,-25.5],[-112.1,-10.1],[-111.1,3.7],[-66.0,-0.5],[-53.0,-11.7]],[[22.7,-4.6],[21.0,-30.1],[-8.6,-28.0],[3.4,-12.2],[12.8,-4.9]]],"tees":[[-26.6,181.3],[-122.1,15.6]]}};
 const HOLES={
  1:{par:3,c:133,f:121,b:146,dir:"na východ",
    green:[[-3,121],[5,122],[10,127],[11,135],[8,142],[2,146],[-5,145],[-10,139],[-11,131],[-8,124]],
@@ -40,26 +42,27 @@ const HOLES={
    bunkers:[[[-17,130],[-14,128],[-13,134],[-15,138],[-13,143],[-15,149],[-18,147],[-17,141],[-19,136]],"c:15,123,4"],
    // podľa videa z odpaliska (16.11.): suchý žltkastý rough, okrúhle vyvýšené predné odpalisko kúsok vpredu,
    // trávnaté valy pri greene, jeden mladý strom vpravo, stromy až ďaleko v pozadí
-   video:{note:"Jamka spresnená podľa tvojho videa: suchý rough, predné okrúhle odpalisko, valy pri greene, mladý strom vpravo. Stále ilustračné.",
+   video:{note:"Greeny, bunkre a stromy podľa satelitu, usadené na GPS z hodiniek. Valy a farby podľa tvojho videa.",
      dry:true,disc:[[-4,20,8]],young:[[24,62]],mounds:[[-30,140,14,10,1.8],[26,150,16,8,1.6],[0,172,36,8,1.5]],treeline:[-160,160,270,300],openSides:true}},
  2:{par:3,c:100,f:90,b:109,dir:"na sever",
    green:[[-3,90.5],[5,92],[8,98],[7,105],[1,109],[-6,107],[-8,101],[-12,95],[-13,88],[-7,86]],
    fairway:[[-9,25],[-10,50],[-10,72],[-9,82],[4,84],[8,74],[10,50],[9,25]],
    bunkers:[[[12,99],[15,102],[18,98],[16,93],[17,88],[14,85],[11,89],[13,94]]],
    // podľa videa z odpaliska (16.11.): hustý pás listnatých stromov za greenom, trávnaté vlny vľavo aj vpravo od greenu
-   video:{treeline:[-120,120,D2(150),D2(175)],mounds:[[-26,96,12,20,1.6],[25,104,10,16,1.4],[-5,128,32,7,1.3]],openSides:true,note:"Jamka spresnená podľa tvojho videa: hustý pás stromov za greenom, trávnaté vlny pri greene. Stále ilustračné."}},
+   video:{treeline:[-120,120,D2(150),D2(175)],mounds:[[-26,96,12,20,1.6],[25,104,10,16,1.4],[-5,128,32,7,1.3]],openSides:true,note:"Greeny, bunkre a stromy podľa satelitu, usadené na GPS z hodiniek. Valy podľa tvojho videa."}},
  3:{par:3,c:136,f:122,b:146,dir:"na západ",
    green:[[-4,123],[4,122],[9,127],[8,134],[10,140],[6,146],[-2,146],[-7,141],[-6,133],[-8,127]],
    fairway:[[-7,30],[-8,60],[-6,90],[-5,112],[3,118],[7,95],[8,65],[7,30]],
    bunkers:["c:-18,140,3.5","c:-15,80,3.5"],
    // podľa videa (16.11.): veľký listnatý strom vľavo pri odpalisku, dva mladé riedke stromy vpravo pred greenom,
    // trávnaté valy s kvetmi za greenom a vľavo, hrá sa proti zapadajúcemu slnku, okolie otvorené
-   video:{note:"Jamka spresnená podľa tvojho videa: veľký strom pri odpalisku, mladé stromy vpravo pred greenom, valy za greenom. Stále ilustračné.",big:[[-16,-2,6,15]],young:[[13,108],[19,117],[24,126]],mounds:[[0,162,38,8,2.2],[-30,150,10,18,1.8],[28,158,14,7,1.5]],sunWest:true,openSides:true}}
+   video:{note:"Greeny, bunkre a stromy podľa satelitu, usadené na GPS z hodiniek. Valy a večerné slnko podľa tvojho videa.",big:[[-16,-2,6,15]],young:[[13,108],[19,117],[24,126]],mounds:[[0,162,38,8,2.2],[-30,150,10,18,1.8],[28,158,14,7,1.5]],sunWest:true,openSides:true}}
 };
 const hNum=Math.min(3,Math.max(1,parseInt(new URLSearchParams(location.search).get("h"))||1));
 const D=HOLES[hNum];
 const circ=s=>{const[x,y,r]=s.slice(2).split(",").map(Number);return Array.from({length:14},(_,i)=>[x+Math.cos(i/14*6.283)*r,y+Math.sin(i/14*6.283)*r])};
-const H={fairway:D.fairway,green:D.green,bunkers:D.bunkers.map(b=>typeof b==="string"?circ(b):b)};
+const SD=SAT[hNum];
+const H={fairway:D.fairway,green:SD.green,bunkers:SD.bunkers};
 const P=p=>p;
 const G=[0,D.c];
 document.getElementById("h-t").textContent="Jamka "+hNum+" · Par "+D.par;
@@ -114,17 +117,11 @@ const trunkM=new THREE.MeshStandardMaterial({color:0x6b4a2b}),leafM=[0x2f6b2c,0x
 function inPoly(pt,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if(((b>pt[1])!==(e>pt[1]))&&(pt[0]<(d-a)*(pt[1]-b)/(e-b)+a))c=!c}return c}
 let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
 const V=D.video||null;
-for(let k=0;k<90;k++){const side=k%3; // línia stromov za greenom a po bokoch (ilustračne)
-  const far=V&&V.openSides?1:0;
-  const pt=side===0?[-140+rnd()*280,D.c+(far?140:45)+rnd()*25]:[(side===1?-1:1)*((far?110:55)+rnd()*25),-10+rnd()*(D.c+60)];
-  const h=9+rnd()*8,r=3+rnd()*2.5;
-  const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.5,h*.45,6),trunkM);tr.position.copy(toWorld(pt[0],pt[1],h*.22));tr.castShadow=true;scene.add(tr);
-  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.y=1.25;cr.position.copy(toWorld(pt[0],pt[1],h*.45+r*.9));cr.castShadow=true;scene.add(cr);}
 if(V){
-  for(const [x,y,r,h] of V.big||[]){const tr=new THREE.Mesh(new THREE.CylinderGeometry(.6,.9,h*.5,8),trunkM);tr.position.copy(toWorld(x,y,h*.25));tr.castShadow=true;scene.add(tr);
+  for(const [x,y,r,h] of []){const tr=new THREE.Mesh(new THREE.CylinderGeometry(.6,.9,h*.5,8),trunkM);tr.position.copy(toWorld(x,y,h*.25));tr.castShadow=true;scene.add(tr);
     for(let k=0;k<6;k++){const cr=new THREE.Mesh(new THREE.SphereGeometry(r*(.55+rnd()*.25),12,10),leafM[1]);cr.position.copy(toWorld(x+(rnd()-.5)*r*1.2,y+(rnd()-.5)*r*1.2,h*.55+rnd()*r*.6));cr.castShadow=true;scene.add(cr)}}
   const thinM=new THREE.MeshStandardMaterial({color:0x8fbf5a,roughness:.9,transparent:true,opacity:.75});
-  for(const [x,y] of V.young||[]){const h=7+rnd()*2;const tr=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,h,6),trunkM);tr.position.copy(toWorld(x,y,h/2));scene.add(tr);
+  for(const [x,y] of []){const h=7+rnd()*2;const tr=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,h,6),trunkM);tr.position.copy(toWorld(x,y,h/2));scene.add(tr);
     const cr=new THREE.Mesh(new THREE.ConeGeometry(1.8,h*.7,8),thinM);cr.position.copy(toWorld(x,y,h*.62));cr.castShadow=true;scene.add(cr)}
   const moundM=new THREE.MeshStandardMaterial({color:0x7da24a,roughness:1});
   for(const [x,y,rx,ry,h] of V.mounds||[]){const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,12,0,Math.PI*2,0,Math.PI/2),moundM);m.scale.set(rx,h,ry);m.position.copy(toWorld(x,y,-0.2));m.receiveShadow=true;scene.add(m);
@@ -133,11 +130,26 @@ if(V){
   if(V.sunWest){sun.position.copy(toWorld(-10,D.c+260,60));sun.target.position.copy(toWorld(0,D.c*.5,0));sun.color.set(0xfff1d6);sun.intensity=1.2;hemi.intensity=2.1;scene.background.set(0xc9dbe8);scene.fog.color.set(0xc9dbe8)}
   if(V.dry)gm.material.color.set(0x9c9a52);
   for(const [x,y,r] of V.disc||[]){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r+1.2,0.6,32),new THREE.MeshStandardMaterial({color:0x8fcf62,roughness:.9}));m.position.copy(toWorld(x,y,0.1));m.receiveShadow=true;scene.add(m)}
-  if(V.treeline){const[x0,x1,y0,y1]=V.treeline;for(let k=0;k<160;k++){const pt=[x0+rnd()*(x1-x0),y0+rnd()*(y1-y0)];const h=12+rnd()*8,r=3.5+rnd()*2.5;
+  if(false){const[x0,x1,y0,y1]=V.treeline;for(let k=0;k<160;k++){const pt=[x0+rnd()*(x1-x0),y0+rnd()*(y1-y0)];const h=12+rnd()*8,r=3.5+rnd()*2.5;
     const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.y=1.3;cr.position.copy(toWorld(pt[0],pt[1],h*.5+r));cr.castShadow=true;scene.add(cr);
     const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.5,h*.5,6),trunkM);tr.position.copy(toWorld(pt[0],pt[1],h*.25));scene.add(tr)}}
   document.getElementById("note").textContent=V.note;
 }
+
+// --- skutočné prvky zo satelitu
+shapeMeshAll();
+function shapeMeshAll(){
+  for(const g of SD.others)shapeMesh(g,0xa6dc5c,0.5,{lift:0.4,rough:.7});
+  for(const [x,y] of SD.tees){const t=new THREE.Mesh(new THREE.BoxGeometry(9,0.5,9),new THREE.MeshStandardMaterial({color:0x8ccd5f}));t.position.copy(toWorld(x,y,0.25));t.receiveShadow=true;scene.add(t)}
+}
+function bigTree(x,y,r,h,k){const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.55,h*.5,6),trunkM);tr.position.copy(toWorld(x,y,h*.25));tr.castShadow=true;scene.add(tr);
+  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.y=1.2;cr.position.copy(toWorld(x,y,h*.5+r*.8));cr.castShadow=true;scene.add(cr)}
+SD.trees.forEach(([x,y,r,h],k)=>bigTree(x,y,r,h,k));
+{const thin=new THREE.MeshStandardMaterial({color:0x6f9f45,roughness:.9});
+ SD.row.forEach(([x,y])=>{const h=6+rnd()*2;const tr=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,h*.5,6),trunkM);tr.position.copy(toWorld(x,y,h*.25));scene.add(tr);
+  const cr=new THREE.Mesh(new THREE.SphereGeometry(1.9,8,6),thin);cr.scale.y=1.5;cr.position.copy(toWorld(x,y,h*.62));cr.castShadow=true;scene.add(cr)})}
+for(const wd of SD.woods){let xs=wd.map(p=>p[0]),ys=wd.map(p=>p[1]);const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  let n=0;for(let k=0;k<2000&&n<90;k++){const pt=[x0+rnd()*(x1-x0),y0+rnd()*(y1-y0)];if(!inPoly(pt,wd))continue;n++;bigTree(pt[0],pt[1],3+rnd()*2.5,11+rnd()*8,k)}}
 // vlajka
 const pin=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,6,8),new THREE.MeshStandardMaterial({color:0xffffff}));pin.position.copy(toWorld(G[0],G[1],3.9));pin.castShadow=true;scene.add(pin);
 const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.1),new THREE.MeshStandardMaterial({color:0xe0312b,side:THREE.DoubleSide}));flag.position.copy(toWorld(G[0]+0.9,G[1],6.3));scene.add(flag);
