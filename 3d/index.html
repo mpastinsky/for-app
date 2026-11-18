@@ -54,15 +54,36 @@ const dx=GC[0]-T[0],dy=GC[1]-T[1],L=Math.hypot(dx,dy),u=[dx/L,dy/L],rt=[u[1],-u[
 const loc=([e,n])=>[(e-T[0])*rt[0]+(n-T[1])*rt[1],(e-T[0])*u[0]+(n-T[1])*u[1]];
 const enu=(x,y)=>[T[0]+x*rt[0]+y*u[0],T[1]+x*rt[1]+y*u[1]];
 const H0=hENU(T[0],T[1]);
-const hL=(x,y)=>hENU(...enu(x,y))-H0;
+let hBump=()=>0;
+const hL=(x,y)=>hENU(...enu(x,y))-H0+hBump(x,y);
 const c=Math.round(L);
 // predok a zadok greenu po línii hry
-const green=DATA.greens[hNum-1].map(loc);
+let green=DATA.greens[hNum-1].map(loc);
+// hrubé obrysy (málo bodov) vyhladíme, aby green nemal rohy
+for(let k=0;k<3&&green.length<40;k++)green=green.flatMap((p,i)=>{const q=green[(i+1)%green.length];return[[.75*p[0]+.25*q[0],.75*p[1]+.25*q[1]],[.25*p[0]+.75*q[0],.25*p[1]+.75*q[1]]]});
 let ys=[];for(let i=0;i<green.length;i++){const[a,b]=green[i],[d,e]=green[(i+1)%green.length];if((a<=0)!==(d<=0)){ys.push(b+(e-b)*(0-a)/(d-a))}}
 const f=Math.round(Math.min(...ys)),b=Math.round(Math.max(...ys));
+// vzdialenosť bodu od obrysu (záporná vnútri)
+const inPoly=(pt,poly)=>{let s=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if(((b>pt[1])!==(e>pt[1]))&&(pt[0]<(d-a)*(pt[1]-b)/(e-b)+a))s=!s}return s};
+function sdist(x,y,P){let m=1e9;for(let i=0,j=P.length-1;i<P.length;j=i++){const[a,b]=P[j],[d,e]=P[i],vx=d-a,vy=e-b,l=vx*vx+vy*vy;
+  let t=l?((x-a)*vx+(y-b)*vy)/l:0;t=t<0?0:t>1?1:t;const qx=a+t*vx-x,qy=b+t*vy-y;m=Math.min(m,qx*qx+qy*qy)}m=Math.sqrt(m);return inPoly([x,y],P)?-m:m}
+const sstep=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
+// --- modelácia greenu na skutočnom teréne: mierny sklon odzadu dopredu, jemné vlnky (do ~30 cm),
+//     zvýšené okraje pri bunkroch a mäkké hrany bunkrov
+const GB=(()=>{let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of green){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}return{x0,x1,y0,y1}})();
+const gcx=(GB.x0+GB.x1)/2,gcy=(GB.y0+GB.y1)/2;
+const myBunkers=[];
+const BUMPS=[[3.5,4,4.2,.13],[-4,-3,3.6,-.09],[-3,4.5,3.2,.08],[4,-5,3,-.06]];
+hBump=(x,y)=>{const M=9;if(x<GB.x0-M||x>GB.x1+M||y<GB.y0-M||y>GB.y1+M)return 0;
+  let h=0;const sd=sdist(x,y,green);const w=sd<=0?1:1-sstep(sd/4.5);
+  if(w>0){h+=w*.011*(y-gcy);for(const[bx,by,sg,a]of BUMPS){const dx=x-gcx-bx,dy=y-gcy-by;h+=w*a*Math.exp(-(dx*dx+dy*dy)/(2*sg*sg))}}
+  for(const B of myBunkers){const d=sdist(x,y,B);if(d>4)continue;
+    if(d>=0){h+=.2*Math.exp(-(((d-.9)/.8)**2))*(sd<6?1:.5)}else{h-=.14*sstep(-d/1.5)}}
+  return h};
 const hG=hL(0,c);
 const cen=P=>[P.reduce((a,p)=>a+p[0],0)/P.length,P.reduce((a,p)=>a+p[1],0)/P.length];
 const nearestGreen=B=>{const q=cen(B);let bi=0,bd=1e9;DATA.gc.forEach((g,i)=>{const d=(g[0]-q[0])**2+(g[1]-q[1])**2;if(d<bd){bd=d;bi=i}});return bi};
+for(const B of DATA.bunkers)if(nearestGreen(B)===hNum-1)myBunkers.push(B.map(loc));
 document.getElementById("h-t").textContent="Jamka "+hNum+" · Par 3";
 document.getElementById("h-s").textContent="Akadémia Apex · "+TEE_N[tIdx]+" odpalisko · "+f+" / "+c+" / "+b+" m";
 document.querySelectorAll("#holes a").forEach(a=>{a.href="?h="+a.dataset.h+"&t="+tIdx;a.classList.toggle("on",+a.dataset.h===hNum)});
@@ -107,7 +128,10 @@ else{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8))
  g2.lineTo(tx(w+2),ty(y1-6));g2.quadraticCurveTo(tx(w),ty(y1+2),tx(0),ty(y1+2));g2.quadraticCurveTo(tx(-w),ty(y1+2),tx(-w-2),ty(y1-6));g2.closePath();g2.clip();
  g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);g2.fillStyle="rgba(40,90,25,.18)";for(let y=y0;y<y1+4;y+=12){const a=ty(y),b2=ty(y+6);g2.fillRect(0,Math.min(a,b2),TEX,Math.abs(a-b2))}g2.restore()}
 // greeny: lem (fringe) + plocha
-for(const [i,G] of DATA.greens.entries()){if(i!==hNum-1)continue;const P=G.map(loc);path(P);g2.lineWidth=2.2*ppm;g2.strokeStyle="#5f9c3a";g2.stroke();g2.fillStyle=i===hNum-1?"#9fdc5a":"#93cf55";g2.fill()}
+// farby trávnika okolo greenu (detail v jemnej textúre nižšie)
+const TURF={cut:"#7cba4b",collar:"#8bcb55",green:"#9fd95e"};
+g2.lineJoin="round";path(green);g2.lineWidth=8*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
+path(green);g2.lineWidth=3*ppm;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill();
 // bunkre
 for(const B of DATA.bunkers){if(nearestGreen(B)!==hNum-1)continue;const P=B.map(loc);path(P);g2.fillStyle="#eadcae";g2.fill();g2.lineWidth=.6*ppm;g2.strokeStyle="#c8b88a";g2.stroke()}
 // odpaliská
@@ -124,13 +148,51 @@ for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);g2.
 const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
 {const p=geo.attributes.position,uv=geo.attributes.uv;for(let i=0;i<p.count;i++){uv.setXY(i,(p.getX(i)-X0)/(X1-X0),(-p.getZ(i)-Y0)/(Y1-Y0))}}
 const ground=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:tex,roughness:1}));ground.receiveShadow=true;scene.add(ground);
+// --- green v detaile: vlastná jemná sieť (0,5 m) a textúra s pruhmi, lemom a prvým kosom
+const PIN=[0,c];
+{const M=7,gx0=Math.floor(GB.x0-M),gx1=Math.ceil(GB.x1+M),gy0=Math.floor(GB.y0-M),gy1=Math.ceil(GB.y1+M),gw=gx1-gx0,gh=gy1-gy0,st=.5;
+ const gg=new THREE.PlaneGeometry(gw,gh,gw/st,gh/st);gg.rotateX(-Math.PI/2);gg.translate((gx0+gx1)/2,0,-(gy0+gy1)/2);
+ {const p=gg.attributes.position,uv=gg.attributes.uv;for(let i=0;i<p.count;i++){const x=p.getX(i),y=-p.getZ(i);p.setY(i,hL(x,y)+.08);uv.setXY(i,(x-gx0)/gw,(y-gy0)/gh)}gg.computeVertexNormals()}
+ const N=1024,cA=document.createElement("canvas");cA.width=cA.height=N;const a=cA.getContext("2d");
+ const px=x=>(x-gx0)/gw*N,py=y=>(gy1-y)/gh*N,pm=N/gw,pmy=N/gh;a.setTransform(pm,0,0,-pmy,-gx0*pm,gy1*pmy);   // kreslíme priamo v metroch
+ const pth=P=>{a.beginPath();P.forEach(([x,y],i)=>i?a.lineTo(x,y):a.moveTo(x,y));a.closePath()};a.lineJoin="round";
+ // prvý kos (mäkko do stratena), lem 1,5 m, plocha
+ for(const[lw,al]of[[10,.25],[9.2,.5],[8.6,.8],[8,1]]){a.globalAlpha=al;pth(green);a.lineWidth=lw;a.strokeStyle=TURF.cut;a.stroke()}
+ a.globalAlpha=1;pth(green);a.fillStyle=TURF.cut;a.fill();
+ pth(green);a.lineWidth=3;a.strokeStyle=TURF.collar;a.stroke();
+ // jemné pruhy prvého kosu (po smere hry)
+ a.save();a.beginPath();a.rect(gx0,gy0,gw,gh);pth(green);a.clip("evenodd");a.globalAlpha=.06;a.fillStyle="#1e4a12";for(let x=gx0;x<gx1;x+=3)a.fillRect(x,gy0,1.5,gh);a.restore();
+ pth(green);a.fillStyle=TURF.green;a.fill();
+ // šachovnica kosenia na greene (uhlopriečne, pásy 1,6 m)
+ a.save();pth(green);a.clip();a.translate(gcx,gcy);a.rotate(Math.PI/4);
+ for(let i=-24;i<24;i++)for(let j=-24;j<24;j++){a.fillStyle=((i+j)&1)?"rgba(255,255,235,.085)":"rgba(20,70,10,.06)";a.fillRect(i*1.6,j*1.6,1.6,1.6)}
+ a.restore();
+ // zrnitosť trávy
+ a.save();
+ let sd2=91;const r2=()=>(sd2=(sd2*16807)%2147483647)/2147483647;
+ for(let k=0;k<9000;k++){a.fillStyle=r2()<.5?"rgba(255,255,255,.05)":"rgba(0,40,0,.06)";a.fillRect(gx0+r2()*gw,gy0+r2()*gh,.12,.12)}a.restore();
+ // okraj greenu: tenká tmavšia linka medzi lemom a plochou
+ pth(green);a.lineWidth=.12;a.strokeStyle="rgba(40,90,20,.35)";a.stroke();
+ // jamka
+ a.beginPath();a.arc(PIN[0],PIN[1],.16,0,7);a.fillStyle="rgba(60,110,40,.35)";a.fill();
+ // bunkre: piesok ostáva z hlavnej textúry, okraj mäkko
+ a.save();a.globalCompositeOperation="destination-out";for(const B of myBunkers){for(const[lw,al]of[[.5,.35],[.25,.7]]){a.globalAlpha=al;pth(B);a.lineWidth=lw;a.stroke()}a.globalAlpha=1;pth(B);a.fill()}a.restore();
+ // tieňovanie reliéfu greenu (zvýrazní vlnky)
+ {const sw=gw*4,sh=gh*4,hc=document.createElement("canvas");hc.width=sw;hc.height=sh;const hx=hc.getContext("2d"),im=hx.createImageData(sw,sh);const L0=[-0.5,0.55,0.67],ex=3,e=.25;
+  for(let j=0;j<sh;j++){const y=gy1-(j+.5)/4;for(let i=0;i<sw;i++){const x=gx0+(i+.5)/4;
+    const ddx=(hL(x+e,y)-hL(x-e,y))/(2*e)*ex,ddy=(hL(x,y+e)-hL(x,y-e))/(2*e)*ex,n=Math.hypot(ddx,ddy,1);
+    const v=Math.max(0,(-ddx*L0[0]-ddy*L0[1]+L0[2])/n)/L0[2],k=(j*sw+i)*4,val=Math.max(0,Math.min(255,128+(v-1)*260));im.data[k]=im.data[k+1]=im.data[k+2]=val;im.data[k+3]=255}}
+  hx.putImageData(im,0,0);const big=document.createElement("canvas");big.width=big.height=N;const bx=big.getContext("2d");bx.drawImage(hc,0,0,N,N);
+  bx.globalCompositeOperation="destination-in";bx.drawImage(cA,0,0);a.save();a.setTransform(1,0,0,1,0,0);a.globalCompositeOperation="soft-light";a.globalAlpha=.75;a.drawImage(big,0,0);a.restore()}
+ const gt=new THREE.CanvasTexture(cA);gt.colorSpace=THREE.SRGBColorSpace;gt.anisotropy=renderer.capabilities.getMaxAnisotropy();
+ const gm=new THREE.Mesh(gg,new THREE.MeshStandardMaterial({map:gt,transparent:true,roughness:.58,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
+ gm.receiveShadow=true;gm.renderOrder=1;scene.add(gm)}
 // okolie mimo modelu (rovina)
 const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:STYLE.dry?0x9c9a52:0x6a8a3c,roughness:1}));
 {let mn=1e9;const pp=geo.attributes.position;for(let i=0;i<pp.count;i++)mn=Math.min(mn,pp.getY(i));far.position.set(0,mn-2,-c/2)}scene.add(far);
 
 // --- stromy
 const trunkM=new THREE.MeshStandardMaterial({color:0x6b4a2b}),leafM=[0x2f6b2c,0x3b7d33,0x285e27].map(x=>new THREE.MeshStandardMaterial({color:x,roughness:.95}));
-const inPoly=(pt,poly)=>{let s=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if(((b>pt[1])!==(e>pt[1]))&&(pt[0]<(d-a)*(pt[1]-b)/(e-b)+a))s=!s}return s};
 const inside=(x,y)=>x>X0+2&&x<X1-2&&y>Y0+2&&y<Y1-2;
 const seeM=new THREE.MeshStandardMaterial({color:0x3b7d33,roughness:.95,transparent:true,opacity:.32,depthWrite:false});
 // stromy, ktoré stoja v ploche hrania (medzi odpaliskom a greenom), sú priesvitné, aby bolo vidno cez ne
@@ -152,8 +214,15 @@ for(const wd of DATA.woods){const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;
     if(!inPoly([e,nn],wd))continue;n++;const[x,y]=loc([e,nn]);bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}}
 
 // --- vlajka, značky odpaliska
-const pin=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,2.4,8),new THREE.MeshStandardMaterial({color:0xffffff}));pin.position.copy(W(0,c,hG+1.2));pin.castShadow=true;scene.add(pin);
-const flag=new THREE.Mesh(new THREE.PlaneGeometry(.8,.5),new THREE.MeshStandardMaterial({color:0xe0312b,side:THREE.DoubleSide}));flag.position.copy(W(.4,c,hG+2.15));scene.add(flag);
+// jamka (10,8 cm), tyčka 2,1 m, červená viajúca vlajka
+const hP=hL(...PIN)+.08;
+{const cup=new THREE.Mesh(new THREE.CircleGeometry(.054,24).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x0e0e0e}));cup.position.copy(W(...PIN,hP+.004));cup.renderOrder=2;scene.add(cup);
+ const lin=new THREE.Mesh(new THREE.RingGeometry(.044,.054,24).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:0xf4f4f4,roughness:.5}));lin.position.copy(W(...PIN,hP+.006));lin.renderOrder=3;scene.add(lin)}
+const pin=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,2.1,10),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.35}));pin.position.copy(W(...PIN,hP+1.05-.06));pin.castShadow=true;scene.add(pin);
+const flagG=new THREE.PlaneGeometry(.6,.4,12,4).translate(.3,0,0);const flagB=Float32Array.from(flagG.attributes.position.array);
+const flag=new THREE.Mesh(flagG,new THREE.MeshStandardMaterial({color:0xd8262a,side:THREE.DoubleSide,roughness:.8}));flag.position.copy(W(...PIN,hP+2.1-.06-.2));flag.castShadow=true;scene.add(flag);
+function waveFlag(t){const p=flagG.attributes.position;for(let i=0;i<p.count;i++){const x=flagB[i*3],y=flagB[i*3+1];const k=x/.6;
+  p.setZ(i,Math.sin(x*7-t*4.2+y*1.5)*.07*k);p.setY(i,y-k*k*.04+Math.sin(x*5-t*3)*.01*k);p.setX(i,x*(1-.04*k))}p.needsUpdate=true;flagG.computeVertexNormals()}
 // kolíky na odpaliskách: zadné biele, stredné žlté, predné červené
 const MK=[0xffffff,0xffd400,0xe0312b];
 DATA.pads[hNum].forEach((pd,j)=>{const[cx,cy]=loc(pd);const m=new THREE.MeshStandardMaterial({color:MK[j],roughness:.5});
@@ -171,7 +240,7 @@ for(const d of [50,100]){if(d>=c-10)continue;const pts=[];for(let a=-0.45;a<=0.4
 // --- štítky
 const labels=[];
 function label(text,v,cls=""){const el=document.createElement("div");el.className="lab "+cls;el.textContent=text;document.body.appendChild(el);labels.push({el,v})}
-label("Green · "+c+" m",W(0,c,hG+4));
+label("Green · "+c+" m",W(...PIN,hP+3.6));
 for(const a of arcs)label(a.d+" m",a.pos,"arc");
 function placeLabels(){for(const l of labels){const p=l.v.clone().project(camera);const vis=p.z<1&&Math.abs(p.x)<1.1&&Math.abs(p.y)<1.1;
   l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=((p.x+1)/2*innerWidth)+"px";l.el.style.top=((1-p.y)/2*innerHeight)+"px"}}}
@@ -194,7 +263,7 @@ renderer.domElement.addEventListener("pointerdown",()=>{if(fly){fly=null;setOn("
 function loop(now){
   if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
     camera.position.copy(curve.getPoint(e));controls.target.copy(W(0,c,hG));if(k>=1)fly=null}
-  controls.update();renderer.render(scene,camera);placeLabels();requestAnimationFrame(loop)}
+  waveFlag(now/1000);controls.update();renderer.render(scene,camera);placeLabels();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script>
