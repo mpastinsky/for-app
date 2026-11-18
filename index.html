@@ -127,7 +127,23 @@ body.editing #round-btn{display:none}
 .repgrid button span{font-size:1.5rem}
 .repitem{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.92rem}
 .repitem div{flex:1}
-.repmk{font-size:22px;line-height:1;text-shadow:0 0 3px #fff,0 0 6px #000}
+.repmk{width:34px;height:34px;border-radius:50% 50% 50% 6px;transform:rotate(-45deg);background:#fff;border:3px solid #ff8a00;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.repmk span{transform:rotate(45deg);font-size:17px;line-height:1}.repmk.hot{border-color:#e0312b;animation:pulse 1.2s infinite}.repmk.old{opacity:.55}
+@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(224,49,43,.35)}}
+#fab{position:absolute;right:12px;bottom:170px;z-index:520;width:68px;height:68px;border-radius:50%;border:0;background:#ff8a00;color:#fff;font-size:1.9rem;box-shadow:0 4px 14px rgba(0,0,0,.4);display:grid;place-items:center;padding:0}
+#fab small{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font:700 .72rem var(--font);color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+body.editing #fab{display:none}
+.rephead{display:flex;align-items:center;gap:8px;margin-bottom:10px}.rephead h2{flex:1;margin:0;font-size:1.15rem}
+#rep-x2{width:44px;height:44px;border-radius:50%;padding:0;font-size:1.2rem;border:0;background:transparent;color:var(--fg)}
+.rephead h2{font-size:1.6rem!important}
+#rep-mic{width:100%;min-height:70px;border:0;border-radius:16px;margin:2px 0 12px;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:linear-gradient(90deg,#3b4a44,#0f6b4a 45%,#2a9d6f);font-size:1.15rem}
+#rep-mic .dots{letter-spacing:2px;opacity:0}#rep-mic.on .dots{opacity:1;animation:blink 1s infinite}#rep-mic.on{background:linear-gradient(90deg,#3b4a44,#1a7cff 50%,#7a4dff);background-size:200% 100%;animation:slide 2.5s linear infinite}
+@keyframes blink{50%{opacity:.3}}@keyframes slide{to{background-position:200% 0}}
+#rep-back{min-height:40px}
+.repgrid.top{grid-template-columns:1fr 1fr 1fr;gap:14px 6px}.repgrid.top button{flex-direction:column;justify-content:flex-start;text-align:center;min-height:0;background:transparent;border:0;font-size:.9rem;font-weight:600;gap:8px;padding:0;color:var(--fg)}
+.repgrid.top button span{font-size:2.4rem;width:78px;height:78px;border-radius:50%;background:var(--bg);display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line)}
+.repgrid.top button.hot span{box-shadow:inset 0 0 0 3px #e0312b}.repgrid.top button:disabled{opacity:.45}
+#rep-voice{min-height:1.2em;margin:8px 0 0;font-weight:600}
 #rec-ind{display:none;color:var(--bad);margin-left:8px}#rec-ind.on{display:inline}
 
 /* spodné záložky */
@@ -212,19 +228,21 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
       <button id="b-me" aria-label="Moja poloha">◎</button>
       <button id="b-green" aria-label="Zobraziť green">⛳</button>
       <button id="b-plan" aria-label="Plán jamky">🗺</button>
-      <button id="b-report" aria-label="Nahlásiť">⚠️</button>
       <button id="b-edit" aria-label="Kresliť jamku">✏️</button>
     </div>
     <div id="rep" hidden>
       <div class="sheet">
-        <h2 id="rep-title">Nahlásiť</h2>
+        <div class="rephead"><button id="rep-back" hidden>‹ Späť</button><h2 id="rep-title">Čo vidíš?</h2><button id="rep-x2" aria-label="Zavrieť">✕</button></div>
+        <button id="rep-mic" hidden><span class="dots">• • •</span><b id="rep-mic-t">Počúvam</b></button>
         <p class="small muted" id="rep-where"></p>
-        <div class="repgrid" id="rep-grid"></div>
+        <div class="repgrid top" id="rep-grid"></div>
+        <p class="small" id="rep-voice"></p>
         <div class="btns"><button id="rep-list-b">Všetky hlásenia</button><button id="rep-x">Zavrieť</button></div>
         <div id="rep-list" hidden></div>
       </div>
     </div>
     <button id="round-btn" class="primary">▶ Začať kolo</button>
+    <button id="fab" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
     <div id="plan" hidden><img id="plan-img" alt="Plán jamky"><button id="plan-x">Zavrieť</button></div>
     <div id="edbar" hidden>
       <div class="edtypes" id="ed-types"></div>
@@ -377,14 +395,32 @@ const DEFAULT_COURSE={name:"Apex Golf Báč",tee:"yellow",
   si:[7,15,5,3,13,11,17,9,1,4,14,12,18,2,10,8,16,6],
   len:{black:[355,309,518,361,169,356,320,200,484,354,364,476,182,480,332,345,165,399],white:[334,287,499,343,161,330,300,192,468,336,346,453,170,456,301,322,148,379],yellow:[311,263,474,324,154,305,277,168,431,317,325,440,159,427,277,308,139,355],blue:[295,250,448,300,136,293,256,147,417,302,298,419,130,404,261,290,128,330],red:[268,226,435,289,130,269,235,128,384,275,275,387,123,376,240,268,115,310]},
   greens:Array(HOLES).fill(null)};
+// hlásenia: g = skupina v ponuke (prvé ťuknutie), w = kľúčové slová pre hlas (bez diakritiky)
 const REPORTS=[
-  {k:"slow",i:"🐢",t:"Pomalá skupina"},
-  {k:"wet",i:"💧",t:"Mokré / močiar"},
-  {k:"pitch",i:"⛳",t:"Pitchmarky na greene"},
-  {k:"divot",i:"🟫",t:"Divoty"},
-  {k:"mole",i:"🐀",t:"Krtince"},
-  {k:"bunker",i:"🏖️",t:"Bunker treba upraviť"},
-  {k:"other",i:"❗",t:"Iné"}];
+  {k:"slow",i:"🐢",t:"Pomalá skupina",w:["pomal","zdrzuj","cakame","cakam","stoja"]},
+  {k:"wet",i:"💧",t:"Mokro / blato",w:["mokr","blat","mociar","kaluz","voda na","zaplav"]},
+  {k:"help",i:"🆘",t:"Zranenie / pomoc",w:["zran","pomoc","sanit","uraz","zle mu","zle je","prva pomoc","zachrank"],hot:1},
+  {k:"pitch",i:"⛳",t:"Pitchmarky na greene",g:"green",w:["pitch","dolk","dier"]},
+  {k:"greenbad",i:"🟤",t:"Zlý stav greenu",g:"green",w:["green"]},
+  {k:"flag",i:"🚩",t:"Chýba vlajka / jamka",g:"green",w:["vlajk","praporec","tyc","jamka chyba"]},
+  {k:"divot",i:"🟫",t:"Divoty",g:"course",w:["divot","drn"]},
+  {k:"mole",i:"🐀",t:"Krtince",g:"course",w:["krt"]},
+  {k:"branch",i:"🌳",t:"Zlomená vetva / strom",g:"course",w:["konar","vetv","strom","spadn"]},
+  {k:"tee",i:"📍",t:"Chýba kolík / značka",g:"course",w:["kolik","znack","odpalisk"]},
+  {k:"bunker",i:"🏖️",t:"Bunker treba upraviť",w:["bunker","piesok","hrabl"]},
+  {k:"animal",i:"🦌",t:"Zvieratá na ihrisku",w:["zvier","srn","diviak","zajac","pes ","psy","had","bazant","lisk"]},
+  {k:"drink",i:"🥤",t:"Chýba občerstvenie",w:["obcerstv","pitie","piti","napoj","bufet","automat"]},
+  {k:"fast",i:"🏃",t:"Rýchla skupina za nami",g:"more",w:["rychl","za nami","tlacia","dobieha"]},
+  {k:"ball",i:"🔍",t:"Hľadáme loptičku",g:"more",w:["hlad","loptick"]},
+  {k:"fore",i:"⚠️",t:"Nebezpečná loptička (fór)",g:"more",w:[" for","nebezpec","trafil","takmer","lietaj"]},
+  {k:"storm",i:"⛈️",t:"Búrka / blesky",g:"more",w:["burk","blesk","hrom","krupob"],hot:1},
+  {k:"great",i:"👍",t:"Super stav ihriska",g:"more",w:["super","skvel","vyborn","perfekt","krasn"]},
+  {k:"other",i:"❗",t:"Iné",g:"more",w:[]}];
+const REP_GROUPS={green:{i:"🟢",t:"Green"},course:{i:"🌳",t:"Fairway a odpaliská"},more:{i:"➕",t:"Ďalšie"}};
+// prvá úroveň (3 × 3): jednotlivé hlásenia alebo skupina
+const REP_TOP=["slow","wet","help","g:green","g:course","bunker","animal","drink","g:more"];
+// poradie pri hlasovom rozpoznávaní: najprv naliehavé
+const VOICE_ORDER=["help","storm","fore","fast","slow","wet","bunker","pitch","flag","divot","mole","branch","tee","animal","drink","ball","great","greenbad"];
 const TEES={black:"čierne",white:"biele",yellow:"žlté",blue:"modré",red:"červené"};
 // Akadémia podľa Garminu (16.11.): jamka 1 par 3 / 133 m, jamka 2 par 3 / 100 m, jamka 3 par 3 / 136 m.
 // dĺžky ku stredu greenu z 3 okrúhlych odpalísk podľa satelitu (18.11.): zadné / stredné / predné
@@ -629,45 +665,77 @@ $("tee-sel").onchange=e=>{course.tee=e.target.value;saveCourse();render()};
 let reports=store.get("reports",[]);
 const repLayer=L.layerGroup().addTo(map);
 const repInfo=k=>REPORTS.find(r=>r.k===k)||REPORTS[REPORTS.length-1];
+const escH=x=>String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"práve teraz":m<60?"pred "+m+" min":"pred "+Math.round(m/60)+" h"};
 function drawReports(){repLayer.clearLayers();
-  for(const r of reports){const ri=repInfo(r.k);
-    L.marker([r.lat,r.lon],{icon:L.divIcon({className:"",html:`<div class="repmk">${ri.i}</div>`,iconSize:[24,24],iconAnchor:[12,12]})})
-      .bindPopup(`<b>${ri.t}</b><br>Jamka ${r.hole} · ${new Date(r.t).toLocaleTimeString("sk",{hour:"2-digit",minute:"2-digit"})}`).addTo(repLayer)}}
-function repWhere(){return tapPt?{p:tapPt,src:"na bode, ktorý si označil na mape"}:me?{p:me,src:"na tvojej polohe"}:null}
-function openReport(){
-  const w=repWhere();
-  $("rep-title").textContent="Nahlásiť · jamka "+(round.hole+1);
-  $("rep-where").textContent=w?"Hlásenie sa uloží "+w.src+". Iné miesto: zavri, ťukni na mapu a otvor ⚠️ znova.":"Poloha nie je známa. Ťukni na mapu na miesto problému a otvor ⚠️ znova.";
-  $("rep-grid").innerHTML=repButtons(w);
-  $("rep-list").hidden=true;$("rep").hidden=false;
-}
+  reports.forEach((r,idx)=>{const ri=repInfo(r.k),age=Date.now()-r.t;if(age>6*3600e3)return;
+    L.marker([r.lat,r.lon],{zIndexOffset:ri.hot?1000:0,icon:L.divIcon({className:"",html:`<div class="repmk ${ri.hot?"hot":""} ${age>2*3600e3?"old":""}"><span>${ri.i}</span></div>`,iconSize:[34,34],iconAnchor:[17,40],popupAnchor:[0,-36]})})
+      .bindPopup(`<b>${ri.i} ${ri.t}</b><br>Jamka ${r.hole} · ${ago(r.t)}${r.note?`<br><i>„${escH(r.note)}“</i>`:""}<br><button class="mini" data-res="${idx}" style="margin-top:6px">✓ Už je to vyriešené</button>`).addTo(repLayer)})}
+map.on("popupopen",e=>{const b=e.popup.getElement().querySelector("button[data-res]");if(b)b.onclick=()=>{reports.splice(+b.dataset.res,1);store.set("reports",reports);map.closePopup();drawReports();renderRepList();showToast("Hlásenie odstránené.")}});
+setInterval(drawReports,60000);
+function repWhere(){return tapPt?{p:tapPt,src:"na bode, ktorý si označil na mape"}:me?{p:me,src:"na tvojej polohe"}:hasGreen()?{p:greenPt(),src:"pri greene jamky "+(round.hole+1)+" (poloha nie je známa)",approx:1}:null}
+let repLevel=null;
+function repTile(k){if(k.startsWith("g:")){const g=REP_GROUPS[k.slice(2)];return `<button data-g="${k.slice(2)}"><span>${g.i}</span>${g.t} ›</button>`}
+  const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${r.i}</span>${r.t}</button>`}
+function renderRepSheet(){const w=repWhere();
+  $("rep-title").textContent=repLevel?REP_GROUPS[repLevel].t:"Čo vidíš?";
+  $("rep-back").hidden=!repLevel;
+  $("rep-grid").innerHTML=(repLevel?REPORTS.filter(r=>r.g===repLevel).map(r=>r.k):REP_TOP).map(repTile).join("");
+  $("rep-where").textContent=w?"Uloží sa "+w.src+".":"Poloha nie je známa. Ťukni na mapu na miesto a otvor hlásenie znova.";
+  $("rep-grid").querySelectorAll("button").forEach(b=>b.disabled=!w)}
+function openReport(){repLevel=null;$("rep-voice").textContent="";$("rep-list").hidden=true;$("rep").hidden=false;renderRepSheet();if(repWhere())startVoice()}
+function closeReport(){$("rep").hidden=true;stopVoice()}
 function repButtons(w){return REPORTS.map(r=>`<button data-k="${r.k}" ${w?"":"disabled"}><span>${r.i}</span>${r.t}</button>`).join("")}
-$("rep-grid2").onclick=e=>$("rep-grid").onclick(e);
-$("rep-grid").onclick=e=>{const b=e.target.closest("button[data-k]");if(!b)return;const w=repWhere();if(!w)return;
-  reports.push({k:b.dataset.k,t:Date.now(),hole:round.hole+1,lat:+w.p[0].toFixed(6),lon:+w.p[1].toFixed(6)});
-  store.set("reports",reports);drawReports();renderRepList();$("rep").hidden=true;tapPt=null;renderTap();
-  showToast(repInfo(b.dataset.k).t+": uložené ("+reports.length+" hlásení). Nájdeš ich v záložke Hlásenia.")};
+function saveReport(k,note){const w=repWhere();if(!w)return false;const ri=repInfo(k);
+  const r={k,t:Date.now(),hole:round.hole+1,lat:+w.p[0].toFixed(6),lon:+w.p[1].toFixed(6),mine:1};if(note)r.note=note.slice(0,120);if(w.approx)r.approx=1;
+  reports.push(r);store.set("reports",reports);drawReports();renderRepList();closeReport();tapPt=null;renderTap();
+  if(navigator.vibrate)navigator.vibrate(40);
+  if(ri.hot){sendReports([r]);showToast(ri.i+" "+ri.t+": uložené. Pošli to hneď správcovi alebo spoluhráčom.")}
+  else showToast(ri.i+" "+ri.t+": ďakujeme, je to na mape.");return true}
+$("rep-grid2").onclick=e=>{const b=e.target.closest("button[data-k]");if(b)saveReport(b.dataset.k)};
+$("rep-grid").onclick=e=>{const g=e.target.closest("button[data-g]");if(g){repLevel=g.dataset.g;renderRepSheet();return}
+  const b=e.target.closest("button[data-k]");if(b)saveReport(b.dataset.k)};
+$("rep-back").onclick=()=>{repLevel=null;renderRepSheet()};
+// hlásenie hlasom (Web Speech API, ak ho telefón podporuje)
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function voiceMatch(txt){const n=" "+norm(txt)+" ";for(const k of VOICE_ORDER){const r=repInfo(k);if(r.w.some(w=>n.includes(w)))return k}return null}
+let rec=null;
+function micIdle(t){$("rep-mic").classList.remove("on");$("rep-mic-t").textContent=t||"🎤 Ťukni a povedz, čo vidíš"}
+function stopVoice(){if(rec){try{rec.abort()}catch(e){}rec=null}micIdle()}
+function startVoice(){if(!SR||rec)return;
+  rec=new SR();rec.lang="sk-SK";rec.interimResults=true;rec.maxAlternatives=3;let fin="";const me_=rec;
+  $("rep-mic").classList.add("on");$("rep-mic-t").textContent="Počúvam";$("rep-voice").textContent="Povedz napr. „pomalá skupina“, „mokro“, „zlomený konár“…";
+  rec.onresult=e=>{let t="";for(const x of e.results)t+=x[0].transcript;$("rep-voice").textContent="🎤 „"+t+"“";if(e.results[e.results.length-1].isFinal){fin=t;
+      if(!voiceMatch(fin))for(const x of e.results)for(let a=1;a<x.length;a++)if(voiceMatch(x[a].transcript)){fin=x[a].transcript;break}}};
+  rec.onerror=e=>{$("rep-voice").textContent=e.error==="not-allowed"||e.error==="service-not-allowed"?"Mikrofón nie je povolený, ťukni na ikonu.":e.error==="no-speech"?"":"Nerozumel som, skús znova alebo ťukni na ikonu."};
+  rec.onend=()=>{if(rec!==me_)return;rec=null;micIdle();if(!fin||$("rep").hidden)return;const k=voiceMatch(fin);
+    if(k)saveReport(k,fin);else{$("rep-voice").textContent="🎤 „"+fin+"“ · tomu nerozumiem. Ťukni na ikonu, alebo:";
+      $("rep-grid").insertAdjacentHTML("afterbegin",`<button data-k="other" data-note="1" style="grid-column:1/-1;flex-direction:row;justify-content:center;min-height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface)">❗ Uložiť ako Iné: „${escH(fin)}“</button>`);
+      $("rep-grid").querySelector("[data-note]").onclick=ev=>{ev.stopPropagation();saveReport("other",fin)}}};
+  try{rec.start()}catch(e){rec=null;micIdle()}}
+if(SR){$("rep-mic").hidden=false;$("rep-mic").onclick=()=>{if(rec)stopVoice();else startVoice()}}
 function renderRepList(){
   $("rep-grid2").innerHTML=repButtons(repWhere());
   const l=$("rep-feed");
   if(!reports.length){l.innerHTML='<p class="small muted">Zatiaľ žiadne hlásenia.</p>';return}
   l.innerHTML=reports.map((r,i)=>[r,i]).reverse().map(([r,i])=>{const ri=repInfo(r.k);return `<div class="repitem"><span>${ri.i}</span><div><b>${ri.t}</b><br><span class="muted">Jamka ${r.hole} · ${new Date(r.t).toLocaleString("sk",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"})}</span></div><button class="mini" data-show="${i}">mapa</button><button class="mini danger" data-del="${i}">✕</button></div>`}).join("")+
    '<div class="btns"><button class="primary" id="rep-send">Poslať správcovi</button></div><p class="small muted">Kým appka nemá server, hlásenia odošleš ako správu (WhatsApp, SMS, e-mail) s odkazmi na mapu.</p>';
-  $("rep-send").onclick=sendReports;
+  $("rep-send").onclick=()=>sendReports();
 }
 $("rep-list-b").onclick=()=>{$("rep").hidden=true;showView("v-rep")};
 $("rep-feed").onclick=e=>{const d=e.target.closest("button[data-del]"),sh=e.target.closest("button[data-show]");
   if(d){reports.splice(+d.dataset.del,1);store.set("reports",reports);drawReports();renderRepList()}
   if(sh){const r=reports[+sh.dataset.show];showView("v-map");map.setView([r.lat,r.lon],18)}};
-async function sendReports(){
-  const txt="Fór · hlásenia z ihriska Apex Báč\n\n"+reports.map(r=>{const ri=repInfo(r.k);
-    return `${ri.i} ${ri.t} – jamka ${r.hole}, ${new Date(r.t).toLocaleTimeString("sk",{hour:"2-digit",minute:"2-digit"})}\nhttps://maps.google.com/?q=${r.lat},${r.lon}`}).join("\n\n");
+async function sendReports(list){if(!Array.isArray(list))list=reports;
+  const txt="Fór · hlásenia z ihriska Apex Báč\n\n"+list.map(r=>{const ri=repInfo(r.k);
+    return `${ri.i} ${ri.t}${r.note?" („"+r.note+"“)":""} – jamka ${r.hole}, ${new Date(r.t).toLocaleTimeString("sk",{hour:"2-digit",minute:"2-digit"})}\nhttps://maps.google.com/?q=${r.lat},${r.lon}`}).join("\n\n");
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e&&e.name==="AbortError")return}
   try{await navigator.clipboard.writeText(txt);showToast("Text hlásení je skopírovaný, vlož ho do správy.")}catch(e){download("for-hlasenia.txt",txt,"text/plain")}
 }
-$("b-report").onclick=openReport;
-$("rep-x").onclick=()=>{$("rep").hidden=true};
-$("rep").onclick=e=>{if(e.target.id==="rep")$("rep").hidden=true};
+$("fab").onclick=openReport;
+function placeFab(){const d=$("dist");if(d&&d.offsetHeight)$("fab").style.bottom=(d.offsetHeight+28)+"px"}addEventListener("resize",placeFab);setTimeout(placeFab,300);if(window.ResizeObserver)new ResizeObserver(placeFab).observe($("dist"));
+$("rep-x").onclick=closeReport;$("rep-x2").onclick=closeReport;
+$("rep").onclick=e=>{if(e.target.id==="rep")closeReport()};
 drawReports();
 if(AKAD){$("b-plan").textContent="3D";$("b-plan").setAttribute("aria-label","3D mapa jamky")}
 drawFeatures();
