@@ -491,7 +491,7 @@ const draftLine=L.polyline([],{color:"#fff",weight:2,dashArray:"4 4"});
 const draftPts=L.layerGroup();
 function drawFeatures(){
   featLayer.clearLayers();
-  if(!edit)return; // nakreslené obrysy ukazujeme len pri kreslení; bežne len satelit
+
   course.feat.forEach((list,h)=>list.forEach((f,i)=>{
     const st=FT[f.t]||FT.ob,cur=h===round.hole;
     const poly=L.polygon(f.p,{color:f.t==="ob"?"#fff":st.c,weight:f.t==="ob"?2:1.5,dashArray:f.t==="ob"?"6 5":null,fillColor:st.c,fillOpacity:f.t==="ob"?0:(cur?.45:.25),opacity:cur?1:.6,interactive:!!edit});
@@ -993,7 +993,9 @@ applyMode();renderRoundBtn();
 let nextQ=false;try{nextQ=sessionStorage.getItem("for.next")==="q";sessionStorage.removeItem("for.next")}catch(e){}
 const QP=new URLSearchParams(location.search);
 if(QP.has("start")||QP.has("map"))history.replaceState(null,"",location.pathname);
-if(QP.has("start"))showStart();
+// akadémia nemá satelitnú mapu: všetko je v 3D
+if(AKAD&&!QP.has("start")&&!QP.has("map")){location.replace("3d/?h="+(round.hole+1)+"&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]??1))}
+else if(QP.has("start"))showStart();
 else if(QP.has("map")){$("start").hidden=true;showView("v-map");if(QP.has("at")){const q=QP.get("at").split(",").map(Number);if(q.length===2&&q.every(isFinite)){tapPt=q;renderTap();map.setView(q,18)}}if(QP.has("rep"))setTimeout(openReport,400)}
 else if(nextQ){showStart();stStep("st-2")}
 else if(!(modeSt&&modeSt.score&&Date.now()-modeSt.t<6*3600e3))showStart();
