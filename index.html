@@ -108,6 +108,13 @@ body.editing #dist{display:none}
 #hint.on{display:block}
 #mapbtns{position:absolute;right:10px;top:10px;z-index:500;display:flex;flex-direction:column;gap:8px}
 #mapbtns button{width:48px;height:48px;padding:0;font-size:1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#round-btn{position:absolute;left:10px;top:48px;z-index:500;border-radius:999px;padding:8px 14px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+body.editing #round-btn{display:none}
+#sum{position:fixed;inset:0;z-index:3000;background:var(--bg);overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(env(safe-area-inset-bottom,0px) + 16px)}
+#sum h2{margin:.2em 0}#sum-map{height:min(62vh,460px);border-radius:14px;margin:10px 0;background:#24331f}
+#sum table{width:100%;border-collapse:collapse}#sum td,#sum th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:center}
+#sum .hdot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.stopmk{background:#fff;color:#14211a;border-radius:50%;font:700 11px/18px var(--font);text-align:center;width:18px;height:18px;box-shadow:0 1px 4px rgba(0,0,0,.5);border:2px solid var(--c)}
 #gpsbadge{position:absolute;left:10px;top:10px;z-index:500;background:var(--surface);border-radius:10px;padding:6px 10px;font-size:.85rem;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 #gpsbadge .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);margin-right:6px}
 #gpsbadge.good .dot{background:var(--good)}#gpsbadge.mid .dot{background:var(--warn)}#gpsbadge.bad .dot{background:var(--bad)}
@@ -217,6 +224,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
         <div id="rep-list" hidden></div>
       </div>
     </div>
+    <button id="round-btn" class="primary">▶ Začať kolo</button>
     <div id="plan" hidden><img id="plan-img" alt="Plán jamky"><button id="plan-x">Zavrieť</button></div>
     <div id="edbar" hidden>
       <div class="edtypes" id="ed-types"></div>
@@ -312,7 +320,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
         <button class="primary" id="g-rec">Spustiť záznam</button>
         <button id="g-export" disabled>Stiahnuť GPX</button>
       </div>
-      <div class="btns"><button class="danger" id="g-clear" disabled>Vymazať záznam</button></div>
+      <div class="btns"><button id="g-last">Posledné kolo</button><button class="danger" id="g-clear" disabled>Vymazať záznam</button></div>
     </div>
     <div class="card">
       <h2>Displej</h2>
@@ -327,6 +335,15 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
     <p class="small muted">Fór · testovacia verzia 0.5. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
   </section>
 </main>
+<div id="sum" hidden>
+  <h2 id="sum-t">Kolo dohrané</h2>
+  <p class="small muted" id="sum-sub"></p>
+  <div class="stats" id="sum-stats"></div>
+  <div id="sum-map"></div>
+  <p class="small muted">Čísla na mape sú miesta, kde si postál aspoň 20 s, väčšinou úder alebo green. Poloha je uložená iba v tomto telefóne.</p>
+  <div class="card" style="padding:6px 8px"><table><thead><tr><th>Jamka</th><th>Údery</th><th>Čas</th><th>Prejdené</th><th>Zastávky</th></tr></thead><tbody id="sum-body"></tbody></table></div>
+  <div class="btns"><button id="sum-gpx">Stiahnuť GPX</button><button class="primary" id="sum-x">Zavrieť</button></div>
+</div>
 
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-v="v-map"><span>🗺️</span>Ihrisko</button>
@@ -672,7 +689,7 @@ function onPos(pos){
   $("gpstxt").textContent="GPS ± "+Math.round(c.accuracy)+" m";
   if(recording){
     const last=track[track.length-1],t=pos.timestamp||Date.now();
-    if(!last||t-last.t>=900){track.push({t,lat:+c.latitude.toFixed(7),lon:+c.longitude.toFixed(7),acc:Math.round(c.accuracy*10)/10,ele:c.altitude!=null?Math.round(c.altitude*10)/10:null});trackDirty=true;
+    if(!last||t-last.t>=900){track.push({t,h:round.hole,lat:+c.latitude.toFixed(7),lon:+c.longitude.toFixed(7),acc:Math.round(c.accuracy*10)/10,ele:c.altitude!=null?Math.round(c.altitude*10)/10:null});trackDirty=true;
       if(track.length%5===0||track.length<3)renderGps();trackLine.addLatLng(me)}
   }
   if(!onPos.centered){onPos.centered=true;if(dist(me,COURSE_CENTER)<3000)map.setView(me,17)}
@@ -814,12 +831,59 @@ function choose(score){
     track=[];store.set("track",track);trackLine.setLatLngs([]);recording=true;store.set("recording",true);wake(true);
   }
   if(!score&&recording){recording=false;store.set("recording",false)}
-  $("start").hidden=true;showView("v-map");render();renderGps();
+  $("start").hidden=true;showView("v-map");render();renderGps();renderRoundBtn();
 }
 $("st-yes").onclick=()=>choose(true);
 $("st-no").onclick=()=>choose(false);
 $("b-home").onclick=()=>showStart(true);
-applyMode();
+/* ---------- kolo: začiatok, koniec a súhrn s trasou ---------- */
+const HCOL=["#ff7a00","#2bb5ff","#ff3d8b","#ffd400","#7cff6b","#b07cff"];
+function renderRoundBtn(){const on=!!(modeSt&&modeSt.score);$("round-btn").textContent=on?"🏁 Ukončiť kolo":"▶ Začať kolo";$("round-btn").className=on?"danger":"primary"}
+$("round-btn").onclick=()=>{
+  if(!(modeSt&&modeSt.score)){forceNew=false;choose(true);renderRoundBtn();showToast("Kolo beží: zapisuješ údery a nahrávam trasu. Nechaj Fór otvorený.");return}
+  if(!confirm("Ukončiť kolo a ukázať prejdenú trasu?"))return;
+  const now=Date.now();if(round.start&&round.holeStart!=null&&round.holeTimes[round.hole]==null)round.holeTimes[round.hole]=now-round.holeStart;
+  round.end=now;saveRound();recording=false;store.set("recording",false);store.set("track",track);wake(false);
+  const last={name:AKAD?"Apex Akadémia":"Apex Golf",holes:HOLES,par:course.par.slice(0,HOLES),round:JSON.parse(JSON.stringify(round)),track:track.slice(),greens:course.greens.slice(0,HOLES)};
+  store.set("last",last);modeSt={score:false,t:Date.now()};store.set("mode",modeSt);applyMode();renderRoundBtn();renderGps();render();showSummary(last)};
+function findStops(tr){const out=[];let i=0;
+  while(i<tr.length){let j=i+1,sl=tr[i].lat,so=tr[i].lon,n=1;
+    while(j<tr.length&&dist([tr[i].lat,tr[i].lon],[tr[j].lat,tr[j].lon])<8){sl+=tr[j].lat;so+=tr[j].lon;n++;j++}
+    if(j-1>i&&tr[j-1].t-tr[i].t>=20000){out.push({lat:sl/n,lon:so/n,h:tr[i].h,s:tr[j-1].t-tr[i].t});i=j}else i++}
+  return out}
+let sumMap=null;
+const fmtMin=ms=>{if(!ms||ms<0)return"–";const m=Math.round(ms/60000);return m<60?m+" min":Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")+" min"};
+function showSummary(last){if(!last||!last.track){showToast("Zatiaľ nemáš uložené žiadne dohrané kolo.");return}
+  const r=last.round,tr=last.track.filter(p=>p.acc==null||p.acc<=35),H=last.holes;
+  const d0=new Date(r.start||(tr[0]&&tr[0].t)||Date.now());
+  $("sum-t").textContent="Kolo dohrané · "+last.name;
+  $("sum-sub").textContent=d0.toLocaleDateString("sk",{weekday:"long",day:"numeric",month:"numeric"})+", "+d0.toLocaleTimeString("sk",{hour:"2-digit",minute:"2-digit"});
+  let km=0;const hk=Array(H).fill(0);for(let i=1;i<tr.length;i++){const d=dist([tr[i-1].lat,tr[i-1].lon],[tr[i].lat,tr[i].lon]);if(d>150)continue;km+=d;if(tr[i].h!=null&&tr[i].h<H)hk[tr[i].h]+=d}
+  const stops=findStops(tr);const tot=r.strokes.slice(0,H).reduce((a,b)=>a+b,0),played=r.strokes.slice(0,H).map((s,i)=>s?last.par[i]:0).reduce((a,b)=>a+b,0);
+  const dur=(r.end||Date.now())-(r.start||(tr[0]?tr[0].t:Date.now()));const dd=tot-played;
+  $("sum-stats").innerHTML=`<div class="stat"><div class="v num">${fmtMin(dur)}</div><div class="l">čas kola</div></div><div class="stat"><div class="v num">${(km/1000).toFixed(2).replace(".",",")}</div><div class="l">km pešo</div></div>`+
+    `<div class="stat"><div class="v num">${tot||"–"}</div><div class="l">${tot?(dd===0?"úderov · na par":"úderov · "+(dd>0?"+":"−")+Math.abs(dd)):"údery nezapísané"}</div></div>`;
+  let html="";for(let i=0;i<H;i++){const t=r.holeTimes&&r.holeTimes[i];const ns=stops.filter(s=>s.h===i).length;
+    if(!r.strokes[i]&&!t&&!hk[i])continue;
+    html+=`<tr><td><span class="hdot" style="background:${HCOL[i%HCOL.length]}"></span>${i+1}</td><td>${r.strokes[i]||"·"}${r.strokes[i]?` <span class="muted small">(par ${last.par[i]})</span>`:""}</td><td>${fmtMin(t)}</td><td>${Math.round(hk[i])} m</td><td>${ns}</td></tr>`}
+  $("sum-body").innerHTML=html||'<tr><td colspan="5" class="muted">Bez údajov o jamkách</td></tr>';
+  $("sum").hidden=false;
+  setTimeout(()=>{if(sumMap){sumMap.remove();sumMap=null}
+    sumMap=L.map("sum-map",{zoomControl:false,attributionControl:true});
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,maxNativeZoom:19,attribution:"Esri, Maxar"}).addTo(sumMap);
+    const all=[];let seg=[],h=null;
+    const flush=()=>{if(seg.length>1)L.polyline(seg,{color:h==null?"#ffffff":HCOL[h%HCOL.length],weight:4,opacity:.95}).addTo(sumMap)};
+    for(const p of tr){const ll=[p.lat,p.lon];all.push(ll);if(p.h!==h){if(seg.length)seg.push(ll);flush();seg=seg.length?[seg[seg.length-1]]:[];h=p.h}seg.push(ll)}flush();
+    last.greens.forEach((g,i)=>{if(g)L.circleMarker(g,{radius:6,color:"#fff",weight:2,fillColor:"#e0312b",fillOpacity:1}).bindTooltip("⛳ "+(i+1),{direction:"top"}).addTo(sumMap)});
+    let k=0;for(const s of stops){k++;const c=s.h==null?"#fff":HCOL[s.h%HCOL.length];
+      L.marker([s.lat,s.lon],{icon:L.divIcon({className:"",html:`<div class="stopmk" style="--c:${c}">${k}</div>`,iconSize:[18,18],iconAnchor:[9,9]})})
+       .bindTooltip("Jamka "+((s.h??-1)+1||"?")+" · postál si "+Math.round(s.s/1000)+" s",{direction:"top"}).addTo(sumMap)}
+    if(tr.length)L.circleMarker([tr[0].lat,tr[0].lon],{radius:7,color:"#fff",weight:3,fillColor:"#1a7cff",fillOpacity:1}).bindTooltip("Štart").addTo(sumMap);
+    if(all.length>1)sumMap.fitBounds(all,{padding:[24,24],maxZoom:18});else sumMap.setView(last.greens.find(Boolean)||COURSE_CENTER,16)},60)}
+$("sum-x").onclick=()=>{$("sum").hidden=true;if(sumMap){sumMap.remove();sumMap=null}};
+$("sum-gpx").onclick=()=>$("g-export").click();
+$("g-last").onclick=()=>showSummary(store.get("last",null));
+applyMode();renderRoundBtn();
 // pri spustení vždy zoznam ihrísk, okrem rozohranej hry so skóre (napr. po znovunačítaní počas kola)
 let nextQ=false;try{nextQ=sessionStorage.getItem("for.next")==="q";sessionStorage.removeItem("for.next")}catch(e){}
 const QP=new URLSearchParams(location.search);
