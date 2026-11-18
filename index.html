@@ -699,6 +699,8 @@ map.on("popupopen",e=>{const el=e.popup.getElement(),b=el.querySelector("button[
 setInterval(drawReports,60000);
 function repWhere(){return tapPt?{p:tapPt,src:"na bode, ktorý si označil na mape"}:me?{p:me,src:"na tvojej polohe"}:hasGreen()?{p:greenPt(),src:"pri greene jamky "+(round.hole+1)+" (poloha nie je známa)",approx:1}:null}
 let repLevel=null;
+const NOT_IN_BUNKER=["divot","mole","pitch","greenbad"];
+function inBunkerNow(){const w=repWhere();if(!w||w.approx)return false;return bunkerDist(w.p)===0}
 // bunker sa ponúka len pri bunkri (obrysy z course.feat); ak ihrisko obrysy bunkrov nemá, ponúkne sa vždy
 function bunkerDist(p){const B=(course.feat||[]).flat().filter(f=>f&&f.t==="bunker"&&f.p&&f.p.length>2);if(!B.length)return null;
   const kx=111320*Math.cos(p[0]*Math.PI/180),ky=111200;let best=1e9;
@@ -713,7 +715,7 @@ function repTile(k){if(k.startsWith("g:")){const g=REP_GROUPS[k.slice(2)];return
 function renderRepSheet(){const w=repWhere();
   $("rep-title").textContent=repLevel?REP_GROUPS[repLevel].t:"Čo vidíš?";
   $("rep-back").hidden=!repLevel;
-  $("rep-grid").innerHTML=(repLevel?REPORTS.filter(r=>r.g===repLevel).map(r=>r.k):REP_TOP).filter(k=>k!=="bunker"||bunkerOk()).map(repTile).join("");
+  $("rep-grid").innerHTML=(repLevel?REPORTS.filter(r=>r.g===repLevel).map(r=>r.k):REP_TOP).filter(k=>(k!=="bunker"||bunkerOk())&&!(NOT_IN_BUNKER.includes(k)&&inBunkerNow())).map(repTile).join("");
   $("rep-where").innerHTML=w?"📍 Uloží sa "+w.src+"."+(tapPt&&me?' <button class="mini" id="rep-mine">na mojej polohe</button>':""):"Poloha nie je známa. Zavri okno a ťukni na mape na miesto problému.";
   if($("rep-mine"))$("rep-mine").onclick=()=>{tapPt=null;renderTap();renderRepSheet()};
   $("rep-grid").querySelectorAll("button").forEach(b=>b.disabled=!w)}
@@ -746,6 +748,7 @@ function startVoice(){if(!SR||rec)return;
   rec.onerror=e=>{$("rep-voice").textContent=e.error==="not-allowed"||e.error==="service-not-allowed"?"Mikrofón nie je povolený, ťukni na ikonu.":e.error==="no-speech"?"":"Nerozumel som, skús znova alebo ťukni na ikonu."};
   rec.onend=()=>{if(rec!==me_)return;rec=null;micIdle();if(!fin||$("rep").hidden)return;const k=voiceMatch(fin);
     if(k==="bunker"&&!bunkerOk()){$("rep-voice").textContent="🎤 „"+fin+"“ · tu žiadny bunker nie je. Ťukni na mape na bunker a nahlás ho tam.";return}
+    if(k&&NOT_IN_BUNKER.includes(k)&&inBunkerNow()){$("rep-voice").textContent="🎤 „"+fin+"“ · v bunkri sa to nahlásiť nedá.";return}
     if(k)saveReport(k,fin);else{$("rep-voice").textContent="🎤 „"+fin+"“ · tomu nerozumiem. Ťukni na ikonu, alebo:";
       $("rep-grid").insertAdjacentHTML("afterbegin",`<button data-k="other" data-note="1" style="grid-column:1/-1;flex-direction:row;justify-content:center;min-height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface)">❗ Uložiť ako Iné: „${escH(fin)}“</button>`);
       $("rep-grid").querySelector("[data-note]").onclick=ev=>{ev.stopPropagation();saveReport("other",fin)}}};

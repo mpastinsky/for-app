@@ -339,6 +339,10 @@ function where(){if(repAt)return{p:repAt,src:"na bode, ktorý si označil",k:"pt
   return{p:toLL(...DATA.gc[hNum-1]),src:"pri greene jamky "+hNum+" (poloha nie je známa)",k:"approx"}}
 function bunkerOk(){const w=where(),[x,y]=loc(toEN(...w.p));let d=1e9;for(const B of bunkersL)d=Math.min(d,Math.max(0,sdist(x,y,B)));
   return d<=(w.k==="gps"?5+Math.min(meAcc||10,15):w.k==="approx"?40:5)}
+// v bunkri nedávajú zmysel hlásenia trávnika
+const NOT_IN_BUNKER=["divot","mole","pitch","greenbad"];
+function inBunker(){const w=where();if(w.k==="approx")return false;const[x,y]=loc(toEN(...w.p));return bunkersL.some(B=>sdist(x,y,B)<0)}
+const allowed=k=>!(k==="bunker"&&!bunkerOk())&&!(NOT_IN_BUNKER.includes(k)&&inBunker());
 let level=null;
 const DIAL={top:["mic","slow","wet","trash","g:play","g:turf","g:safe","g:serv"],play:["fast","ball","fore"],turf:["bunker","pitch","greenbad","flag","divot","mole","branch","tee"],safe:["help","storm","animal"],serv:["drink","great","other"]};
 const DG={play:{i:"⛳",t:"Hra a tempo"},turf:{i:"🌿",t:"Ihrisko a trávnik"},safe:{i:"🆘",t:"Bezpečnosť",hot:1},serv:{i:"🥤",t:"Služby a iné"}};
@@ -347,7 +351,7 @@ function tile(k){if(k==="mic")return SR?`<button data-mic="1" class="mic ${rec?"
   if(k.startsWith("g:")){const g=DG[k.slice(2)];return `<button data-g="${k.slice(2)}" class="grp ${g.hot?"hot":""}"><span>${g.i}</span><em>${g.t} ›</em></button>`}
   const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${r.i}</span><em>${r.t}</em></button>`}
 function renderSheet(){const w=where();
-  $3("r3grid").innerHTML=(level?["back",...DIAL[level]]:DIAL.top).filter(k=>k!=="bunker"||bunkerOk()).map(tile).join("");
+  $3("r3grid").innerHTML=(level?["back",...DIAL[level]]:DIAL.top).filter(allowed).map(tile).join("");
   $3("r3where").innerHTML="📍 "+w.src+(repAt&&meLL?'<button id="r3me">moja poloha</button>':"");if($3("r3me"))$3("r3me").onclick=()=>{repAt=null;renderSheet()}}
 function openSheet(){level=null;$3("r3voice").textContent="";$3("pop3").hidden=true;$3("here3").hidden=true;$3("rep3").hidden=false;$3("fab3").classList.add("open");renderSheet();startVoice()}
 function closeSheet(){$3("rep3").hidden=true;$3("fab3").classList.remove("open");stopVoice();repAt=null}
@@ -373,6 +377,7 @@ function startVoice(){if(!SR||rec)return;rec=new SR();rec.lang="sk-SK";rec.inter
   rec.onerror=e=>{$3("r3voice").textContent=e.error==="no-speech"?"":e.error==="not-allowed"||e.error==="service-not-allowed"?"Mikrofón nie je povolený, ťukni na ikonu.":"Nerozumel som, skús znova alebo ťukni na ikonu."};
   rec.onend=()=>{if(rec!==mine)return;rec=null;micIdle();if(!fin||$3("rep3").hidden)return;const k=voiceMatch(fin);
     if(k==="bunker"&&!bunkerOk()){$3("r3voice").textContent="🎤 „"+fin+"“ · tu žiadny bunker nie je.";return}
+    if(k&&!allowed(k)){$3("r3voice").textContent="🎤 „"+fin+"“ · v bunkri sa to nahlásiť nedá.";return}
     if(k)saveRep(k,fin);else{$3("r3voice").innerHTML="🎤 „"+escH(fin)+"“ · tomu nerozumiem. Ťukni na ikonu, alebo ";const b=document.createElement("button");b.textContent="ulož ako Iné";b.style.cssText="border:1px solid #d6ddd3;background:#fff;border-radius:8px;padding:4px 10px;font:600 .85rem var(--font)";b.onclick=()=>saveRep("other",fin);$3("r3voice").appendChild(b)}};
   try{rec.start()}catch(e){rec=null;micIdle()}}
 
@@ -551,7 +556,7 @@ if(PLAY){
     const k=snap?1:1-Math.exp(-dt*(S.mode==="fly"?2.2:4));camP.lerp(P,k);camT.lerp(T,k);camera.position.copy(camP);camera.lookAt(camT)}
   // ovládanie
   let hold=null,turn=0;
-  const powOf=t=>{const ph=(t/1400)%2;return ph<1?ph:2-ph};
+  const powOf=t=>{const ph=(t/2300)%2;return ph<1?ph:2-ph};
   $("p-hit").addEventListener("pointerdown",e=>{if(S.mode!=="aim")return;e.preventDefault();hold=performance.now();$("p-hit").setPointerCapture(e.pointerId)});
   const rel=e=>{if(hold==null)return;const p=Math.max(.04,powOf(performance.now()-hold));hold=null;$("p-pow").style.width="0";shoot(p)};
   $("p-hit").addEventListener("pointerup",rel);$("p-hit").addEventListener("pointercancel",()=>{hold=null;$("p-pow").style.width="0"});
@@ -561,10 +566,10 @@ if(PLAY){
   $("p-v").onclick=()=>{S.view=1-S.view};
   // potiahnutie prstom po scéne = mierenie
   let drag=null;renderer.domElement.addEventListener("pointerdown",e=>{drag=e.clientX});
-  addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim")return;S.aim+=(e.clientX-drag)*.0025;drag=e.clientX;drawAim()});
+  addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim")return;S.aim+=(e.clientX-drag)*.0011;drag=e.clientX;drawAim()});
   addEventListener("pointerup",()=>{drag=null});
   game={update(dt){
-      if(turn&&S.mode==="aim"){S.aim+=turn*dt*.35;drawAim()}
+      if(turn&&S.mode==="aim"){S.aim+=turn*dt*.16;drawAim()}
       if(hold!=null){const p=powOf(performance.now()-hold);$("p-pow").style.width=(p*100)+"%";const cl=CLUBS[S.club];
         $("p-ht").textContent=cl.a?"Sila "+Math.round(p*100)+" % · ≈ "+Math.round(cl.c*S.lie.m*p)+" m":"Pat ≈ "+(cl.c*p).toFixed(1).replace(".",",")+" m"}
       else if(S.mode==="aim")$("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";
