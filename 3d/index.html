@@ -99,8 +99,11 @@ g2.fillStyle=STYLE.dry?"#b3ad66":"#86a352";g2.fillRect(0,0,TEX,TEX);
 let seed=7+hNum*13;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
 for(let k=0;k<2500;k++){g2.fillStyle=STYLE.dry?(rnd()<.5?"rgba(150,150,80,.10)":"rgba(210,200,140,.10)"):(rnd()<.5?"rgba(90,130,50,.10)":"rgba(150,180,90,.10)");
   const r=(2+rnd()*6)*ppm/3;g2.beginPath();g2.arc(rnd()*TEX,rnd()*TEX,r,0,7);g2.fill()}
-// pokosená plocha medzi odpaliskom a greenom (odhad, zo satelitu ju nevidno)
-{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8));g2.quadraticCurveTo(tx(-w),ty(y0),tx(0),ty(y0));g2.quadraticCurveTo(tx(w),ty(y0),tx(w),ty(y0+8));
+// pokosené plochy: podľa leteckých záberov (jamky 1 a 2), inak odhad
+const MOW=DATA.mow&&DATA.mow[hNum];
+if(MOW){for(const poly of MOW.slice().reverse()){const P=poly.map(loc);g2.save();path(P);g2.clip();g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);
+  g2.fillStyle="rgba(40,90,25,.16)";for(let y=-20;y<c+30;y+=12){const a=ty(y),b2=ty(y+6);g2.fillRect(0,Math.min(a,b2),TEX,Math.abs(a-b2))}g2.restore()}}
+else{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8));g2.quadraticCurveTo(tx(-w),ty(y0),tx(0),ty(y0));g2.quadraticCurveTo(tx(w),ty(y0),tx(w),ty(y0+8));
  g2.lineTo(tx(w+2),ty(y1-6));g2.quadraticCurveTo(tx(w),ty(y1+2),tx(0),ty(y1+2));g2.quadraticCurveTo(tx(-w),ty(y1+2),tx(-w-2),ty(y1-6));g2.closePath();g2.clip();
  g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);g2.fillStyle="rgba(40,90,25,.18)";for(let y=y0;y<y1+4;y+=12){const a=ty(y),b2=ty(y+6);g2.fillRect(0,Math.min(a,b2),TEX,Math.abs(a-b2))}g2.restore()}
 // greeny: lem (fringe) + plocha
