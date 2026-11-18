@@ -82,16 +82,18 @@ const GB=(()=>{let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of green){x0=Math
 const gcx=(GB.x0+GB.x1)/2,gcy=(GB.y0+GB.y1)/2;
 const myBunkers=[];
 const BUMPS=[[3.5,4,4.2,.13],[-4,-3,3.6,-.09],[-3,4.5,3.2,.08],[4,-5,3,-.06]];
-hBump=(x,y)=>{const M=9;if(x<GB.x0-M||x>GB.x1+M||y<GB.y0-M||y>GB.y1+M)return 0;
-  let h=0;const sd=sdist(x,y,green);const w=sd<=0?1:1-sstep(sd/4.5);
+hBump=(x,y)=>{const M=9;let h=0;
+  for(const B of myBunkers){const bb=B.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,B);if(d>4)continue;
+    if(d>=0){h+=.2*Math.exp(-(((d-.9)/.8)**2))*(B.gd<6?1:.5)}else{h-=.14*sstep(-d/1.5)}}
+  if(x<GB.x0-M||x>GB.x1+M||y<GB.y0-M||y>GB.y1+M)return h;
+  const sd=sdist(x,y,green);const w=sd<=0?1:1-sstep(sd/4.5);
   if(w>0){h+=w*.011*(y-gcy);for(const[bx,by,sg,a]of BUMPS){const dx=x-gcx-bx,dy=y-gcy-by;h+=w*a*Math.exp(-(dx*dx+dy*dy)/(2*sg*sg))}}
-  for(const B of myBunkers){const d=sdist(x,y,B);if(d>4)continue;
-    if(d>=0){h+=.2*Math.exp(-(((d-.9)/.8)**2))*(sd<6?1:.5)}else{h-=.14*sstep(-d/1.5)}}
   return h};
 const hG=hL(0,c);
 const cen=P=>[P.reduce((a,p)=>a+p[0],0)/P.length,P.reduce((a,p)=>a+p[1],0)/P.length];
 const nearestGreen=B=>{const q=cen(B);let bi=0,bd=1e9;DATA.gc.forEach((g,i)=>{const d=(g[0]-q[0])**2+(g[1]-q[1])**2;if(d<bd){bd=d;bi=i}});return bi};
 for(const B of DATA.bunkers)if(nearestGreen(B)===hNum-1)myBunkers.push(B.map(loc));
+for(const B of myBunkers){let a=1e9,b=-1e9,c2=1e9,d=-1e9;for(const[x,y]of B){a=Math.min(a,x);b=Math.max(b,x);c2=Math.min(c2,y);d=Math.max(d,y)}B.bb=[a-4,b+4,c2-4,d+4];B.gd=Math.min(...B.map(([x,y])=>sdist(x,y,green)))}
 document.getElementById("h-t").textContent="Jamka "+hNum+" · Par 3";
 document.getElementById("h-s").textContent=TEE_N[tIdx]+" · "+f+" / "+c+" / "+b+" m";
 document.querySelectorAll("#holes a").forEach(a=>{a.href="?h="+a.dataset.h+"&t="+tIdx;a.classList.toggle("on",+a.dataset.h===hNum)});
@@ -119,7 +121,9 @@ scene.add(sun,sun.target);
 const X0=-170,X1=170,Y0=-70,Y1=c+150,SEG=2;
 const geo=new THREE.PlaneGeometry(X1-X0,Y1-Y0,(X1-X0)/SEG,(Y1-Y0)/SEG);geo.rotateX(-Math.PI/2);
 geo.translate((X0+X1)/2,0,-(Y0+Y1)/2);
-{const p=geo.attributes.position;for(let i=0;i<p.count;i++){p.setY(i,hL(p.getX(i),-p.getZ(i)))}geo.computeVertexNormals()}
+{const p=geo.attributes.position,m=4.5;for(let i=0;i<p.count;i++){const x=p.getX(i),y=-p.getZ(i);let h=hL(x,y);
+  // pod jemnou sieťou greenu hrubý terén mierne znížime, aby cez ňu nepresvital (inak ostrý „odrezaný“ okraj pri bunkri)
+  if(x>GB.x0-7+m&&x<GB.x1+7-m&&y>GB.y0-7+m&&y<GB.y1+7-m&&!myBunkers.some(B=>inPoly([x,y],B)))h-=.35;p.setY(i,h)}geo.computeVertexNormals()}
 const TEX=2048,cv=document.createElement("canvas");cv.width=cv.height=TEX;const g2=cv.getContext("2d");
 const tx=x=>(x-X0)/(X1-X0)*TEX,ty=y=>(Y1-y)/(Y1-Y0)*TEX,ppm=TEX/(X1-X0);
 function path(P){g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));g2.closePath()}
@@ -194,7 +198,8 @@ const PIN=[0,c];
   bx.globalCompositeOperation="destination-in";bx.drawImage(cA,0,0);a.save();a.setTransform(1,0,0,1,0,0);a.globalCompositeOperation="soft-light";a.globalAlpha=.75;a.drawImage(big,0,0);a.restore()}
  const gt=new THREE.CanvasTexture(cA);gt.colorSpace=THREE.SRGBColorSpace;gt.anisotropy=renderer.capabilities.getMaxAnisotropy();
  const gm=new THREE.Mesh(gg,new THREE.MeshStandardMaterial({map:gt,transparent:true,roughness:.58,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
- gm.receiveShadow=true;gm.renderOrder=1;scene.add(gm)}
+ gm.receiveShadow=false;gm.renderOrder=1;   // green bez tieňov stromov, aby nevyzeral odrezaný
+ scene.add(gm)}
 // okolie mimo modelu (rovina)
 const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:STYLE.dry?0x9c9a52:0x6a8a3c,roughness:1}));
 {let mn=1e9;const pp=geo.attributes.position;for(let i=0;i<pp.count;i++)mn=Math.min(mn,pp.getY(i));far.position.set(0,mn-2,-c/2)}scene.add(far);
@@ -463,7 +468,7 @@ controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.44;
 controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;
 // na telefóne pôvodná rýchlosť, s myšou na počítači pomalšie
 if(matchMedia("(pointer:fine)").matches){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=.6}
-renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.2;controls.zoomSpeed=m?.6:1},{capture:true});controls.minDistance=8;controls.maxDistance=500;
+renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:4.5;controls.zoomSpeed=m?.6:1},{capture:true});controls.minDistance=8;controls.maxDistance=500;
 const eye=1.7;
 const views={tee:{pos:W(0,-15,hL(0,-15)+eye+2.6),target:W(0,c*.9,hL(0,c*.9))},top:{pos:W(0,c*.5-25,230),target:W(0,c*.5,0)}};
 function go(v){camera.position.copy(v.pos);controls.target.copy(v.target);controls.update()}
