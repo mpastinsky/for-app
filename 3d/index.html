@@ -340,15 +340,18 @@ const RS=document.createElement("style");RS.textContent=`
 #fab3.open{background:#14211a}
 /* tlačidlo Nahlásiť dole vpravo, možnosti v oblúku nad ním */
 #v-fly,#v-top{display:none}
+#nav3{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);display:grid;grid-template-columns:repeat(4,38px);gap:5px;z-index:40}
+#nav3 button{width:38px;height:38px;border:0;border-radius:10px;background:rgba(255,255,255,.88);color:#123;font:700 1.05rem system-ui;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;user-select:none}#nav3 button:hover{background:#fff}
+body.playing #nav3{display:none}
 #fab3{top:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 74px)!important;touch-action:none;user-select:none;-webkit-user-select:none;z-index:46!important}
 body.playing #fab3{bottom:calc(env(safe-area-inset-bottom,0px) + 140px)!important}
 #fab3 small{top:-17px!important}
 #rep3{inset:0!important;right:0!important;top:0!important;max-height:none!important;display:block!important;background:radial-gradient(circle at calc(100% - 40px) calc(100% - 110px),rgba(0,0,0,.35),rgba(0,0,0,0) 260px)!important}
 #rep3[hidden]{display:none!important}
 #r3grid{display:block!important;overflow:visible!important;padding:0!important}
-#r3grid>button{position:fixed;transform:translate(-50%,-50%);flex-direction:column!important;gap:3px!important;width:76px;transition:left .15s,top .15s}
-#r3grid>button span{width:46px!important;height:46px!important;font-size:1.35rem!important}
-#r3grid>button em{font-size:.62rem!important;padding:2px 6px!important;white-space:normal!important;text-align:center;line-height:1.15;max-width:76px}
+#r3grid>button{position:fixed;transform:translate(-50%,-50%);flex-direction:column!important;gap:2px!important;width:56px;overflow:visible;transition:left .15s,top .15s}
+#r3grid>button span{width:44px!important;height:44px!important;font-size:1.3rem!important}
+#r3grid>button em{font-size:.6rem!important;padding:1px 5px!important;white-space:nowrap!important;text-align:center;line-height:1.2}
 #r3grid>button.hov span{transform:scale(1.18);box-shadow:0 0 0 3px #ff8a00,0 2px 8px rgba(0,0,0,.35)!important}
 #r3where,#r3voice{position:fixed;right:12px;max-width:min(300px,80vw)}
 #r3txt{position:fixed;right:12px;width:min(260px,80vw)!important}
@@ -386,11 +389,12 @@ const DG={pace:{i:"⏱️",t:"Tempo hry"},green:{i:"🌳",t:"Ihrisko"},info:{i:"
 function tile(k){if(k==="mic")return SR?`<button data-mic="1" class="mic ${rec?"on":""}"><span>🎤</span><em>${rec?"Počúvam…":"Povedať hlasom"}</em></button>`:"";
   if(k==="back")return `<button data-back="1"><span>‹</span><em>Späť</em></button>`;
   if(k.startsWith("g:")){const g=DG[k.slice(2)];return `<button data-g="${k.slice(2)}" class="grp ${g.hot?"hot":""}"><span>${g.i}</span><em>${g.t} ›</em></button>`}
-  const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${icH(r)}</span><em>${r.t}</em></button>`}
+  const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${icH(r)}</span><em>${SHORT[r.k]||r.t}</em></button>`}
+const SHORT={trash:"Neporiadok",wet:"Mokro",greenbad:"Zlý green",divot:"Divoty",mole:"Krtince",bunker:"Bunker",other:"Iné",slow:"Pomalí",fast:"Rýchli",ball:"Loptička",help:"SOS",text:"Text"};
 function layoutArc(){const fb=$3("fab3").getBoundingClientRect(),cx=fb.left+fb.width/2,cy=fb.top+fb.height/2;
   const items=[...$3("r3grid").querySelectorAll(":scope>button")];const rings=items.length<=4?[items]:[items.slice(0,3),items.slice(3)];
-  rings.forEach((ring,ri)=>{const r=ri?218:(rings.length>1?122:150),m=ring.length;ring.forEach((el,i)=>{const a=(m===1?135:180-i*90/(m-1))*Math.PI/180;el.style.left=(cx+r*Math.cos(a))+"px";el.style.top=(cy-r*Math.sin(a))+"px"})});
-  const topY=cy-(rings.length>1?272:205);$3("r3voice").style.top=(topY-70)+"px";$3("r3where").style.top=(topY-28)+"px";const tx=$3("r3txt");if(tx)tx.style.top=Math.max(80,cy-330)+"px";
+  rings.forEach((ring,ri)=>{const m=ring.length,r=ri?168:(rings.length>1?92:Math.max(92,(m-1)*72/1.571));ring.forEach((el,i)=>{const a=(m===1?135:180-i*90/(m-1))*Math.PI/180;el.style.left=(cx+r*Math.cos(a))+"px";el.style.top=(cy-r*Math.sin(a))+"px"})});
+  const topY=cy-(rings.length>1?215:140);$3("r3voice").style.top=(topY-70)+"px";$3("r3where").style.top=(topY-28)+"px";const tx=$3("r3txt");if(tx)tx.style.top=Math.max(80,cy-330)+"px";
   $3("fab3").firstChild.nodeValue=level?"‹":"✕"}
 function renderSheet(){const w=where();
   $3("r3grid").innerHTML=(level?DIAL[level]:DIAL.top).filter(allowed).map(tile).join("");
@@ -431,7 +435,7 @@ $3("r3back").onclick=()=>{level=null;renderSheet()};$3("r3x").onclick=closeSheet
  fab.addEventListener("pointercancel",()=>{clearTimeout(holdT);holdT=null;byHold=false});
  addEventListener("resize",()=>{if(isOpen())layoutArc()})}$3("here3").onclick=()=>openSheet();
 // hlas
-const SR=null; // hlasové hlásenie zatiaľ vypnuté (Martin 18.11.); zapnúť: window.SpeechRecognition||window.webkitSpeechRecognitionlet rec=null;
+const SR=null;let rec=null; // hlasové hlásenie zatiaľ vypnuté (Martin 18.11.); zapnúť: SR=window.SpeechRecognition||window.webkitSpeechRecognition
 const micIdle=()=>{const b=document.querySelector("#r3grid button[data-mic]");if(b){b.classList.remove("on");b.querySelector("em").textContent="Povedať hlasom"}};
 function stopVoice(){if(rec){try{rec.abort()}catch(e){}rec=null}micIdle()}
 function startVoice(){if(!SR||rec)return;rec=new SR();rec.lang="sk-SK";rec.interimResults=true;rec.maxAlternatives=3;let fin="";const mine=rec;
@@ -475,11 +479,22 @@ function placeLabels(){for(const l of labels){const p=l.v.clone().project(camera
 // --- kamera
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.44;
+// ovládacie tlačidlá pre počítač (vľavo dole): podržaním sa pohyb opakuje
+if(matchMedia("(pointer:fine)").matches){controls.zoomToCursor=true;
+ document.body.insertAdjacentHTML("beforeend",`<div id="nav3"><button data-a="rl" title="Otočiť doľava">⟲</button><button data-a="f" title="Dopredu">▲</button><button data-a="rr" title="Otočiť doprava">⟳</button><button data-a="zi" title="Priblížiť">＋</button><button data-a="tu" title="Sklopiť pohľad">⤒</button><button data-a="b" title="Dozadu">▼</button><button data-a="td" title="Pohľad zhora">⤓</button><button data-a="zo" title="Oddialiť">－</button></div>`);
+ const sph=new THREE.Spherical(),off=new THREE.Vector3();
+ const act=a=>{const T=controls.target,cp=camera.position;off.copy(cp).sub(T);
+   if(a==="zi"||a==="zo"){const k=a==="zi"?.94:1/.94;off.multiplyScalar(k);const L=off.length();if(L<controls.minDistance||L>controls.maxDistance)return;cp.copy(T).add(off)}
+   else if(a==="rl"||a==="rr"||a==="tu"||a==="td"){sph.setFromVector3(off);if(a==="rl")sph.theta+=.04;if(a==="rr")sph.theta-=.04;if(a==="tu")sph.phi=Math.max(.05,sph.phi-.03);if(a==="td")sph.phi=Math.min(controls.maxPolarAngle,sph.phi+.03);off.setFromSpherical(sph);cp.copy(T).add(off)}
+   else{const d=new THREE.Vector3(-off.x,0,-off.z).normalize().multiplyScalar((a==="f"?1:-1)*Math.max(1.5,off.length()*.03));T.add(d);cp.add(d)}};
+ let timer=null;const stop=()=>{clearInterval(timer);timer=null};
+ document.getElementById("nav3").addEventListener("pointerdown",e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();act(b.dataset.a);stop();timer=setInterval(()=>act(b.dataset.a),30)});
+ addEventListener("pointerup",stop);addEventListener("pointercancel",stop);document.getElementById("nav3").addEventListener("pointerleave",stop)}
 // dotyk: 1 prst = posun po ihrisku (dopredu, dozadu, do strán), 2 prsty = sklon hore/dole, otáčanie a priblíženie
 controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;
 // na telefóne pôvodná rýchlosť, s myšou na počítači pomalšie
-if(matchMedia("(pointer:fine)").matches){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=.6}
-renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?.6:1},{capture:true});controls.minDistance=8;controls.maxDistance=500;
+if(matchMedia("(pointer:fine)").matches){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=1.2}
+renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?1.2:1},{capture:true});controls.minDistance=8;controls.maxDistance=230;
 const eye=1.7;
 const views={tee:{pos:W(0,-15,hL(0,-15)+eye+2.6),target:W(0,c*.9,hL(0,c*.9))},top:{pos:W(0,c*.5-25,230),target:W(0,c*.5,0)}};
 function go(v){camera.position.copy(v.pos);controls.target.copy(v.target);controls.update()}
