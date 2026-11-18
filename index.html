@@ -132,7 +132,9 @@ body.editing #round-btn{display:none}
 @keyframes pulse{50%{box-shadow:0 0 0 8px rgba(224,49,43,.35)}}
 #fab{position:absolute;right:12px;bottom:170px;z-index:520;width:68px;height:68px;border-radius:50%;border:0;background:#ff8a00;color:#fff;font-size:1.9rem;box-shadow:0 4px 14px rgba(0,0,0,.4);display:grid;place-items:center;padding:0}
 #fab small{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font:700 .72rem var(--font);color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
-body.editing #fab{display:none}
+body.editing #fab,body.editing #rep-here{display:none}
+#rep-here{position:absolute;left:50%;transform:translateX(-50%);top:104px;z-index:520;border-radius:999px;background:#ff8a00;color:#fff;border:0;font-weight:700;padding:10px 16px;box-shadow:0 3px 10px rgba(0,0,0,.4);white-space:nowrap}
+#rep-mine{margin-left:6px;padding:2px 8px;min-height:0;font-size:.8rem}
 .rephead{display:flex;align-items:center;gap:8px;margin-bottom:10px}.rephead h2{flex:1;margin:0;font-size:1.15rem}
 #rep-x2{width:44px;height:44px;border-radius:50%;padding:0;font-size:1.2rem;border:0;background:transparent;color:var(--fg)}
 .rephead h2{font-size:1.6rem!important}
@@ -242,6 +244,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
       </div>
     </div>
     <button id="round-btn" class="primary">▶ Začať kolo</button>
+    <button id="rep-here" hidden>⚠️ Nahlásiť na tomto bode</button>
     <button id="fab" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
     <div id="plan" hidden><img id="plan-img" alt="Plán jamky"><button id="plan-x">Zavrieť</button></div>
     <div id="edbar" hidden>
@@ -558,6 +561,7 @@ function renderHint(){
 }
 function render(){renderMap();renderScore();renderPace();renderSet()}
 function renderTap(){
+  $("rep-here").hidden=!tapPt||!!edit;
   if(!tapPt){tapMk.remove();tapLines.remove();return}
   const parts=[],pts=[];
   if(me){parts.push("ty "+Math.round(dist(me,tapPt))+" m");pts.push(me)}
@@ -574,6 +578,8 @@ map.on("click",e=>{
   tapPt=tapPt&&map.distance(tapPt,p)<15?null:p; // ťuk blízko bodu ho zruší
   renderTap();
 });
+// dlhé podržanie prsta na mape = hneď nahlásiť na tom mieste
+map.on("contextmenu",e=>{if(edit||mode)return;tapPt=[e.latlng.lat,e.latlng.lng];renderTap();openReport()});
 $("b-green").onclick=()=>{
   if(hasGreen()&&mode!=="setGreen"){
     // druhé ťuknutie: posunúť green
@@ -682,8 +688,10 @@ function renderRepSheet(){const w=repWhere();
   $("rep-title").textContent=repLevel?REP_GROUPS[repLevel].t:"Čo vidíš?";
   $("rep-back").hidden=!repLevel;
   $("rep-grid").innerHTML=(repLevel?REPORTS.filter(r=>r.g===repLevel).map(r=>r.k):REP_TOP).map(repTile).join("");
-  $("rep-where").textContent=w?"Uloží sa "+w.src+".":"Poloha nie je známa. Ťukni na mapu na miesto a otvor hlásenie znova.";
+  $("rep-where").innerHTML=w?"📍 Uloží sa "+w.src+"."+(tapPt&&me?' <button class="mini" id="rep-mine">na mojej polohe</button>':""):"Poloha nie je známa. Zavri okno a ťukni na mape na miesto problému.";
+  if($("rep-mine"))$("rep-mine").onclick=()=>{tapPt=null;renderTap();renderRepSheet()};
   $("rep-grid").querySelectorAll("button").forEach(b=>b.disabled=!w)}
+$("rep-here").onclick=e=>{e.stopPropagation();openReport()};
 function openReport(){repLevel=null;$("rep-voice").textContent="";$("rep-list").hidden=true;$("rep").hidden=false;renderRepSheet();if(repWhere())startVoice()}
 function closeReport(){$("rep").hidden=true;stopVoice()}
 function repButtons(w){return REPORTS.map(r=>`<button data-k="${r.k}" ${w?"":"disabled"}><span>${r.i}</span>${r.t}</button>`).join("")}
