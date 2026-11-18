@@ -61,6 +61,8 @@ const green=DATA.greens[hNum-1].map(loc);
 let ys=[];for(let i=0;i<green.length;i++){const[a,b]=green[i],[d,e]=green[(i+1)%green.length];if((a<=0)!==(d<=0)){ys.push(b+(e-b)*(0-a)/(d-a))}}
 const f=Math.round(Math.min(...ys)),b=Math.round(Math.max(...ys));
 const hG=hL(0,c);
+const cen=P=>[P.reduce((a,p)=>a+p[0],0)/P.length,P.reduce((a,p)=>a+p[1],0)/P.length];
+const nearestGreen=B=>{const q=cen(B);let bi=0,bd=1e9;DATA.gc.forEach((g,i)=>{const d=(g[0]-q[0])**2+(g[1]-q[1])**2;if(d<bd){bd=d;bi=i}});return bi};
 document.getElementById("h-t").textContent="Jamka "+hNum+" · Par 3";
 document.getElementById("h-s").textContent="Akadémia Apex · "+TEE_N[tIdx]+" odpalisko · "+f+" / "+c+" / "+b+" m";
 document.querySelectorAll("#holes a").forEach(a=>{a.href="?h="+a.dataset.h+"&t="+tIdx;a.classList.toggle("on",+a.dataset.h===hNum)});
@@ -71,17 +73,17 @@ const dh=hG;document.getElementById("note").textContent="Skutočný terén z vý
 const scene=new THREE.Scene();
 const sky=STYLE.sunWest?0xc9dbe8:0x9fc6e8;
 scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,350,900);
-const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.3,2000);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,1,1500);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled=true;document.body.prepend(renderer.domElement);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.prepend(renderer.domElement);
 const W=(x,y,h)=>new THREE.Vector3(x,h,-y);          // svet: X vpravo, Y hore, -Z dopredu
 const hemi=new THREE.HemisphereLight(0xdff1ff,0x3a5a2a,STYLE.sunWest?1.9:1.15);scene.add(hemi);
 const sun=new THREE.DirectionalLight(STYLE.sunWest?0xfff1d6:0xffffff,STYLE.sunWest?1.25:1.6);
 // slnko: z juhu (poobede), pri jamke 3 večer zo západu
 const sunDir=STYLE.sunWest?[-1,0.15]:[0.3,-1];const sl=loc([T[0]+sunDir[0]*200,T[1]+sunDir[1]*200]);
 sun.position.copy(W(sl[0],sl[1],170));sun.target.position.copy(W(0,c*.5,0));sun.castShadow=true;
-Object.assign(sun.shadow.camera,{left:-220,right:220,top:220,bottom:-220,near:1,far:800});sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-0.0005;
+Object.assign(sun.shadow.camera,{left:-220,right:220,top:220,bottom:-220,near:1,far:800});sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-0.0003;sun.shadow.normalBias=0.5;
 scene.add(sun,sun.target);
 
 // --- terén + "namaľovaný" povrch (rough, fairway, greeny, bunkre, odpaliská)
@@ -92,36 +94,36 @@ geo.translate((X0+X1)/2,0,-(Y0+Y1)/2);
 const TEX=2048,cv=document.createElement("canvas");cv.width=cv.height=TEX;const g2=cv.getContext("2d");
 const tx=x=>(x-X0)/(X1-X0)*TEX,ty=y=>(Y1-y)/(Y1-Y0)*TEX,ppm=TEX/(X1-X0);
 function path(P){g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));g2.closePath()}
-g2.fillStyle=STYLE.dry?"#a5a35a":"#6f913f";g2.fillRect(0,0,TEX,TEX);
+g2.fillStyle=STYLE.dry?"#b3ad66":"#86a352";g2.fillRect(0,0,TEX,TEX);
 // textúra trávy: náhodné škvrny
 let seed=7+hNum*13;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
-for(let k=0;k<9000;k++){g2.fillStyle=STYLE.dry?(rnd()<.5?"rgba(120,130,60,.25)":"rgba(200,190,120,.2)"):(rnd()<.5?"rgba(70,110,40,.25)":"rgba(140,170,80,.2)");
+for(let k=0;k<2500;k++){g2.fillStyle=STYLE.dry?(rnd()<.5?"rgba(150,150,80,.10)":"rgba(210,200,140,.10)"):(rnd()<.5?"rgba(90,130,50,.10)":"rgba(150,180,90,.10)");
   const r=(2+rnd()*6)*ppm/3;g2.beginPath();g2.arc(rnd()*TEX,rnd()*TEX,r,0,7);g2.fill()}
 // pokosená plocha medzi odpaliskom a greenom (odhad, zo satelitu ju nevidno)
 {const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8));g2.quadraticCurveTo(tx(-w),ty(y0),tx(0),ty(y0));g2.quadraticCurveTo(tx(w),ty(y0),tx(w),ty(y0+8));
  g2.lineTo(tx(w+2),ty(y1-6));g2.quadraticCurveTo(tx(w),ty(y1+2),tx(0),ty(y1+2));g2.quadraticCurveTo(tx(-w),ty(y1+2),tx(-w-2),ty(y1-6));g2.closePath();g2.clip();
  g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);g2.fillStyle="rgba(40,90,25,.18)";for(let y=y0;y<y1+4;y+=12){const a=ty(y),b2=ty(y+6);g2.fillRect(0,Math.min(a,b2),TEX,Math.abs(a-b2))}g2.restore()}
 // greeny: lem (fringe) + plocha
-for(const [i,G] of DATA.greens.entries()){const P=G.map(loc);path(P);g2.lineWidth=2.2*ppm;g2.strokeStyle="#5f9c3a";g2.stroke();g2.fillStyle=i===hNum-1?"#9fdc5a":"#93cf55";g2.fill()}
+for(const [i,G] of DATA.greens.entries()){if(i!==hNum-1)continue;const P=G.map(loc);path(P);g2.lineWidth=2.2*ppm;g2.strokeStyle="#5f9c3a";g2.stroke();g2.fillStyle=i===hNum-1?"#9fdc5a":"#93cf55";g2.fill()}
 // bunkre
-for(const B of DATA.bunkers){const P=B.map(loc);path(P);g2.fillStyle="#eadcae";g2.fill();g2.lineWidth=.6*ppm;g2.strokeStyle="#c8b88a";g2.stroke()}
+for(const B of DATA.bunkers){if(nearestGreen(B)!==hNum-1)continue;const P=B.map(loc);path(P);g2.fillStyle="#eadcae";g2.fill();g2.lineWidth=.6*ppm;g2.strokeStyle="#c8b88a";g2.stroke()}
 // odpaliská
-for(const k of ["1","2","3"])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);
+for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);
   g2.fillStyle=(+k===hNum&&j===tIdx)?"#a7e874":(+k===hNum?"#8fd062":"#86c45a");g2.fill();g2.lineWidth=.5*ppm;g2.strokeStyle="#5d9a3c";g2.stroke()});
 // tieňovanie reliéfu (aby boli kopčeky vidno aj zhora)
 {const ww=X1-X0,hh=Y1-Y0,sc2=document.createElement("canvas");sc2.width=ww;sc2.height=hh;const sx=sc2.getContext("2d"),im=sx.createImageData(ww,hh);
- const L0=[-0.5,0.55,0.67];const ex=2.5;
+ const L0=[-0.5,0.55,0.67];const ex=1.6;
  for(let j=0;j<hh;j++){const y=Y1-j-.5;for(let i=0;i<ww;i++){const x=X0+i+.5;
    const gx=(hL(x+1,y)-hL(x-1,y))/2*ex,gy=(hL(x,y+1)-hL(x,y-1))/2*ex,n=Math.hypot(gx,gy,1);
    const v=Math.max(0,(-gx*L0[0]-gy*L0[1]+L0[2])/n)/L0[2];const k=(j*ww+i)*4;const val=Math.max(0,Math.min(255,128+(v-1)*300));
    im.data[k]=im.data[k+1]=im.data[k+2]=val;im.data[k+3]=255}}
- sx.putImageData(im,0,0);g2.save();g2.globalCompositeOperation="overlay";g2.globalAlpha=.85;g2.drawImage(sc2,0,0,TEX,TEX);g2.restore()}
+ sx.putImageData(im,0,0);g2.save();g2.globalCompositeOperation="soft-light";g2.globalAlpha=.7;g2.drawImage(sc2,0,0,TEX,TEX);g2.restore()}
 const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
 {const p=geo.attributes.position,uv=geo.attributes.uv;for(let i=0;i<p.count;i++){uv.setXY(i,(p.getX(i)-X0)/(X1-X0),(-p.getZ(i)-Y0)/(Y1-Y0))}}
 const ground=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:tex,roughness:1}));ground.receiveShadow=true;scene.add(ground);
 // okolie mimo modelu (rovina)
 const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:STYLE.dry?0x9c9a52:0x6a8a3c,roughness:1}));
-far.position.set(0,hL(X0,Y0)-0.6,-c/2);scene.add(far);
+{let mn=1e9;const pp=geo.attributes.position;for(let i=0;i<pp.count;i++)mn=Math.min(mn,pp.getY(i));far.position.set(0,mn-2,-c/2)}scene.add(far);
 
 // --- stromy
 const trunkM=new THREE.MeshStandardMaterial({color:0x6b4a2b}),leafM=[0x2f6b2c,0x3b7d33,0x285e27].map(x=>new THREE.MeshStandardMaterial({color:x,roughness:.95}));
