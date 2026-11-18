@@ -957,7 +957,7 @@ let nextQ=false;try{nextQ=sessionStorage.getItem("for.next")==="q";sessionStorag
 const QP=new URLSearchParams(location.search);
 if(QP.has("start")||QP.has("map"))history.replaceState(null,"",location.pathname);
 if(QP.has("start"))showStart();
-else if(QP.has("map")){$("start").hidden=true;showView("v-map")}
+else if(QP.has("map")){$("start").hidden=true;showView("v-map");if(QP.has("rep"))setTimeout(openReport,400)}
 else if(nextQ){showStart();stStep("st-2")}
 else if(!(modeSt&&modeSt.score&&Date.now()-modeSt.t<6*3600e3))showStart();
 

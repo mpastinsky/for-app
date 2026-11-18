@@ -24,11 +24,14 @@ canvas{display:block;touch-action:none}
 #top b{white-space:nowrap}#top small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top>div:nth-child(2){min-width:0}
 @media (max-width:480px){#top a{width:36px;height:38px}#holes{gap:4px}#top b{font-size:1.1rem}#tees>span{display:none}#tees{top:calc(env(safe-area-inset-top,0px) + 66px)}
  #bar{gap:6px}#bar button{font-size:.82rem;padding:0 4px}}
+#fab3{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:20;width:56px;height:56px;border-radius:50%;background:#ff8a00;display:grid;place-items:center;font-size:1.6rem;text-decoration:none;box-shadow:0 3px 12px rgba(0,0,0,.4)}
+#fab3 small{position:absolute;top:58px;left:50%;transform:translateX(-50%);font:700 .7rem var(--font);color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
 <body>
 <div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div><a href="../?map=1" aria-label="Mapa a vzdialenosti" style="font-size:1.15rem">🗺</a></div>
+<a id="fab3" href="../?map=1&rep=1" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></a>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
 <div id="note">Načítavam terén…</div>
 <div id="bar"><button id="v-tee" class="on">Z odpaliska</button><button id="v-fly">Let ku greenu</button><button id="v-top">Zhora</button><button id="v-play">⛳ Hrať</button></div>
