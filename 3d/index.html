@@ -40,7 +40,7 @@ const Q=new URLSearchParams(location.search);
 const hNum=Math.min(3,Math.max(1,parseInt(Q.get("h"))||1));
 const tIdx=Math.min(2,Math.max(0,parseInt(Q.get("t"))||0));
 const TEE_N=["zadné","stredné","predné"];
-const STYLE={1:{dry:true},2:{},3:{dry:true,sunWest:true}}[hNum];
+const STYLE={1:{},2:{},3:{sunWest:true}}[hNum];
 
 // --- terén
 const TR=DATA.terrain,Hcm=new Int16Array(Uint8Array.from(atob(TR.cm),c=>c.charCodeAt(0)).buffer);
