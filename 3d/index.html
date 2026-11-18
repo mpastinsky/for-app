@@ -247,7 +247,7 @@ for(const d of [50,100]){if(d>=c-10)continue;const pts=[];for(let a=-0.45;a<=0.4
 const REPORTS=[
   {k:"slow",i:"🐢",t:"Pomalá skupina",w:["pomal","zdrzuj","cakame","cakam","stoja"]},
   {k:"wet",i:"💧",t:"Mokro / blato",w:["mokr","blat","mociar","kaluz","voda na","zaplav"]},
-  {k:"help",off:1,i:"🆘",t:"Zranenie / pomoc",w:["zran","pomoc","sanit","uraz","zle mu","zle je","prva pomoc","zachrank"],hot:1},
+  {k:"help",i:"🆘",t:"Zranenie / pomoc",w:["zran","pomoc","sanit","uraz","zle mu","zle je","prva pomoc","zachrank"],hot:1},
   {k:"pitch",i:"⛳",t:"Pitchmarky na greene",g:"green",w:["pitch","dolk","dier"]},
   {k:"greenbad",i:"🟤",t:"Zlý stav greenu",g:"green",w:["green"]},
   {k:"flag",i:"🚩",t:"Chýba vlajka / jamka",g:"green",w:["vlajk","praporec","tyc","jamka chyba"]},
@@ -264,9 +264,10 @@ const REPORTS=[
   {k:"fore",off:1,i:"⚠️",t:"Nebezpečná loptička (fór)",g:"more",w:[" for","nebezpec","trafil","takmer","lietaj"]},
   {k:"storm",off:1,i:"⛈️",t:"Búrka / blesky",g:"more",w:["burk","blesk","hrom","krupob"],hot:1},
   {k:"great",i:"👍",t:"Super stav ihriska",g:"more",w:["super","skvel","vyborn","perfekt","krasn"]},
-  {k:"other",off:1,i:"❗",t:"Iné",g:"more",w:[]}];
+  {k:"text",i:"💬",t:"Vlastný text",g:"more",w:[]},
+  {k:"other",i:"❗",t:"Iné",g:"more",w:[]}];
 // platnosť hlásení v minútach; m = viaže sa na jamku (pohyblivé: tempo), inak pevný bod
-const REP_TTL={slow:15,fast:15,ball:10,fore:15,help:60,storm:60,animal:30,drink:240,great:360,flag:720,
+const REP_TTL={slow:15,fast:15,ball:10,text:240,fore:15,help:60,storm:60,animal:30,drink:240,great:360,flag:720,
   wet:1440,bunker:1440,tee:1440,trash:2880,other:1440,branch:4320,pitch:4320,divot:4320,mole:4320,greenbad:4320};
 const REP_MOVING={slow:1,fast:1};
 const repExp=r=>r.exp||(r.t+(REP_TTL[r.k]||360)*60000);
@@ -275,7 +276,7 @@ const REP_GROUPS={green:{i:"🟢",t:"Green"},course:{i:"🌳",t:"Fairway a odpal
 // prvá úroveň (3 × 3): jednotlivé hlásenia alebo skupina
 const REP_TOP=["slow","wet","trash","g:green","g:course","bunker","g:more"];
 // poradie pri hlasovom rozpoznávaní: najprv naliehavé
-const VOICE_ORDER=["fast","slow","wet","trash","bunker","pitch","flag","divot","mole","branch","tee","ball","great","greenbad"];
+const VOICE_ORDER=["help","fast","slow","wet","trash","bunker","pitch","flag","divot","mole","branch","tee","ball","great","greenbad"];
 const norm=t=>t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 const repInfo=k=>REPORTS.find(r=>r.k===k)||REPORTS[REPORTS.length-1];
 function voiceMatch(txt){const n=" "+norm(txt)+" ";for(const k of VOICE_ORDER){const r=repInfo(k);if(r.w.some(w=>n.includes(w)))return k}return null}
@@ -344,8 +345,8 @@ const NOT_IN_BUNKER=["divot","mole","pitch","greenbad"];
 function inBunker(){const w=where();if(w.k==="approx")return false;const[x,y]=loc(toEN(...w.p));return bunkersL.some(B=>sdist(x,y,B)<0)}
 const allowed=k=>!(k==="bunker"&&!bunkerOk())&&!(NOT_IN_BUNKER.includes(k)&&inBunker());
 let level=null;
-const DIAL={top:["mic","slow","wet","trash","g:play","g:turf"],play:["fast","ball"],turf:["bunker","pitch","greenbad","flag","divot","mole","branch","tee","great"]};
-const DG={play:{i:"⛳",t:"Hra a tempo"},turf:{i:"🌿",t:"Ihrisko a trávnik"}};
+const DIAL={top:["mic","g:pace","g:green","g:info","g:course"],pace:["slow","fast"],green:["trash","wet","greenbad","divot","mole","other"],info:["ball","help","text"],course:["bunker","pitch","flag","branch","tee","great"]};
+const DG={pace:{i:"⏱️",t:"Tempo hry"},green:{i:"🟢",t:"Green"},info:{i:"ℹ️",t:"Info"},course:{i:"🌳",t:"Ihrisko"}};
 function tile(k){if(k==="mic")return SR?`<button data-mic="1" class="mic ${rec?"on":""}"><span>🎤</span><em>${rec?"Počúvam…":"Povedať hlasom"}</em></button>`:"";
   if(k==="back")return `<button data-back="1"><span>‹</span><em>Späť</em></button>`;
   if(k.startsWith("g:")){const g=DG[k.slice(2)];return `<button data-g="${k.slice(2)}" class="grp ${g.hot?"hot":""}"><span>${g.i}</span><em>${g.t} ›</em></button>`}
@@ -353,6 +354,13 @@ function tile(k){if(k==="mic")return SR?`<button data-mic="1" class="mic ${rec?"
 function renderSheet(){const w=where();
   $3("r3grid").innerHTML=(level?["back",...DIAL[level]]:DIAL.top).filter(allowed).map(tile).join("");
   $3("r3where").innerHTML="📍 "+w.src+(repAt&&meLL?'<button id="r3me">moja poloha</button>':"");if($3("r3me"))$3("r3me").onclick=()=>{repAt=null;renderSheet()}}
+function askText(k){stopVoice();const ri=repInfo(k);
+  $3("r3grid").innerHTML=`<button data-back="1"><span>‹</span><em>Späť</em></button><div id="r3txt" style="background:#fff;border-radius:14px;padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.35);width:min(230px,62vw);box-sizing:border-box;margin-right:2px">
+    <div style="font:700 .85rem var(--font);margin-bottom:6px">${ri.i} ${k==="other"?"Iné na greene":"Vlastný text"}</div>
+    <textarea id="r3in" maxlength="120" rows="3" placeholder="Napíš krátko, čo sa deje…" style="width:100%;box-sizing:border-box;font:16px var(--font);border:1px solid #d6ddd3;border-radius:10px;padding:6px"></textarea>
+    <button id="r3ok" style="width:100%;margin-top:6px;min-height:40px;border:0;border-radius:10px;background:#0f6b4a;color:#fff;font:700 .95rem var(--font)">Uložiť</button></div>`;
+  const inp=$3("r3in");setTimeout(()=>inp.focus(),50);
+  $3("r3ok").onclick=ev=>{ev.stopPropagation();const v=inp.value.trim();if(!v&&k==="text"){inp.focus();return}saveRep(k,v||null)}}
 function openSheet(){level=null;$3("r3voice").textContent="";$3("pop3").hidden=true;$3("here3").hidden=true;$3("rep3").hidden=false;$3("fab3").classList.add("open");renderSheet();startVoice()}
 function closeSheet(){$3("rep3").hidden=true;$3("fab3").classList.remove("open");stopVoice();repAt=null}
 function saveRep(k,note){const w=where(),ri=repInfo(k);let pt=w.p;
@@ -364,6 +372,7 @@ function saveRep(k,note){const w=where(),ri=repInfo(k);let pt=w.p;
 async function shareRep(list){const txt="Fór · hlásenie z ihriska Apex Báč\n\n"+list.map(r=>{const ri=repInfo(r.k);return `${ri.i} ${ri.t}${r.note?" („"+r.note+"“)":""} – jamka ${r.hole}\nhttps://maps.google.com/?q=${r.lat},${r.lon}`}).join("\n\n");
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e&&e.name==="AbortError")return}try{await navigator.clipboard.writeText(txt);toast("Text je skopírovaný, vlož ho do správy.")}catch(e){}}
 $3("r3grid").onclick=e=>{if(e.target.closest("button[data-back]")){level=null;renderSheet();return}if(e.target.closest("button[data-mic]")){if(rec)stopVoice();else startVoice();renderSheet();return}
+  const tx=e.target.closest("button[data-k='text'],button[data-k='other']");if(tx){askText(tx.dataset.k);return}
   const g=e.target.closest("button[data-g]");if(g){level=g.dataset.g;renderSheet();return}const b=e.target.closest("button[data-k]");if(b)saveRep(b.dataset.k,b.dataset.note?b.dataset.note:null)};
 $3("r3back").onclick=()=>{level=null;renderSheet()};$3("r3x").onclick=closeSheet;$3("rep3").onclick=e=>{if(e.target.id==="rep3")closeSheet()};
 $3("fab3").onclick=e=>{e.preventDefault();if(!$3("rep3").hidden){closeSheet();return}repAt=null;openSheet()};$3("here3").onclick=()=>openSheet();
