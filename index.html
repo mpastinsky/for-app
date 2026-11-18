@@ -402,7 +402,7 @@ const DEFAULT_COURSE={name:"Apex Golf Báč",tee:"yellow",
 const REPORTS=[
   {k:"slow",i:"🐢",t:"Pomalá skupina",w:["pomal","zdrzuj","cakame","cakam","stoja"]},
   {k:"wet",i:"💧",t:"Mokro / blato",w:["mokr","blat","mociar","kaluz","voda na","zaplav"]},
-  {k:"help",i:"🆘",t:"Zranenie / pomoc",w:["zran","pomoc","sanit","uraz","zle mu","zle je","prva pomoc","zachrank"],hot:1},
+  {k:"help",off:1,i:"🆘",t:"Zranenie / pomoc",w:["zran","pomoc","sanit","uraz","zle mu","zle je","prva pomoc","zachrank"],hot:1},
   {k:"pitch",i:"⛳",t:"Pitchmarky na greene",g:"green",w:["pitch","dolk","dier"]},
   {k:"greenbad",i:"🟤",t:"Zlý stav greenu",g:"green",w:["green"]},
   {k:"flag",i:"🚩",t:"Chýba vlajka / jamka",g:"green",w:["vlajk","praporec","tyc","jamka chyba"]},
@@ -412,14 +412,14 @@ const REPORTS=[
   {k:"tee",i:"📍",t:"Chýba kolík / značka",g:"course",w:["kolik","znack","odpalisk"]},
   {k:"bunker",i:"🏖️",t:"Bunker treba upraviť",w:["bunker","piesok","hrabl"]},
   {k:"trash",i:"🗑️",t:"Neporiadok / odpadky",w:["neporiad","smet","odpad","spina","spinav","flas","plechov","papier","nedopal","bordel","necist"]},
-  {k:"animal",i:"🦌",t:"Zvieratá na ihrisku",w:["zvier","srn","diviak","zajac","pes ","psy","had","bazant","lisk"]},
-  {k:"drink",i:"🥤",t:"Chýba občerstvenie",w:["obcerstv","pitie","piti","napoj","bufet","automat"]},
+  {k:"animal",off:1,i:"🦌",t:"Zvieratá na ihrisku",w:["zvier","srn","diviak","zajac","pes ","psy","had","bazant","lisk"]},
+  {k:"drink",off:1,i:"🥤",t:"Chýba občerstvenie",w:["obcerstv","pitie","piti","napoj","bufet","automat"]},
   {k:"fast",i:"🏃",t:"Rýchla skupina za nami",g:"more",w:["rychl","za nami","tlacia","dobieha"]},
   {k:"ball",i:"🔍",t:"Hľadáme loptičku",g:"more",w:["hlad","loptick"]},
-  {k:"fore",i:"⚠️",t:"Nebezpečná loptička (fór)",g:"more",w:[" for","nebezpec","trafil","takmer","lietaj"]},
-  {k:"storm",i:"⛈️",t:"Búrka / blesky",g:"more",w:["burk","blesk","hrom","krupob"],hot:1},
+  {k:"fore",off:1,i:"⚠️",t:"Nebezpečná loptička (fór)",g:"more",w:[" for","nebezpec","trafil","takmer","lietaj"]},
+  {k:"storm",off:1,i:"⛈️",t:"Búrka / blesky",g:"more",w:["burk","blesk","hrom","krupob"],hot:1},
   {k:"great",i:"👍",t:"Super stav ihriska",g:"more",w:["super","skvel","vyborn","perfekt","krasn"]},
-  {k:"other",i:"❗",t:"Iné",g:"more",w:[]}];
+  {k:"other",off:1,i:"❗",t:"Iné",g:"more",w:[]}];
 // platnosť hlásení v minútach; m = viaže sa na jamku (pohyblivé: tempo), inak pevný bod
 const REP_TTL={slow:15,fast:15,ball:10,fore:15,help:60,storm:60,animal:30,drink:240,great:360,flag:720,
   wet:1440,bunker:1440,tee:1440,trash:2880,other:1440,branch:4320,pitch:4320,divot:4320,mole:4320,greenbad:4320};
@@ -428,9 +428,9 @@ const repExp=r=>r.exp||(r.t+(REP_TTL[r.k]||360)*60000);
 const left=ms=>{const m=Math.round(ms/60000);return m<60?m+" min":m<1440?Math.round(m/60)+" h":Math.round(m/1440)+" d"};
 const REP_GROUPS={green:{i:"🟢",t:"Green"},course:{i:"🌳",t:"Fairway a odpaliská"},more:{i:"➕",t:"Ďalšie"}};
 // prvá úroveň (3 × 3): jednotlivé hlásenia alebo skupina
-const REP_TOP=["slow","wet","help","g:green","g:course","bunker","trash","animal","drink","g:more"];
+const REP_TOP=["slow","wet","trash","g:green","g:course","bunker","g:more"];
 // poradie pri hlasovom rozpoznávaní: najprv naliehavé
-const VOICE_ORDER=["help","storm","fore","fast","slow","wet","trash","bunker","pitch","flag","divot","mole","branch","tee","animal","drink","ball","great","greenbad"];
+const VOICE_ORDER=["fast","slow","wet","trash","bunker","pitch","flag","divot","mole","branch","tee","ball","great","greenbad"];
 const TEES={black:"čierne",white:"biele",yellow:"žlté",blue:"modré",red:"červené"};
 // Akadémia podľa Garminu (16.11.): jamka 1 par 3 / 133 m, jamka 2 par 3 / 100 m, jamka 3 par 3 / 136 m.
 // dĺžky ku stredu greenu z 3 okrúhlych odpalísk podľa satelitu (18.11.): zadné / stredné / predné
@@ -715,7 +715,7 @@ function repTile(k){if(k.startsWith("g:")){const g=REP_GROUPS[k.slice(2)];return
 function renderRepSheet(){const w=repWhere();
   $("rep-title").textContent=repLevel?REP_GROUPS[repLevel].t:"Čo vidíš?";
   $("rep-back").hidden=!repLevel;
-  $("rep-grid").innerHTML=(repLevel?REPORTS.filter(r=>r.g===repLevel).map(r=>r.k):REP_TOP).filter(k=>(k!=="bunker"||bunkerOk())&&!(NOT_IN_BUNKER.includes(k)&&inBunkerNow())).map(repTile).join("");
+  $("rep-grid").innerHTML=(repLevel?REPORTS.filter(r=>r.g===repLevel&&!r.off).map(r=>r.k):REP_TOP).filter(k=>(k!=="bunker"||bunkerOk())&&!(NOT_IN_BUNKER.includes(k)&&inBunkerNow())).map(repTile).join("");
   $("rep-where").innerHTML=w?"📍 Uloží sa "+w.src+"."+(tapPt&&me?' <button class="mini" id="rep-mine">na mojej polohe</button>':""):"Poloha nie je známa. Zavri okno a ťukni na mape na miesto problému.";
   if($("rep-mine"))$("rep-mine").onclick=()=>{tapPt=null;renderTap();renderRepSheet()};
   $("rep-grid").querySelectorAll("button").forEach(b=>b.disabled=!w)}
@@ -749,9 +749,7 @@ function startVoice(){if(!SR||rec)return;
   rec.onend=()=>{if(rec!==me_)return;rec=null;micIdle();if(!fin||$("rep").hidden)return;const k=voiceMatch(fin);
     if(k==="bunker"&&!bunkerOk()){$("rep-voice").textContent="🎤 „"+fin+"“ · tu žiadny bunker nie je. Ťukni na mape na bunker a nahlás ho tam.";return}
     if(k&&NOT_IN_BUNKER.includes(k)&&inBunkerNow()){$("rep-voice").textContent="🎤 „"+fin+"“ · v bunkri sa to nahlásiť nedá.";return}
-    if(k)saveReport(k,fin);else{$("rep-voice").textContent="🎤 „"+fin+"“ · tomu nerozumiem. Ťukni na ikonu, alebo:";
-      $("rep-grid").insertAdjacentHTML("afterbegin",`<button data-k="other" data-note="1" style="grid-column:1/-1;flex-direction:row;justify-content:center;min-height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface)">❗ Uložiť ako Iné: „${escH(fin)}“</button>`);
-      $("rep-grid").querySelector("[data-note]").onclick=ev=>{ev.stopPropagation();saveReport("other",fin)}}};
+    if(k)saveReport(k,fin);else $("rep-voice").textContent="🎤 „"+fin+"“ · tomu nerozumiem, ťukni na ikonu."};
   try{rec.start()}catch(e){rec=null;micIdle()}}
 if(SR){$("rep-mic").hidden=false;$("rep-mic").onclick=()=>{if(rec)stopVoice();else startVoice()}}
 function renderRepList(){
