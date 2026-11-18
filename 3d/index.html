@@ -391,14 +391,15 @@ $3("pop3").onclick=e=>{const b=e.target.closest("button[data-a]");if(!b||!popR)r
   if(b.dataset.a==="res"){reports.splice(popR.idx,1);toast("Ďakujeme, hlásenie je zrušené.")}else{const ttl=(REP_TTL[r.k]||360)*60000;r.exp=REP_MOVING[r.k]?Math.max(repExp(r),Date.now())+ttl:Date.now()+ttl;r.conf=(r.conf||0)+1;toast(REP_MOVING[r.k]?"Predĺžené o 15 min.":"Ďakujeme, platí ďalej.")}
   saveR();drawPins();$3("pop3").hidden=true;popR=null};
 function repTick(){if(!popR||$3("pop3").hidden)return;const p=popR.v.clone().project(camera);if(p.z>1){$3("pop3").hidden=true;return}$3("pop3").style.left=((p.x+1)/2*innerWidth)+"px";$3("pop3").style.top=((1-p.y)/2*innerHeight)+"px"}
-{const ray=new THREE.Raycaster(),v2=new THREE.Vector2();let down=null,lastTap=null;
- renderer.domElement.addEventListener("pointerdown",e=>{down=[e.clientX,e.clientY,performance.now()];$3("here3").hidden=true;if(!$3("rep3").hidden){closeSheet();down=null}});
+{const ray=new THREE.Raycaster(),v2=new THREE.Vector2();let down=null,lastTap=null,pillWas=false;
+ renderer.domElement.addEventListener("pointerdown",e=>{down=[e.clientX,e.clientY,performance.now()];pillWas=!$3("here3").hidden;$3("here3").hidden=true;if(!$3("rep3").hidden){closeSheet();down=null}});
  renderer.domElement.addEventListener("pointerup",e=>{if(!down)return;const moved=Math.hypot(e.clientX-down[0],e.clientY-down[1]),dt=performance.now()-down[2];down=null;
    if(moved>8||dt>600)return;v2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(v2,camera);
    const ph=ray.intersectObjects(pinG.children)[0];if(ph){showPop(ph.object.userData.idx);return}$3("pop3").hidden=true;
    if(document.body.classList.contains("playing"))return;
    const hit=ray.intersectObject(ground)[0];if(!hit)return;const[E,N]=enu(hit.point.x,-hit.point.z);repAt=toLL(E,N);
    const now=performance.now();if(lastTap&&now-lastTap[0]<450&&Math.hypot(e.clientX-lastTap[1],e.clientY-lastTap[2])<35){lastTap=null;openSheet();return}
+   if(pillWas){lastTap=[now,e.clientX,e.clientY];repAt=null;return} // druhé ťuknutie skryje „Nahlásiť tu“
    lastTap=[now,e.clientX,e.clientY];$3("here3").style.left=e.clientX+"px";$3("here3").style.top=e.clientY+"px";$3("here3").hidden=false})}
 // --- štítky
 const labels=[];

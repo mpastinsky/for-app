@@ -586,7 +586,7 @@ map.on("click",e=>{
   // dvojité ťuknutie = nahlásiť na tom mieste
   const now=Date.now(),cp=e.containerPoint;if(lastMapTap&&now-lastMapTap.t<450&&cp.distanceTo(lastMapTap.c)<35){lastMapTap=null;tapPt=p;renderTap();openReport();return}
   lastMapTap={t:now,c:cp};
-  tapPt=tapPt&&map.distance(tapPt,p)<15?null:p; // ťuk blízko bodu ho zruší
+  tapPt=tapPt?null:p; // ďalšie ťuknutie bod (a „Nahlásiť na tomto bode“) zruší
   renderTap();
 });
 // dlhé podržanie prsta na mape = hneď nahlásiť na tom mieste
