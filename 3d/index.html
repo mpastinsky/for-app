@@ -26,6 +26,8 @@ canvas{display:block;touch-action:none}
  #bar{gap:6px}#bar button{font-size:.82rem;padding:0 4px}}
 #fab3{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:20;width:56px;height:56px;border-radius:50%;background:#ff8a00;display:grid;place-items:center;font-size:1.6rem;text-decoration:none;box-shadow:0 3px 12px rgba(0,0,0,.4)}
 #fab3 small{position:absolute;top:58px;left:50%;transform:translateX(-50%);font:700 .7rem var(--font);color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+.ric{width:1.3em;height:1.3em;vertical-align:-.28em;object-fit:contain}
+#r3grid>button span .ric,.repmk .ric{width:80%;height:80%;vertical-align:middle}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
@@ -266,6 +268,9 @@ const REPORTS=[
   {k:"great",i:"👍",t:"Super stav ihriska",g:"more",w:["super","skvel","vyborn","perfekt","krasn"]},
   {k:"text",i:"💬",t:"Vlastný text",g:"more",w:[]},
   {k:"other",i:"❗",t:"Iné",g:"more",w:[]}];
+// vlastné ikonky (SVG) tam, kde emoji nesedí; ri.i zostáva pre text (zdieľanie)
+const REP_SVG={"trash": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M14%2030%209%2021l10-6%205-9%2011%204%2010-4%206%2010%209%205-4%2010%204%2010-9%206-3%2010-11-2-9%205-8-8-10-2%202-10z%22%20fill%3D%22%23f4f1e8%22%20stroke%3D%22%238a8578%22%20stroke-width%3D%222.2%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M24%206l4%2014-9%206m16-16-3%2012%2010%206m14-2-12%204%201%2012m15%204-12-2-6%209m-6%2014%201-14-10-4m-12%206%2011-7-1-12m-6-1%209%204%207-5%208%205%22%20fill%3D%22none%22%20stroke%3D%22%23b3ad9e%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M19%2026l6%203%206-5%206%206-2%208-8%202-5-6z%22%20fill%3D%22%23e2ddd0%22%2F%3E%3C%2Fsvg%3E", "wet": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M6%2042c0-7%209-9%2015-11%207-3%2012-1%2019-2%209-1%2018%202%2018%209s-6%207-9%2010c-4%204-13%205-22%204C16%2051%206%2049%206%2042z%22%20fill%3D%22%237a5a3a%22%2F%3E%3Cpath%20d%3D%22M11%2041c1-5%208-6%2013-8%206-2%2010%200%2016-1%208%200%2013%202%2013%206s-5%206-8%208c-4%202-11%203-18%202-8%200-16-2-16-7z%22%20fill%3D%22%233a8fd6%22%2F%3E%3Cellipse%20cx%3D%2232%22%20cy%3D%2240%22%20rx%3D%2210%22%20ry%3D%223%22%20fill%3D%22none%22%20stroke%3D%22%23bfe2ff%22%20stroke-width%3D%222%22%2F%3E%3Cellipse%20cx%3D%2232%22%20cy%3D%2240%22%20rx%3D%224%22%20ry%3D%221.2%22%20fill%3D%22%23bfe2ff%22%2F%3E%3Cpath%20d%3D%22M45%2014c3%205%205%208%205%2011a5%205%200%200%201-10%200c0-3%202-6%205-11z%22%20fill%3D%22%233a8fd6%22%2F%3E%3Cpath%20d%3D%22M20%2020c2%203%203%205%203%207a3%203%200%200%201-6%200c0-2%201-4%203-7z%22%20fill%3D%22%233a8fd6%22%2F%3E%3C%2Fsvg%3E", "greenbad": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2228%22%20fill%3D%22%235fae3e%22%2F%3E%3Cpath%20d%3D%22M14%2030c2-9%2010-14%2018-12%205-6%2015-3%2016%204%207%202%209%2012%203%2017%201%207-7%2011-13%208-5%205-15%204-17-2-8%200-12-9-7-15z%22%20fill%3D%22%236b4423%22%2F%3E%3Cpath%20d%3D%22M22%2029c3-4%208-5%2012-3m2%2010c4%200%207-2%208-5m-20%209c3%202%206%202%209%201%22%20fill%3D%22none%22%20stroke%3D%22%234a2e16%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2224%22%20r%3D%222.4%22%20fill%3D%22%238a5d34%22%2F%3E%3Ccircle%20cx%3D%2225%22%20cy%3D%2240%22%20r%3D%222%22%20fill%3D%22%238a5d34%22%2F%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2220%22%20r%3D%222.4%22%20fill%3D%22%236b4423%22%2F%3E%3Ccircle%20cx%3D%2254%22%20cy%3D%2247%22%20r%3D%222%22%20fill%3D%22%236b4423%22%2F%3E%3C%2Fsvg%3E", "divot": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%224%2010%2058%2048%22%3E%3Cellipse%20cx%3D%2222%22%20cy%3D%2248%22%20rx%3D%2215%22%20ry%3D%226%22%20fill%3D%22%236b4423%22%2F%3E%3Cellipse%20cx%3D%2222%22%20cy%3D%2247%22%20rx%3D%2211%22%20ry%3D%223.6%22%20fill%3D%22%234a2e16%22%2F%3E%3Cg%20transform%3D%22rotate%28-14%2042%2030%29%22%3E%3Cpath%20d%3D%22M26%2030c4-3%2028-3%2032%200l-2%209c-3%202-25%202-28%200z%22%20fill%3D%22%237a5130%22%2F%3E%3Cpath%20d%3D%22M28%2034c3%201%2022%201%2026%200%22%20stroke%3D%22%235a3a1e%22%20stroke-width%3D%221.6%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M26%2030c4-3%2028-3%2032%200-4%202-28%202-32%200z%22%20fill%3D%22%234f9a33%22%2F%3E%3Cpath%20d%3D%22M29%2029l-1-6m4%206%201-7m3%207-1-8m4%208%201-7m3%207v-8m4%208%201-6m3%206%201-7m3%207%201-5%22%20stroke%3D%22%233e8a25%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E", "mole": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M2%2052h60%22%20stroke%3D%22%234f9a33%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M6%2052c2-14%209-22%2017-22s14%208%2016%2022z%22%20fill%3D%22%237a5130%22%2F%3E%3Cpath%20d%3D%22M30%2052c2-10%207-16%2014-16s12%206%2014%2016z%22%20fill%3D%22%238a5d34%22%2F%3E%3Cpath%20d%3D%22M12%2044c2-5%206-8%2010-8m14%2010c2-4%205-6%208-6%22%20stroke%3D%22%23a87a4c%22%20stroke-width%3D%222.2%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2242%22%20r%3D%221.8%22%20fill%3D%22%234a2e16%22%2F%3E%3Ccircle%20cx%3D%2228%22%20cy%3D%2246%22%20r%3D%221.6%22%20fill%3D%22%234a2e16%22%2F%3E%3Ccircle%20cx%3D%2246%22%20cy%3D%2245%22%20r%3D%221.6%22%20fill%3D%22%235a3a1e%22%2F%3E%3Ccircle%20cx%3D%2217%22%20cy%3D%2248%22%20r%3D%221.4%22%20fill%3D%22%235a3a1e%22%2F%3E%3C%2Fsvg%3E"};
+const icH=r=>REP_SVG[r.k]?`<img class="ric" src="${REP_SVG[r.k]}" alt="">`:r.i;
 // platnosť hlásení v minútach; m = viaže sa na jamku (pohyblivé: tempo), inak pevný bod
 const REP_TTL={slow:15,fast:15,ball:10,text:240,fore:15,help:60,storm:60,animal:30,drink:240,great:360,flag:720,
   wet:1440,bunker:1440,tee:1440,trash:2880,other:1440,branch:4320,pitch:4320,divot:4320,mole:4320,greenbad:4320};
@@ -338,14 +343,15 @@ const $3=id=>document.getElementById(id);
 const toast=t=>{$3("toast3").textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>$3("toast3").textContent="",3500)};
 // pin modely
 const pinG=new THREE.Group();scene.add(pinG);const texC={};
-function pinTex(icon,hot){const k=icon+hot;if(texC[k])return texC[k];const c=document.createElement("canvas");c.width=c.height=128;const g=c.getContext("2d");
+function pinTex(icon,hot,svg){const k=icon+hot;if(texC[k])return texC[k];const c=document.createElement("canvas");c.width=c.height=128;const g=c.getContext("2d");
   g.beginPath();g.arc(64,58,50,0,7);g.fillStyle="#fff";g.fill();g.lineWidth=10;g.strokeStyle=hot?"#e0312b":"#ff8a00";g.stroke();
   g.beginPath();g.moveTo(44,100);g.lineTo(84,100);g.lineTo(64,126);g.closePath();g.fillStyle=hot?"#e0312b":"#ff8a00";g.fill();
-  g.font="56px system-ui,'Apple Color Emoji','Segoe UI Emoji'";g.textAlign="center";g.textBaseline="middle";g.fillText(icon,64,62);
-  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return texC[k]=t}
+  g.font="56px system-ui,'Apple Color Emoji','Segoe UI Emoji'";g.textAlign="center";g.textBaseline="middle";const t=new THREE.CanvasTexture(c);
+  if(svg){const im=new Image();im.onload=()=>{g.drawImage(im,26,20,76,76);t.needsUpdate=true};im.src=svg}else g.fillText(icon,64,62);
+  t.colorSpace=THREE.SRGBColorSpace;return texC[k]=t}
 function drawPins(){pinG.clear();const now=Date.now();
   reports.forEach((r,idx)=>{if(repExp(r)<=now)return;const ri=repInfo(r.k);const[x,y]=loc(toEN(r.lat,r.lon));if(x<X0||x>X1||y<Y0||y>Y1)return;
-    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:pinTex(ri.i,!!ri.hot),depthTest:false,transparent:true}));sp.scale.set(1.7,1.7,1);sp.center.set(.5,0);sp.position.copy(W(x,y,hL(x,y)+.3));sp.renderOrder=10;sp.userData={idx};pinG.add(sp)})}
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:pinTex(ri.i,!!ri.hot,REP_SVG[ri.k]),depthTest:false,transparent:true}));sp.scale.set(1.7,1.7,1);sp.center.set(.5,0);sp.position.copy(W(x,y,hL(x,y)+.3));sp.renderOrder=10;sp.userData={idx};pinG.add(sp)})}
 drawPins();setInterval(()=>{loadR();drawPins()},30000);addEventListener("storage",()=>{loadR();drawPins()});
 // vlastná pozícia hlásenia
 let repAt=null; // [lat,lon] z ťuknutia na terén
@@ -364,7 +370,7 @@ const DG={pace:{i:"⏱️",t:"Tempo hry"},green:{i:"🌳",t:"Ihrisko"},info:{i:"
 function tile(k){if(k==="mic")return SR?`<button data-mic="1" class="mic ${rec?"on":""}"><span>🎤</span><em>${rec?"Počúvam…":"Povedať hlasom"}</em></button>`:"";
   if(k==="back")return `<button data-back="1"><span>‹</span><em>Späť</em></button>`;
   if(k.startsWith("g:")){const g=DG[k.slice(2)];return `<button data-g="${k.slice(2)}" class="grp ${g.hot?"hot":""}"><span>${g.i}</span><em>${g.t} ›</em></button>`}
-  const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${r.i}</span><em>${r.t}</em></button>`}
+  const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${icH(r)}</span><em>${r.t}</em></button>`}
 function layoutArc(){const fb=$3("fab3").getBoundingClientRect(),cx=fb.left+fb.width/2,cy=fb.top+fb.height/2;
   const items=[...$3("r3grid").querySelectorAll(":scope>button")];const rings=items.length<=4?[items]:[items.slice(0,3),items.slice(3)];
   rings.forEach((ring,ri)=>{const r=ri?218:(rings.length>1?122:150),m=ring.length;ring.forEach((el,i)=>{const a=(m===1?135:180-i*90/(m-1))*Math.PI/180;el.style.left=(cx+r*Math.cos(a))+"px";el.style.top=(cy-r*Math.sin(a))+"px"})});
@@ -375,7 +381,7 @@ function renderSheet(){const w=where();
   $3("r3where").innerHTML="📍 "+w.src+(repAt&&meLL?'<button id="r3me">moja poloha</button>':"");if($3("r3me"))$3("r3me").onclick=()=>{repAt=null;renderSheet()};layoutArc()}
 function askText(k){stopVoice();const ri=repInfo(k);
   level=level||"info";$3("r3grid").innerHTML=`<div id="r3txt" style="background:#fff;border-radius:14px;padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.35);width:min(230px,62vw);box-sizing:border-box;margin-right:2px">
-    <div style="font:700 .85rem var(--font);margin-bottom:6px">${ri.i} ${k==="other"?"Iné na ihrisku":"Vlastný text"}</div>
+    <div style="font:700 .85rem var(--font);margin-bottom:6px">${icH(ri)} ${k==="other"?"Iné na ihrisku":"Vlastný text"}</div>
     <textarea id="r3in" maxlength="120" rows="3" placeholder="Napíš krátko, čo sa deje…" style="width:100%;box-sizing:border-box;font:16px var(--font);border:1px solid #d6ddd3;border-radius:10px;padding:6px"></textarea>
     <button id="r3ok" style="width:100%;margin-top:6px;min-height:40px;border:0;border-radius:10px;background:#0f6b4a;color:#fff;font:700 .95rem var(--font)">Uložiť</button></div>`;
   layoutArc();const inp=$3("r3in");setTimeout(()=>inp.focus(),50);
@@ -425,7 +431,7 @@ function startVoice(){if(!SR||rec)return;rec=new SR();rec.lang="sk-SK";rec.inter
 // ťuknutie: na špendlík = detail; na terén = „Nahlásiť tu“; dvojťuk = rovno hlásenie
 let popR=null;
 function showPop(idx,cx,cy){const r=reports[idx];if(!r)return;const ri=repInfo(r.k),mv=REP_MOVING[r.k];popR={idx,v:W(...loc(toEN(r.lat,r.lon)),hL(...loc(toEN(r.lat,r.lon)))+2.2)};
-  $3("pop3").innerHTML=`<b>${ri.i} ${mv?(r.k==="slow"?"Pomalé tempo":"Rýchla skupina")+" pri jamke "+r.hole:ri.t}</b>${mv?"":"Jamka "+r.hole+" · "}${ago(r.t)} · platí ešte ${left(repExp(r)-Date.now())}${r.note?`<br><i>„${escH(r.note)}“</i>`:""}
+  $3("pop3").innerHTML=`<b>${icH(ri)} ${mv?(r.k==="slow"?"Pomalé tempo":"Rýchla skupina")+" pri jamke "+r.hole:ri.t}</b>${mv?"":"Jamka "+r.hole+" · "}${ago(r.t)} · platí ešte ${left(repExp(r)-Date.now())}${r.note?`<br><i>„${escH(r.note)}“</i>`:""}
    <div class="bb"><button data-a="ext">${mv?(r.k==="slow"?"🐢 Stále pomalé":"Stále tlačia"):"Stále tam"}</button><button data-a="res">${mv?(r.k==="slow"?"✓ Už ide":"✓ Už nie"):"✓ Vyriešené"}</button></div>`;
   $3("pop3").hidden=false}
 $3("pop3").onclick=e=>{const b=e.target.closest("button[data-a]");if(!b||!popR)return;loadR();const r=reports[popR.idx];if(!r)return;
