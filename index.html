@@ -491,6 +491,7 @@ const draftLine=L.polyline([],{color:"#fff",weight:2,dashArray:"4 4"});
 const draftPts=L.layerGroup();
 function drawFeatures(){
   featLayer.clearLayers();
+  if(!edit)return; // nakreslené obrysy ukazujeme len pri kreslení; bežne len satelit
   course.feat.forEach((list,h)=>list.forEach((f,i)=>{
     const st=FT[f.t]||FT.ob,cur=h===round.hole;
     const poly=L.polygon(f.p,{color:f.t==="ob"?"#fff":st.c,weight:f.t==="ob"?2:1.5,dashArray:f.t==="ob"?"6 5":null,fillColor:st.c,fillOpacity:f.t==="ob"?0:(cur?.45:.25),opacity:cur?1:.6,interactive:!!edit});
