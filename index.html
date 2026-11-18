@@ -741,7 +741,7 @@ $("rep-grid").onclick=e=>{const g=e.target.closest("button[data-g]");if(g){repLe
   const b=e.target.closest("button[data-k]");if(b)saveReport(b.dataset.k)};
 $("rep-back").onclick=()=>{repLevel=null;renderRepSheet()};
 // hlásenie hlasom (Web Speech API, ak ho telefón podporuje)
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const SR=null; // hlasové hlásenie zatiaľ vypnuté (Martin 18.11.); zapnúť: window.SpeechRecognition||window.webkitSpeechRecognition
 function voiceMatch(txt){const n=" "+norm(txt)+" ";for(const k of VOICE_ORDER){const r=repInfo(k);if(r.w.some(w=>n.includes(w)))return k}return null}
 let rec=null;
 function micIdle(t){$("rep-mic").classList.remove("on");$("rep-mic-t").textContent=t||"🎤 Ťukni a povedz, čo vidíš"}

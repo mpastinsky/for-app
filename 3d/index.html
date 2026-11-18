@@ -420,7 +420,7 @@ $3("r3back").onclick=()=>{level=null;renderSheet()};$3("r3x").onclick=closeSheet
  fab.addEventListener("pointercancel",()=>{clearTimeout(holdT);holdT=null;byHold=false});
  addEventListener("resize",()=>{if(isOpen())layoutArc()})}$3("here3").onclick=()=>openSheet();
 // hlas
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
+const SR=null; // hlasové hlásenie zatiaľ vypnuté (Martin 18.11.); zapnúť: window.SpeechRecognition||window.webkitSpeechRecognitionlet rec=null;
 const micIdle=()=>{const b=document.querySelector("#r3grid button[data-mic]");if(b){b.classList.remove("on");b.querySelector("em").textContent="Povedať hlasom"}};
 function stopVoice(){if(rec){try{rec.abort()}catch(e){}rec=null}micIdle()}
 function startVoice(){if(!SR||rec)return;rec=new SR();rec.lang="sk-SK";rec.interimResults=true;rec.maxAlternatives=3;let fin="";const mine=rec;
