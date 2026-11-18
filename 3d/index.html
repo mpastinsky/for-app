@@ -422,7 +422,9 @@ function placeLabels(){for(const l of labels){const p=l.v.clone().project(camera
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.44;
 // dotyk: 1 prst = posun po ihrisku (dopredu, dozadu, do strán), 2 prsty = sklon hore/dole, otáčanie a priblíženie
-controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;controls.panSpeed=.55;controls.rotateSpeed=.45;controls.zoomSpeed=.6;controls.dampingFactor=.08;controls.minDistance=8;controls.maxDistance=500;
+controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;
+// na telefóne pôvodná rýchlosť, s myšou na počítači pomalšie
+renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?.55:1;controls.zoomSpeed=m?.6:1},{capture:true});controls.minDistance=8;controls.maxDistance=500;
 const eye=1.7;
 const views={tee:{pos:W(0,-15,hL(0,-15)+eye+2.6),target:W(0,c*.9,hL(0,c*.9))},top:{pos:W(0,c*.5-25,230),target:W(0,c*.5,0)}};
 function go(v){camera.position.copy(v.pos);controls.target.copy(v.target);controls.update()}
