@@ -780,6 +780,8 @@ $("st-list").onclick=e=>{const b=e.target.closest("button[data-c]");if(b)stStep(
 $("st-lback").onclick=()=>stStep("st-1");
 $("st-back").onclick=()=>stStep("st-l");
 document.querySelectorAll("#start .lay").forEach(b=>b.onclick=()=>{
+  // akadémia: rovno 3D jamka 1
+  if(b.dataset.l==="akad"){try{localStorage.setItem("for.layout","akad")}catch(e){}location.href="3d/?h=1&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]??1);return}
   if(b.dataset.l===LAYOUT){stStep("st-2");return}
   try{localStorage.setItem("for.layout",b.dataset.l);sessionStorage.setItem("for.next","q")}catch(e){}
   location.reload()});
@@ -820,7 +822,11 @@ $("b-home").onclick=()=>showStart(true);
 applyMode();
 // pri spustení vždy zoznam ihrísk, okrem rozohranej hry so skóre (napr. po znovunačítaní počas kola)
 let nextQ=false;try{nextQ=sessionStorage.getItem("for.next")==="q";sessionStorage.removeItem("for.next")}catch(e){}
-if(nextQ){showStart();stStep("st-2")}
+const QP=new URLSearchParams(location.search);
+if(QP.has("start")||QP.has("map"))history.replaceState(null,"",location.pathname);
+if(QP.has("start"))showStart();
+else if(QP.has("map")){$("start").hidden=true;showView("v-map")}
+else if(nextQ){showStart();stStep("st-2")}
 else if(!(modeSt&&modeSt.score&&Date.now()-modeSt.t<6*3600e3))showStart();
 
 if(recording)wake(true);

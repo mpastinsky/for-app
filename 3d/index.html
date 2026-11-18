@@ -21,11 +21,14 @@ canvas{display:block;touch-action:none}
 #note{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 68px);color:#fff;font-size:.8rem;text-shadow:0 1px 3px #000;opacity:.9}
 .lab{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:3px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35);pointer-events:none}
 .lab.arc{background:rgba(0,0,0,.55);color:#fff;font-weight:600}
+#top b{white-space:nowrap}#top small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top>div:nth-child(2){min-width:0}
+@media (max-width:480px){#top a{width:36px;height:38px}#holes{gap:4px}#top b{font-size:1.1rem}#tees>span{display:none}#tees{top:calc(env(safe-area-inset-top,0px) + 66px)}
+ #bar{gap:6px}#bar button{font-size:.82rem;padding:0 4px}}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
 <body>
-<div id="top"><a href="../" aria-label="Späť do appky" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div></div>
+<div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div><a href="../?map=1" aria-label="Mapa a vzdialenosti" style="font-size:1.15rem">🗺</a></div>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
 <div id="note">Načítavam terén…</div>
 <div id="bar"><button id="v-tee" class="on">Z odpaliska</button><button id="v-fly">Let ku greenu</button><button id="v-top">Zhora</button><button id="v-play">⛳ Hrať</button></div>
@@ -85,7 +88,7 @@ const cen=P=>[P.reduce((a,p)=>a+p[0],0)/P.length,P.reduce((a,p)=>a+p[1],0)/P.len
 const nearestGreen=B=>{const q=cen(B);let bi=0,bd=1e9;DATA.gc.forEach((g,i)=>{const d=(g[0]-q[0])**2+(g[1]-q[1])**2;if(d<bd){bd=d;bi=i}});return bi};
 for(const B of DATA.bunkers)if(nearestGreen(B)===hNum-1)myBunkers.push(B.map(loc));
 document.getElementById("h-t").textContent="Jamka "+hNum+" · Par 3";
-document.getElementById("h-s").textContent="Akadémia Apex · "+TEE_N[tIdx]+" odpalisko · "+f+" / "+c+" / "+b+" m";
+document.getElementById("h-s").textContent=TEE_N[tIdx]+" · "+f+" / "+c+" / "+b+" m";
 document.querySelectorAll("#holes a").forEach(a=>{a.href="?h="+a.dataset.h+"&t="+tIdx;a.classList.toggle("on",+a.dataset.h===hNum)});
 document.querySelectorAll("#tees a").forEach(a=>{a.href="?h="+hNum+"&t="+a.dataset.t;a.classList.toggle("on",+a.dataset.t===tIdx)});
 const dh=hG;document.getElementById("note").textContent="Skutočný terén z výškového modelu DMR 5.0 (ÚGKK SR, CC BY 4.0). Green je "+(Math.abs(dh)<0.15?"v rovine s odpaliskom":(dh>0?"o "+dh.toFixed(1).replace(".",",")+" m vyššie":"o "+(-dh).toFixed(1).replace(".",",")+" m nižšie")+" ako odpalisko")+". Tvary zo satelitu.";
