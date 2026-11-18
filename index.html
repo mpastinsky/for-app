@@ -1004,7 +1004,7 @@ if(recording)wake(true);
 render();renderGps();
 if(hasGreen())map.setView(greenPt(),17);
 
-if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").then(r=>r.update()).catch(()=>{});let rl=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(rl)return;rl=true;location.reload()})}
 })();
 </script>
 </body>

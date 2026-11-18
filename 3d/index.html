@@ -30,7 +30,7 @@ canvas{display:block;touch-action:none}
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
 <body>
-<div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div></div>
+<div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div><a href="../?map=1" aria-label="Prehľad na mape" style="font-size:1.15rem">🗺</a></div>
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
 <div id="note">Načítavam terén…</div>
@@ -569,6 +569,9 @@ function loop(now){const dt=Math.min(.05,lastT?(now-lastT)/1000:0);lastT=now;
   waveFlag(now/1000);if(game)game.update(dt);else controls.update();renderer.render(scene,camera);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+// nová verzia appky: service worker sa hneď aktualizuje a stránka sa raz obnoví
+if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("../sw.js",{scope:"../"}).then(r=>r.update()).catch(()=>{});
+  let rl=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(rl)return;rl=true;location.reload()})}
 </script>
 </body>
 </html>
