@@ -233,8 +233,7 @@ function waveFlag(t){const p=flagG.attributes.position;for(let i=0;i<p.count;i++
 const MK=[0xffffff,0xffd400,0xe0312b];
 DATA.pads[hNum].forEach((pd,j)=>{const[cx,cy]=loc(pd);const m=new THREE.MeshStandardMaterial({color:MK[j],roughness:.5});
   for(const sx of [-2.3,2.3]){const x=cx+sx,y=cy+1.2,z=hL(x,y);
-    const st=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.45,10),m);st.position.copy(W(x,y,z+.22));st.castShadow=true;scene.add(st);
-    const tp=new THREE.Mesh(new THREE.SphereGeometry(.16,12,10),m);tp.position.copy(W(x,y,z+.48));scene.add(tp)}});
+    const tp=new THREE.Mesh(new THREE.SphereGeometry(.1,12,10),m);tp.position.copy(W(x,y,z+.1));tp.castShadow=true;scene.add(tp)}});
 // --- oblúky a línia hry (prilepené na terén)
 const arcs=[];
 for(const d of [50,100]){if(d>=c-10)continue;const pts=[];for(let a=-0.45;a<=0.451;a+=0.03){const x=Math.sin(a)*d,y=c-Math.cos(a)*d;pts.push(W(x,y,hL(x,y)+.35))}
