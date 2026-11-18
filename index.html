@@ -571,15 +571,21 @@ function renderTap(){
   tapLines.setLatLngs(pts).addTo(map);
 }
 
+let lastMapTap=null;
 map.on("click",e=>{
   const p=[e.latlng.lat,e.latlng.lng];
   if(edit){edit.pts.push(p);renderEdit();return}
   if(mode==="setGreen"){course.greens[round.hole]=[+p[0].toFixed(7),+p[1].toFixed(7)];if(course.greensAuto)course.greensAuto[round.hole]=false;saveCourse();mode=null;tapPt=null;render();return}
+  // dvojité ťuknutie = nahlásiť na tom mieste
+  const now=Date.now(),cp=e.containerPoint;if(lastMapTap&&now-lastMapTap.t<450&&cp.distanceTo(lastMapTap.c)<35){lastMapTap=null;tapPt=p;renderTap();openReport();return}
+  lastMapTap={t:now,c:cp};
   tapPt=tapPt&&map.distance(tapPt,p)<15?null:p; // ťuk blízko bodu ho zruší
   renderTap();
 });
 // dlhé podržanie prsta na mape = hneď nahlásiť na tom mieste
 map.on("contextmenu",e=>{if(edit||mode)return;tapPt=[e.latlng.lat,e.latlng.lng];renderTap();openReport()});
+// dvojité ťuknutie = nahlásiť na tom mieste (približovanie dvojťukom je vypnuté)
+map.doubleClickZoom.disable();map.on("dblclick",e=>{if(edit||mode)return;tapPt=[e.latlng.lat,e.latlng.lng];renderTap();openReport()});
 $("b-green").onclick=()=>{
   if(hasGreen()&&mode!=="setGreen"){
     // druhé ťuknutie: posunúť green
@@ -976,7 +982,7 @@ let nextQ=false;try{nextQ=sessionStorage.getItem("for.next")==="q";sessionStorag
 const QP=new URLSearchParams(location.search);
 if(QP.has("start")||QP.has("map"))history.replaceState(null,"",location.pathname);
 if(QP.has("start"))showStart();
-else if(QP.has("map")){$("start").hidden=true;showView("v-map");if(QP.has("rep"))setTimeout(openReport,400)}
+else if(QP.has("map")){$("start").hidden=true;showView("v-map");if(QP.has("at")){const q=QP.get("at").split(",").map(Number);if(q.length===2&&q.every(isFinite)){tapPt=q;renderTap();map.setView(q,18)}}if(QP.has("rep"))setTimeout(openReport,400)}
 else if(nextQ){showStart();stStep("st-2")}
 else if(!(modeSt&&modeSt.score&&Date.now()-modeSt.t<6*3600e3))showStart();
 

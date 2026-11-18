@@ -243,6 +243,16 @@ for(const d of [50,100]){if(d>=c-10)continue;const pts=[];for(let a=-0.45;a<=0.4
 {const pts=[];for(let y=0;y<=c;y+=2)pts.push(W(0,y,hL(0,y)+.3));
  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:0xd23b2a,dashSize:3,gapSize:2})).computeLineDistances())}
 
+// --- ťuknutie na terén v 3D: nahlásiť na tom mieste
+{const pill=document.createElement("a");pill.id="here3";pill.textContent="⚠️ Nahlásiť tu";pill.hidden=true;document.body.appendChild(pill);
+ const st=document.createElement("style");st.textContent="#here3{position:fixed;transform:translate(-50%,-130%);background:#ff8a00;color:#fff;font:700 .95rem var(--font);padding:9px 14px;border-radius:999px;text-decoration:none;box-shadow:0 3px 10px rgba(0,0,0,.4);z-index:30;white-space:nowrap}#here3[hidden]{display:none}";document.head.appendChild(st);
+ const ray=new THREE.Raycaster(),v2=new THREE.Vector2();let down=null,lastTap=null;
+ renderer.domElement.addEventListener("pointerdown",e=>{down=[e.clientX,e.clientY,performance.now()];pill.hidden=true});
+ renderer.domElement.addEventListener("pointerup",e=>{if(!down)return;const moved=Math.hypot(e.clientX-down[0],e.clientY-down[1]),dt=performance.now()-down[2];down=null;
+   if(moved>8||dt>600||document.body.classList.contains("playing"))return;
+   v2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(v2,camera);const hit=ray.intersectObject(ground)[0];if(!hit)return;
+   const x=hit.point.x,y=-hit.point.z,[E,N]=enu(x,y);const lat=48.0007065+N/111200,lon=17.368905+E/(111320*Math.cos(48.0007*Math.PI/180));
+   pill.href="../?map=1&rep=1&at="+lat.toFixed(7)+","+lon.toFixed(7);const now=performance.now();if(lastTap&&now-lastTap[0]<400&&Math.hypot(e.clientX-lastTap[1],e.clientY-lastTap[2])<30){location.href=pill.href;return}lastTap=[now,e.clientX,e.clientY];pill.style.left=e.clientX+"px";pill.style.top=e.clientY+"px";pill.hidden=false})}
 // --- štítky
 const labels=[];
 function label(text,v,cls=""){const el=document.createElement("div");el.className="lab "+cls;el.textContent=text;document.body.appendChild(el);labels.push({el,v})}
