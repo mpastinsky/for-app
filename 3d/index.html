@@ -420,7 +420,9 @@ function placeLabels(){for(const l of labels){const p=l.v.clone().project(camera
 
 // --- kamera
 const controls=new OrbitControls(camera,renderer.domElement);
-controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.44;controls.minDistance=8;controls.maxDistance=500;
+controls.enableDamping=true;controls.maxPolarAngle=Math.PI*0.44;
+// dotyk: 1 prst = posun po ihrisku (dopredu, dozadu, do strán), 2 prsty = sklon hore/dole, otáčanie a priblíženie
+controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;controls.panSpeed=1.2;controls.minDistance=8;controls.maxDistance=500;
 const eye=1.7;
 const views={tee:{pos:W(0,-15,hL(0,-15)+eye+2.6),target:W(0,c*.9,hL(0,c*.9))},top:{pos:W(0,c*.5-25,230),target:W(0,c*.5,0)}};
 function go(v){camera.position.copy(v.pos);controls.target.copy(v.target);controls.update()}
@@ -598,7 +600,8 @@ function loop(now){const dt=Math.min(.05,lastT?(now-lastT)/1000:0);lastT=now;
     camera.position.copy(curve.getPoint(e));controls.target.copy(W(0,c,hG));if(k>=1)fly=null}
   waveFlag(now/1000);if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
-    {const cp=camera.position,gh=hL(cp.x,-cp.z)+1.5;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}renderer.render(scene,camera);placeLabels();repTick();requestAnimationFrame(loop)}
+    {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+1.5;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}renderer.render(scene,camera);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // nová verzia appky: service worker sa hneď aktualizuje a stránka sa raz obnoví
