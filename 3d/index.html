@@ -129,9 +129,12 @@ const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),
 const trunkM=new THREE.MeshStandardMaterial({color:0x6b4a2b}),leafM=[0x2f6b2c,0x3b7d33,0x285e27].map(x=>new THREE.MeshStandardMaterial({color:x,roughness:.95}));
 const inPoly=(pt,poly)=>{let s=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if(((b>pt[1])!==(e>pt[1]))&&(pt[0]<(d-a)*(pt[1]-b)/(e-b)+a))s=!s}return s};
 const inside=(x,y)=>x>X0+2&&x<X1-2&&y>Y0+2&&y<Y1-2;
-function tree(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);
+const seeM=new THREE.MeshStandardMaterial({color:0x3b7d33,roughness:.95,transparent:true,opacity:.32,depthWrite:false});
+// stromy, ktoré stoja v ploche hrania (medzi odpaliskom a greenom), sú priesvitné, aby bolo vidno cez ne
+const inPlay=(x,y,r)=>y>-2&&y<c-5&&Math.abs(x)<r+9;
+function tree(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);const see=inPlay(x,y,r);
   const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.55,h*.5,6),trunkM);tr.position.copy(W(x,y,z+h*.25));tr.castShadow=true;scene.add(tr);
-  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3]);cr.scale.y=1.2;cr.position.copy(W(x,y,z+h*.5+r*.8));cr.castShadow=true;scene.add(cr)}
+  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),see?seeM:leafM[k%3]);cr.scale.y=1.2;cr.position.copy(W(x,y,z+h*.5+r*.8));cr.castShadow=!see;scene.add(cr)}
 DATA.trees.forEach(([e,n,r,h],k)=>{const[x,y]=loc([e,n]);tree(x,y,r,h,k)});
 {const thin=new THREE.MeshStandardMaterial({color:0x6f9f45,roughness:.9});
  DATA.row.forEach(p=>{const[x,y]=loc(p);if(!inside(x,y))return;const z=hL(x,y),h=6+rnd()*2;
