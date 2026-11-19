@@ -33,6 +33,7 @@ canvas{display:block;touch-action:none}
 #guard3{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);width:min(320px,86vw);background:#fff;border-radius:16px;padding:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);font:600 .95rem var(--font);z-index:60;color:#123}
 #guard3 .bb{display:flex;gap:8px;margin:12px 0 8px}#guard3 .bb button{flex:1;min-height:42px;border:0;border-radius:10px;font:700 .9rem var(--font);background:#e8eee6}#guard3 .bb button[data-g=ok]{background:#0f6b4a;color:#fff}
 #guard3 small{display:block;font-weight:500;color:#556;font-size:.75rem;line-height:1.3}#r3test{border:0;border-radius:8px;background:#ffe9a8;font:700 .72rem var(--font);padding:3px 7px;margin-right:4px}
+#pop3 .pl{display:flex;align-items:center;gap:6px;width:100%;margin-top:6px;border:0;border-radius:10px;background:#f0f4ee;padding:7px 9px;font:600 .85rem var(--font);text-align:left}#pop3 .pl .ric{width:1.4em;height:1.4em}#pop3 .pl small{font-weight:500;color:#667}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
@@ -430,15 +431,26 @@ const $3=id=>document.getElementById(id);
 const toast=t=>{$3("toast3").textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>$3("toast3").textContent="",3500)};
 // pin modely
 const pinG=new THREE.Group();scene.add(pinG);const texC={};
-function pinTex(icon,hot,svg){const k=icon+hot;if(texC[k])return texC[k];const c=document.createElement("canvas");c.width=c.height=128;const g=c.getContext("2d");
+function pinTex(icon,hot,svg,n){const k=icon+hot+(n||1);if(texC[k])return texC[k];const c=document.createElement("canvas");c.width=c.height=128;const g=c.getContext("2d");
   g.beginPath();g.arc(64,58,50,0,7);g.fillStyle="#fff";g.fill();g.lineWidth=10;g.strokeStyle=hot?"#e0312b":"#ff8a00";g.stroke();
   g.beginPath();g.moveTo(44,100);g.lineTo(84,100);g.lineTo(64,126);g.closePath();g.fillStyle=hot?"#e0312b":"#ff8a00";g.fill();
   g.font="56px system-ui,'Apple Color Emoji','Segoe UI Emoji'";g.textAlign="center";g.textBaseline="middle";const t=new THREE.CanvasTexture(c);
-  if(svg){const im=new Image();im.onload=()=>{g.drawImage(im,26,20,76,76);t.needsUpdate=true};im.src=svg}else g.fillText(icon,64,62);
+  const badge=()=>{if(!(n>1))return;g.beginPath();g.arc(100,26,26,0,7);g.fillStyle="#e0312b";g.fill();g.lineWidth=4;g.strokeStyle="#fff";g.stroke();
+    g.fillStyle="#fff";g.font="bold 34px system-ui";g.fillText(n>9?"9+":String(n),100,28);t.needsUpdate=true};
+  if(svg){const im=new Image();im.onload=()=>{g.drawImage(im,26,20,76,76);badge()};im.src=svg}else{g.fillText(icon,64,62);badge()}
   t.colorSpace=THREE.SRGBColorSpace;return texC[k]=t}
 function drawPins(){pinG.clear();const now=Date.now();
-  reports.forEach((r,idx)=>{if(repExp(r)<=now)return;const ri=repInfo(r.k);const[x,y]=loc(toEN(r.lat,r.lon));if(x<X0||x>X1||y<Y0||y>Y1)return;
-    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:pinTex(ri.i,!!ri.hot,REP_SVG[ri.k]),depthTest:false,transparent:true}));sp.scale.set(1.7,1.7,1);sp.center.set(.5,0);sp.position.copy(W(x,y,hL(x,y)+.3));sp.renderOrder=10;sp.userData={idx};pinG.add(sp)})}
+  // blízke hlásenia (do 8 m) zlúčime do jedného špendlíka s počtom; naliehavé (SOS) majú prednosť v ikonke
+  const items=[];reports.forEach((r,idx)=>{if(repExp(r)<=now)return;const[x,y]=loc(toEN(r.lat,r.lon));if(x<X0||x>X1||y<Y0||y>Y1)return;items.push({idx,x,y,ri:repInfo(r.k)})});
+  const groups=[];for(const it of items){const g=groups.find(g=>Math.hypot(g.x-it.x,g.y-it.y)<PIN_MERGE_M);if(g){g.list.push(it);g.x=g.list.reduce((a,q)=>a+q.x,0)/g.list.length;g.y=g.list.reduce((a,q)=>a+q.y,0)/g.list.length}else groups.push({x:it.x,y:it.y,list:[it]})}
+  for(const g of groups){g.list.sort((a,b)=>(b.ri.hot?1:0)-(a.ri.hot?1:0)||reports[b.idx].t-reports[a.idx].t);const top=g.list[0].ri,n=g.list.length;
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:pinTex(top.i,!!top.hot,REP_SVG[top.k],n),depthTest:false,transparent:true}));sp.scale.set(1.7,1.7,1);sp.center.set(.5,0);sp.position.copy(W(g.x,g.y,hL(g.x,g.y)+.3));sp.renderOrder=10;
+    sp.userData=n>1?{list:g.list.map(q=>q.idx),x:g.x,y:g.y}:{idx:g.list[0].idx};pinG.add(sp)}}
+const PIN_MERGE_M=8;
+// zoznam zlúčených hlásení; ťuk na riadok otvorí detail
+function showList(list,x,y){$3("here3").hidden=true;popR={idx:-1,v:W(x,y,hL(x,y)+2.2)};
+  $3("pop3").innerHTML=`<b>${list.length} hlásenia na tomto mieste</b>`+list.map(i=>{const r=reports[i],ri=repInfo(r.k);return `<button class="pl" data-i="${i}">${icH(ri)} ${REP_MOVING[r.k]?MV_T[r.k]:(SHORT[r.k]||ri.t)}<small> · ${ago(r.t)}</small></button>`}).join("");
+  $3("pop3").hidden=false;repTick()}
 drawPins();setInterval(()=>{loadR();drawPins()},30000);addEventListener("storage",()=>{loadR();drawPins()});
 // vlastná pozícia hlásenia
 let repAt=null; // [lat,lon] z ťuknutia na terén
@@ -538,7 +550,7 @@ function showPop(idx,cx,cy){const r=reports[idx];if(!r)return;const ri=repInfo(r
    ${(r.yes||r.no)?`<br><small>👍 ${r.yes||0} · 👎 ${r.no||0}</small>`:""}${r.test?"<br><small>🧪 skúšobné hlásenie</small>":""}
    <div class="bb">${r.mine?`<button data-a="ext">${mv?MV_EXT[r.k]:"Stále tam"}</button><button data-a="res">${mv?(r.k==="slow"?"✓ Už ide":"✓ Už nie"):"✓ Vyriešené"}</button>`:r.voted?"<small>Ďakujeme za potvrdenie.</small>":`<button data-a="yes">👍 Stále tam</button><button data-a="no">👎 Nie je tam</button>`}</div>`;
   $3("pop3").hidden=false}
-$3("pop3").onclick=e=>{const b=e.target.closest("button[data-a]");if(!b||!popR)return;loadR();const r=reports[popR.idx];if(!r)return;
+$3("pop3").onclick=e=>{{const li=e.target.closest("button[data-i]");if(li){showPop(+li.dataset.i);return}}const b=e.target.closest("button[data-a]");if(!b||!popR)return;loadR();const r=reports[popR.idx];if(!r)return;
   if(b.dataset.a==="no"){r.no=(r.no||0)+1;r.voted=1;if(r.no>=REP_NO_KILL){reports.splice(popR.idx,1);toast("Hlásenie potvrdilo viac hráčov ako neplatné, zmizlo.")}else toast("Ďakujeme. Ak to potvrdí ďalší hráč, hlásenie zmizne.")}
   else if(b.dataset.a==="yes"){r.yes=(r.yes||0)+1;r.voted=1;r.exp=Math.max(repExp(r),Date.now()+(REP_TTL[r.k]||360)*60000*(REP_MOVING[r.k]?1:.5));toast("Ďakujeme, platnosť sa predĺžila.")}
   else if(b.dataset.a==="res"){reports.splice(popR.idx,1);toast("Ďakujeme, hlásenie je zrušené.")}else{const ttl=(REP_TTL[r.k]||360)*60000;r.exp=REP_MOVING[r.k]?Math.max(repExp(r),Date.now())+ttl:Date.now()+ttl;r.conf=(r.conf||0)+1;toast(REP_MOVING[r.k]?"Predĺžené o 15 min.":"Ďakujeme, platí ďalej.")}
@@ -548,7 +560,7 @@ function repTick(){if(!popR||$3("pop3").hidden)return;const p=popR.v.clone().pro
  renderer.domElement.addEventListener("pointerdown",e=>{down=[e.clientX,e.clientY,performance.now()];pillWas=!$3("here3").hidden;$3("here3").hidden=true;if(!$3("rep3").hidden){closeSheet();down=null}});
  renderer.domElement.addEventListener("pointerup",e=>{if(!down)return;const moved=Math.hypot(e.clientX-down[0],e.clientY-down[1]),dt=performance.now()-down[2];down=null;
    if(moved>8||dt>600)return;v2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(v2,camera);
-   const ph=pinG.visible&&ray.intersectObjects(pinG.children)[0];if(ph){showPop(ph.object.userData.idx);return}$3("pop3").hidden=true;
+   const ph=pinG.visible&&ray.intersectObjects(pinG.children)[0];if(ph){const u=ph.object.userData;if(u.list)showList(u.list,u.x,u.y);else showPop(u.idx);return}$3("pop3").hidden=true;
    if(document.body.classList.contains("playing"))return;
    const hit=ray.intersectObject(ground)[0];if(!hit)return;const[E,N]=enu(hit.point.x,-hit.point.z);repAt=toLL(E,N);repAtD=hit.distance;
    const now=performance.now();if(lastTap&&now-lastTap[0]<450&&Math.hypot(e.clientX-lastTap[1],e.clientY-lastTap[2])<35){lastTap=null;openSheet();return}
