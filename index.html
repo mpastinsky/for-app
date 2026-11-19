@@ -647,7 +647,7 @@ function goHole(n){
   const now=Date.now();
   if(round.start&&round.holeStart!=null&&n===round.hole+1){round.holeTimes[round.hole]=now-round.holeStart}
   if(round.start)round.holeStart=now;
-  round.hole=n;tapPt=null;mode=null;if(edit)edit.pts=[];saveRound();render();drawFeatures();renderEdit();
+  round.hole=n;tapPt=null;mode=null;if(edit)edit.pts=[];saveRound();render();if(!AKAD&&!$("plan").hidden)planSrc();drawFeatures();renderEdit();
   if(hasGreen()){if(me&&dist(me,greenPt())<700)map.fitBounds([me,greenPt()],{padding:[60,60],maxZoom:18});else map.setView(greenPt(),17)}
 }
 $("prev").onclick=()=>goHole(round.hole-1);
@@ -833,7 +833,8 @@ drawReports();
 if(AKAD){$("b-plan").textContent="3D";$("b-plan").setAttribute("aria-label","3D mapa jamky")}
 drawFeatures();
 
-$("b-plan").onclick=()=>{if(AKAD){location.href="3d/?h="+(round.hole+1)+"&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]||0);return}$("plan-img").src="holes/jamka-"+String(round.hole+1).padStart(2,"0")+".jpg";$("plan").hidden=false};
+$("b-plan").onclick=()=>{if(AKAD){location.href="3d/?h="+(round.hole+1)+"&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]||0);return}planSrc();$("plan").hidden=false};
+function planSrc(){$("plan-img").src="holes/jamka-"+String(round.hole+1).padStart(2,"0")+".jpg"}
 $("plan-x").onclick=()=>{$("plan").hidden=true};
 $("plan").onclick=e=>{if(e.target.id==="plan")$("plan").hidden=true};
 $("c-export").onclick=()=>download("for-ihrisko-apex.json",JSON.stringify(course,null,1),"application/json");
