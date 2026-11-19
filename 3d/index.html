@@ -311,7 +311,8 @@ DATA.trees.forEach(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(g)bush(x,y,r,h,k);
 DATA.row.forEach((p,k)=>{const[x,y]=loc(p);tree(x,y,1.9+((k*37)%10)/12,6.2+((k*53)%15)/10,k+100)});   // rad pri plote: menšie stromy (podľa satelitu)
 for(const wd of DATA.woods){const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;
   for(let k=0;k<3000&&n<90;k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
-    if(!inPoly([e,nn],wd))continue;n++;const[x,y]=loc([e,nn]);bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}}
+    if(!inPoly([e,nn],wd))continue;const[x,y]=loc([e,nn]);if(y<-3&&y>-30&&Math.abs(x)<10)continue;   // za odpaliskom nechaj miesto pre kameru
+    n++;bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}}
 
 // --- nízke kríky (len na určených miestach)
 {const SHR=[0,1,2,3,4].map(i=>crownGeo(i+31,"bush"));const shrM=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.95});
