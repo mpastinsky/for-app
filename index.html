@@ -446,6 +446,15 @@ function repGuard(k,pt,me,acc,onCourse){if(TESTMODE())return null;
 // rovnaké platné hlásenie (pevné do 15 m, tempo na tej istej jamke) → len predĺžime
 const findDup=(list,k,pt,hole)=>list.findIndex(r=>r.k===k&&repExp(r)>Date.now()&&(REP_MOVING[k]?r.hole===hole:distM([r.lat,r.lon],pt)<REP_DUP_M));
 // platnosť hlásení v minútach; m = viaže sa na jamku (pohyblivé: tempo), inak pevný bod
+// filter vulgarizmov (SK/CZ/EN) – normalizuje diakritiku, l33t, opakované písmená aj „k o k o t“
+const BAD_SUB=["kurv","kokot","jeb","chuj","zmrd","sracka","srack","posra","zasra","dosra","hovn","hovad","debil","kreten","dement","retard","buzerant","picovin","picus","fuck","fuk","fck","phuck","shit","cunt","bitch","asshol","arsehol","motherf","wank","nigg","negr","whore","twat","bollock","faggot","fagot","dickhead","bullsh","jerkoff"];
+const BAD_PRE=["pica","pice","pici","picu","pico","mrd","srac","srat","sral","sran","cock","dick","prdel","cigos","piss","slut","prick","bastard","idiot"];
+const BAD_EX=["kkt","ass","arse","damn","wtf","stfu","suka","suki","rit","fag","fags","crap","magor","buzna","cigan","cigani","kreten","vole","kurwa","hajzel","hajzl"];
+function badWord(s){if(!s)return false;const n=s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[*#.\-_]/g,"").replace(/[0134578@$!|]/g,c=>({0:"o",1:"i",3:"e",4:"a",5:"s",7:"t",8:"b","@":"a","$":"s","!":"i","|":"i"})[c]);
+  let t=n.split(/[^a-z]+/).filter(Boolean),out=[],run="";for(const w of t){if(w.length===1)run+=w;else{if(run)out.push(run);run="";out.push(w)}}if(run)out.push(run);
+  const all=n.replace(/[^a-z]/g,"");const toks=new Set();for(const w of out){toks.add(w);toks.add(w.replace(/(.)\1+/g,"$1"))}
+  for(const w of toks){if(BAD_EX.includes(w)||BAD_PRE.some(p=>w.startsWith(p))||BAD_SUB.some(p=>w.includes(p)))return true}
+  const allc=all.replace(/(.)\1+/g,"$1");return BAD_SUB.some(p=>p.length>=4&&(all.includes(p)||allc.includes(p)))}
 const REP_TTL={slow:15,fast:15,pass:10,ball:10,text:240,fore:15,help:60,storm:60,animal:30,drink:240,great:360,flag:720,
   wet:1440,bunker:1440,tee:1440,trash:2880,other:1440,branch:4320,pitch:4320,divot:4320,mole:4320,greenbad:4320};
 const REP_MOVING={slow:1,fast:1,pass:1};
@@ -765,7 +774,7 @@ function openReport(){repLevel=null;$("rep-voice").textContent="";$("rep-list").
   if(repWhere())startVoice()}
 function closeReport(){$("rep").hidden=true;stopVoice()}
 function repButtons(w){return REPORTS.map(r=>`<button data-k="${r.k}" ${w?"":"disabled"}><span>${icH(r)}</span>${r.t}</button>`).join("")}
-function saveReport(k,note){const w=repWhere();if(!w)return false;const ri=repInfo(k);
+function saveReport(k,note){if(note&&badWord(note))note=null;const w=repWhere();if(!w)return false;const ri=repInfo(k);
   let pt=w.p;if(REP_MOVING[k]){const g=course.greens[round.hole],te=course.tees&&course.tees[round.hole];if(g&&te)pt=[(g[0]+te[0])/2,(g[1]+te[1])/2];else if(g)pt=g}
   if(k==="bunker")pt=snapBunker(pt);
   {const m=repGuard(k,pt,me,meAccM,onCourseApp);if(m){showToast("🛡️ "+m);return false}}
