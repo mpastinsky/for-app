@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f3d2b">
+<title>Fór 3D ihrisko</title>
+<style>
+:root{--font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{margin:0;height:100%;background:#5e8443;font-family:var(--font);overflow:hidden;overscroll-behavior:none;touch-action:manipulation;-webkit-text-size-adjust:100%}
+canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
+#top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 18px;background:linear-gradient(#0f3d2bee,#0f3d2b00);color:#fff;display:flex;align-items:center;gap:10px;pointer-events:none;z-index:5}
+#top a{pointer-events:auto;color:#fff;text-decoration:none;font-size:1.4rem;background:rgba(255,255,255,.15);border-radius:10px;width:42px;height:42px;display:grid;place-items:center}
+#top b{font-size:1.25rem;white-space:nowrap}#top small{display:block;opacity:.85;white-space:nowrap}
+#tees{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 66px);display:flex;gap:6px;z-index:5}
+#tees a{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.85);text-decoration:none}
+#tees a.on{background:#0f6b4a}#tees i{display:block;width:12px;height:12px;border-radius:50%;border:1px solid #0006}
+#bar{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:flex;gap:8px;z-index:5}
+#bar button{flex:1;font:600 .95rem var(--font);min-height:48px;border:0;border-radius:12px;background:#fff;color:#14211a;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+#bar button.go{background:#0f6b4a;color:#fff}
+.hole{position:fixed;transform:translate(-50%,-50%);width:30px;height:30px;line-height:30px;border-radius:50%;background:#0f6b4a;color:#fff;border:2px solid #fff;text-align:center;font:800 15px var(--font);text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:3}
+#note{position:fixed;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 66px);color:#fff;font-size:11px;text-shadow:0 1px 2px #000;opacity:.9;z-index:4}
+#load{position:fixed;inset:0;display:grid;place-items:center;color:#fff;font:600 1rem var(--font);text-shadow:0 1px 3px #000}
+</style>
+<script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="top"><a href="../?start=1" aria-label="Späť">‹</a><div style="flex:1;min-width:0"><b>Apex Golf · 18 jamiek</b><small>Ťukni na číslo jamky</small></div></div>
+<div id="tees"></div>
+<div id="load">Načítavam ihrisko…</div>
+<div id="note">Terén © ÚGKK SR, DMR 5.0 (CC BY 4.0)</div>
+<div id="bar"><button id="b-go" class="go">⛳ Hrať kolo</button></div>
+<script type="module">
+// Prehľad celej 18-ky zhora: jeden zjednodušený model celého ihriska (terén 4 m, mapa fairwayov/greenov/bunkrov/vody, stromy).
+// Súradnice ENU (východ, sever) z apex.json – rovnaké ako pri jednotlivých jamkách, aby sa dal neskôr pripojiť celý areál.
+import * as THREE from "three";
+import {OrbitControls} from "./lib/OrbitControls.js";
+const Q=new URLSearchParams(location.search);
+const DATA=await (await fetch("apex.json")).json();
+const TILES=await Promise.all(DATA.tiles.map(async f=>{const t=await (await fetch(f)).json();t.H=new Int16Array(Uint8Array.from(atob(t.cm),c=>c.charCodeAt(0)).buffer);return t}));
+const TEE_C=DATA.teeColors,tIdx=Math.min(TEE_C.length-1,Math.max(0,Q.has("t")?parseInt(Q.get("t"))||0:2));
+document.getElementById("tees").innerHTML=TEE_C.map((c,j)=>`<a href="?t=${j}" class="${j===tIdx?"on":""}" title="${DATA.teeNames[j]}"><i style="background:${c}"></i></a>`).join("");
+function hENU(e,n){for(const T of TILES){let c=(e-T.e0)/T.step,r=(n-T.n0)/T.step;if(c<0||r<0||c>T.w-1.001||r>T.h-1.001)continue;
+  const c0=c|0,r0=r|0,fc=c-c0,fr=r-r0,i=r0*T.w+c0,H=T.H;return T.base+(H[i]*(1-fc)*(1-fr)+H[i+1]*fc*(1-fr)+H[i+T.w]*(1-fc)*fr+H[i+T.w+1]*fc*fr)/100}
+  return null}
+const READY=DATA.ready;
+// hranice: všetky jamky + okraj
+let e0=1e9,e1=-1e9,n0=1e9,n1=-1e9;for(const h of READY)for(const[e,n]of[...DATA.pads[h],DATA.gc[h-1],...DATA.greens[h-1]]){e0=Math.min(e0,e);e1=Math.max(e1,e);n0=Math.min(n0,n);n1=Math.max(n1,n)}
+const M=70;e0-=M;e1+=M;n0-=M;n1+=M;
+const ST=4,NX=Math.ceil((e1-e0)/ST)+1,NY=Math.ceil((n1-n0)/ST)+1;
+const HS=new Float32Array(NX*NY);let hsum=0,hn=0;
+for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const h=hENU(e0+i*ST,n0+j*ST);HS[j*NX+i]=h??NaN;if(h!=null){hsum+=h;hn++}}
+const HM=hsum/hn,EX=1.4;   // mierne prevýšenie, aby boli vlny vidno aj z výšky
+for(let k=0;k<HS.length;k++)HS[k]=isNaN(HS[k])?0:(HS[k]-HM)*EX;
+const hAt=(e,n)=>{let i=(e-e0)/ST,j=(n-n0)/ST;i=Math.max(0,Math.min(NX-1.001,i));j=Math.max(0,Math.min(NY-1.001,j));const i0=i|0,j0=j|0,fi=i-i0,fj=j-j0,k=j0*NX+i0;
+  return HS[k]*(1-fi)*(1-fj)+HS[k+1]*fi*(1-fj)+HS[k+NX]*(1-fi)*fj+HS[k+NX+1]*fi*fj};
+const W=(e,n,h)=>new THREE.Vector3(e,h,-n);
+// --- textúra ihriska
+const PPM=Math.min(1.5,3072/Math.max(e1-e0,n1-n0)),TW=Math.round((e1-e0)*PPM),TH=Math.round((n1-n0)*PPM);
+const cv=document.createElement("canvas");cv.width=TW;cv.height=TH;const g=cv.getContext("2d");
+const tx=e=>(e-e0)*PPM,ty=n=>(n1-n)*PPM;
+const path=P=>{g.beginPath();P.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.closePath()};
+g.fillStyle="#5f8a3c";g.fillRect(0,0,TW,TH);
+let sd=11;const rnd=()=>((sd=(sd*16807)%2147483647)/2147483647);
+for(let k=0;k<5000;k++){g.fillStyle=rnd()<.5?"rgba(40,70,20,.10)":"rgba(140,170,80,.08)";g.beginPath();g.arc(rnd()*TW,rnd()*TH,(3+rnd()*14)*PPM,0,7);g.fill()}
+for(const h of READY)for(const P of DATA.mow[h]||[]){path(P);g.fillStyle="#76b24a";g.fill()}
+for(const h of READY)for(const p of DATA.pads[h]){g.beginPath();g.arc(tx(p[0]),ty(p[1]),4.5*PPM,0,7);g.fillStyle="#86c45a";g.fill()}
+for(const P of DATA.water){path(P);g.fillStyle="#3d7397";g.fill();g.lineWidth=2*PPM;g.strokeStyle="#6f9a4a";g.stroke()}
+for(const h of READY){const P=DATA.greens[h-1];path(P);g.lineJoin="round";g.lineWidth=7*PPM;g.strokeStyle="#7cba4b";g.stroke();g.fillStyle="#9fd95e";g.fill()}
+for(const P of DATA.bunkers){path(P);g.fillStyle="#eadcae";g.fill()}
+// tieňovanie reliéfu: na mriežke terénu (4 m), roztiahnuté cez mapu – rýchle aj na telefóne
+{const sc=document.createElement("canvas");sc.width=NX;sc.height=NY;const sx=sc.getContext("2d"),im=sx.createImageData(NX,NY),d=im.data;const L=[-.5,.55,.67],Ln=Math.hypot(...L);
+ for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const k=j*NX+i,gx=(HS[j*NX+Math.min(NX-1,i+1)]-HS[j*NX+Math.max(0,i-1)])/(2*ST)*2.2,gy=(HS[Math.min(NY-1,j+1)*NX+i]-HS[Math.max(0,j-1)*NX+i])/(2*ST)*2.2;
+   const s=(-gx*L[0]-gy*L[1]+L[2])/Math.hypot(gx,gy,1)/Ln,f=Math.max(0,Math.min(255,(.72+.38*s)*200)),o=((NY-1-j)*NX+i)*4;d[o]=d[o+1]=d[o+2]=f;d[o+3]=255}
+ sx.putImageData(im,0,0);g.globalCompositeOperation="multiply";g.imageSmoothingEnabled=true;g.drawImage(sc,0,0,TW,TH);g.globalCompositeOperation="source-over";
+ // multiply stmaví (200 = neutrál) → vyrovnáme jasom
+ g.globalCompositeOperation="screen";g.fillStyle="rgba(60,60,60,1)";g.fillRect(0,0,TW,TH);g.globalCompositeOperation="source-over"}
+// --- scéna
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xc4dbee);scene.fog=new THREE.Fog(0xc4dbee,2500,5000);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,5,8000);
+scene.add(new THREE.HemisphereLight(0xdff1ff,0x3a5a2a,1.2));const sun=new THREE.DirectionalLight(0xffffff,1.4);sun.position.set(-400,700,-300);scene.add(sun);
+{const geo=new THREE.PlaneGeometry(e1-e0,n1-n0,NX-1,NY-1);geo.rotateX(-Math.PI/2);const p=geo.attributes.position;
+ for(let k=0;k<p.count;k++){const e=p.getX(k)+(e0+e1)/2,n=-p.getZ(k)+(n0+n1)/2;p.setXYZ(k,e,hAt(e,n),-n)}geo.computeVertexNormals();
+ const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+ const ground=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({map:tex}));scene.add(ground);
+ // okolie (polia) – plochý okraj, aby ihrisko neviselo vo vzduchu
+ const out=new THREE.Mesh(new THREE.PlaneGeometry(8000,8000),new THREE.MeshLambertMaterial({color:0x7d9a55}));out.rotation.x=-Math.PI/2;out.position.set((e0+e1)/2,Math.min(...HS)-1,-(n0+n1)/2);scene.add(out)}
+// stromy: jednoduché koruny (inštancie), výška podľa dát
+{const tr=DATA.trees.filter(([e,n])=>e>e0&&e<e1&&n>n0&&n<n1),N=tr.length;
+ const crown=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),new THREE.MeshLambertMaterial({color:0x3d7a33,flatShading:true}),N);
+ const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.25,1,5),new THREE.MeshLambertMaterial({color:0x5a3f28}),N);
+ const m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
+ tr.forEach(([e,n,r,h],k)=>{const z=hAt(e,n);m.compose(W(e,n,z+h*.62),q,new THREE.Vector3(r*1.1,r*1.25,r*1.1));crown.setMatrixAt(k,m);
+   c.setHSL(.29+((k*37)%10)/200,.45,.24+((k*53)%10)/120);crown.setColorAt(k,c);m.compose(W(e,n,z+h*.3),q,new THREE.Vector3(1,h*.6,1));trunk.setMatrixAt(k,m)});
+ scene.add(crown,trunk)}
+// čiary odpalisko → zlom → green a čísla jamiek
+const labels=[];
+for(const h of READY){const t=DATA.pads[h][tIdx],b=DATA.bend&&DATA.bend[h],gc=DATA.gc[h-1],pts=b?[t,b,gc]:[t,gc];const arr=[];
+  for(let s=0;s<pts.length-1;s++){const[a,c2]=[pts[s],pts[s+1]];for(let i=0;i<=20;i++){const k=i/20,e=a[0]+(c2[0]-a[0])*k,n=a[1]+(c2[1]-a[1])*k;arr.push(e,hAt(e,n)+1.5,-n)}}
+  const lg=new THREE.BufferGeometry();lg.setAttribute("position",new THREE.Float32BufferAttribute(arr,3));const ln=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0xffffff,dashSize:6,gapSize:4}));ln.computeLineDistances();scene.add(ln);
+  const mid=b||[(t[0]+gc[0])/2,(t[1]+gc[1])/2];const el=document.createElement("a");el.className="hole";el.textContent=h;el.href="./?c=apex&h="+h+"&t="+tIdx;document.body.appendChild(el);
+  labels.push({el,v:W(mid[0],mid[1],hAt(...mid)+8)})}
+// kamera: celé ihrisko v zábere
+const cx=(e0+e1)/2,cn=(n0+n1)/2,asp=innerWidth/innerHeight,tv=Math.tan(25*Math.PI/180),land=asp>1.05;
+// na šírku: pohľad od západu (sever vľavo), aby sa dlhé ihrisko zmestilo; na výšku sever hore. Rezerva na lištu hore a tlačidlo dole.
+const LEN=n1-n0,WID=e1-e0,dist=land?Math.max(LEN/2/(tv*asp),WID/2/tv)*1.08:Math.max(LEN/2/tv,WID/2/(tv*asp))*1.12;
+const home=land?{pos:W(cx-dist*.35,cn,dist),target:W(cx+dist*.03,cn,0)}:{pos:W(cx,cn-dist*.35-dist*.04,dist),target:W(cx,cn-dist*.04,0)};
+camera.position.copy(home.pos);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(home.target);controls.enableDamping=true;controls.maxPolarAngle=1.35;controls.minDistance=60;controls.maxDistance=dist*1.6;controls.screenSpacePanning=false;controls.update();
+document.getElementById("load").remove();
+// ⛳ Hrať kolo: prelet nadol na odpalisko jamky 1, potom hra
+document.getElementById("b-go").onclick=()=>{const t=DATA.pads[READY[0]][tIdx],gc=DATA.gc[READY[0]-1],u=[gc[0]-t[0],gc[1]-t[1]],L=Math.hypot(...u);u[0]/=L;u[1]/=L;
+  const p1=W(t[0]-u[0]*15,t[1]-u[1]*15,hAt(...t)+6),t1=W(t[0]+u[0]*120,t[1]+u[1]*120,hAt(t[0]+u[0]*120,t[1]+u[1]*120));
+  const p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2600;controls.enabled=false;labels.forEach(l=>l.el.style.display="none");
+  const st=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);camera.position.y+=Math.sin(Math.PI*e)*60;
+    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else location.href="./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1"};requestAnimationFrame(st)};
+const v=new THREE.Vector3();
+function frame(){if(controls.enabled)controls.update();renderer.render(scene,camera);
+  for(const l of labels){v.copy(l.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=(v.x+1)/2*innerWidth+"px";l.el.style.top=(1-v.y)/2*innerHeight+"px"}}
+  requestAnimationFrame(frame)}
+frame();
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
