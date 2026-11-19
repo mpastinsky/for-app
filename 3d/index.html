@@ -725,7 +725,7 @@ if(CRS!=="apex"){btns.all=document.getElementById("v-all");
     labels.push({el,v:W(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5,hL(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5)+4),all:1})});
   if(Q.get("v")==="all"){go(views.all);setOn("all")}}
 // ⛳ Hrať: v prehľade zhora celé kolo od jamky 1, inak len práve zobrazená jamka
-const playLbl=()=>{document.getElementById("v-play").textContent=document.body.classList.contains("allv")?"⛳ Hrať kolo":"⛳ Hrať jamku "+hNum};
+function playLbl(){document.getElementById("v-play").textContent=document.body.classList.contains("allv")?"⛳ Hrať kolo":"⛳ Hrať jamku "+hNum}
 playLbl();
 document.getElementById("v-play").onclick=()=>{if(!document.body.classList.contains("allv")){location.href="?"+CQ+"h="+hNum+"&t="+tIdx+"&play=1&one=1";return}
   const go2=()=>{location.href="?"+CQ+"h="+READY[0]+"&t="+tIdx+"&play=1"};
