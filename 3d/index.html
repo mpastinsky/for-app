@@ -2,13 +2,14 @@
 <html lang="sk">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0f3d2b">
 <title>Fór 3D jamka</title>
 <style>
 :root{--font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 html,body{margin:0;height:100%;background:#5e8443;font-family:var(--font);overflow:hidden;overscroll-behavior:none}
 canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}body.playing,body.playing *{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:linear-gradient(#0f3d2bee,#0f3d2b00);color:#fff;display:flex;align-items:center;gap:10px;pointer-events:none}
 #top a{pointer-events:auto;color:#fff;text-decoration:none;font-size:1.4rem;background:rgba(255,255,255,.15);border-radius:10px;width:42px;height:42px;display:grid;place-items:center}
 #holes{display:flex;gap:6px}#holes a{font-size:1rem;font-weight:700}#holes a.on{background:#fff;color:#0f3d2b}
@@ -442,8 +443,12 @@ let reports=[];const loadR=()=>{try{reports=JSON.parse(localStorage.getItem("for
 // GPS hráča
 let meLL=null,meAcc=null;const meDot=new THREE.Mesh(new THREE.SphereGeometry(.9,16,12),new THREE.MeshBasicMaterial({color:0x1a7cff}));meDot.visible=false;scene.add(meDot);
 const meRing=new THREE.Mesh(new THREE.RingGeometry(1.3,1.8,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthWrite:false}));meRing.visible=false;scene.add(meRing);
-if(navigator.geolocation)navigator.geolocation.watchPosition(p=>{meLL=[p.coords.latitude,p.coords.longitude];meAcc=p.coords.accuracy;
-  const[x,y]=loc(toEN(...meLL));const ins=x>X0&&x<X1&&y>Y0&&y<Y1;meDot.visible=meRing.visible=ins;if(ins){meDot.position.copy(W(x,y,hL(x,y)+1.2));meRing.position.copy(W(x,y,hL(x,y)+.15))}},()=>{},{enableHighAccuracy:true,maximumAge:3000});
+// GPS: o povolenie sa pýtame najviac raz a len keď treba (hlásenie). V hre ⛳ Hrať sa GPS nepoužíva.
+let gpsOn=false;const gpsLS=v=>{try{if(v!=null)localStorage.setItem("for.gps",v);return localStorage.getItem("for.gps")}catch(e){return null}};
+function startGPS(ask){if(gpsOn||!navigator.geolocation||Q.get("play")==="1")return;if(!ask&&gpsLS()!=="1")return;if(gpsLS()==="0"&&!ask)return;gpsOn=true;navigator.geolocation.watchPosition(p=>{gpsLS("1");meLL=[p.coords.latitude,p.coords.longitude];meAcc=p.coords.accuracy;
+  const[x,y]=loc(toEN(...meLL));const ins=x>X0&&x<X1&&y>Y0&&y<Y1;meDot.visible=meRing.visible=ins;if(ins){meDot.position.copy(W(x,y,hL(x,y)+1.2));meRing.position.copy(W(x,y,hL(x,y)+.15))}},e=>{if(e.code===1){gpsLS("0")}},{enableHighAccuracy:true,maximumAge:3000})}
+// automaticky len ak je poloha už povolená
+if(navigator.permissions&&navigator.permissions.query)navigator.permissions.query({name:"geolocation"}).then(r=>{if(r.state==="granted"){gpsLS("1");startGPS(false)}else if(r.state==="denied")gpsLS("0")}).catch(()=>startGPS(false));else startGPS(false);
 // UI
 const RS=document.createElement("style");RS.textContent=`
 #fab3{border:0;padding:0;cursor:pointer}
@@ -562,7 +567,7 @@ const COURSE_BB=(()=>{const P=[...DATA.greens.flat(),...Object.values(DATA.pads)
 const onCourse=ll=>{const[e,n]=toEN(...ll);return e>COURSE_BB[0]&&e<COURSE_BB[1]&&n>COURSE_BB[2]&&n<COURSE_BB[3]};
 function guardCard(msg){const g=$3("guard3");g.innerHTML=`<b>🛡️ ${msg}</b><div class="bb"><button data-g="ok">OK</button><button data-g="test">🧪 Skúšobný režim</button></div><small>Skúšobný režim je na testovanie mimo ihriska. Takéto hlásenia sú označené ako skúšobné.</small>`;g.hidden=false;
   g.onclick=e=>{const b=e.target.closest("button[data-g]");if(!b)return;g.hidden=true;if(b.dataset.g==="test"){setTestmode(1);openSheet()}}}
-function openSheet(){{const m=repGuard(null,null,meLL,meAcc,onCourse);if(m){closeSheet();guardCard(m);return}}level=null;$3("r3voice").textContent="";$3("pop3").hidden=true;$3("here3").hidden=true;$3("rep3").hidden=false;$3("fab3").classList.add("open");renderSheet();startVoice()}
+function openSheet(){if(gpsLS()!=="0")startGPS(true);{const m=repGuard(null,null,meLL,meAcc,onCourse);if(m){closeSheet();guardCard(m);return}}level=null;$3("r3voice").textContent="";$3("pop3").hidden=true;$3("here3").hidden=true;$3("rep3").hidden=false;$3("fab3").classList.add("open");renderSheet();startVoice()}
 function closeSheet(){$3("rep3").hidden=true;$3("fab3").classList.remove("open");$3("fab3").firstChild.nodeValue="⚠️";level=null;stopVoice();repAt=null}
 function saveRep(k,note){if(note&&badWord(note)){toast("🚫 Bez vulgarizmov, prosím.");return false}const w=where(),ri=repInfo(k);let pt=w.p;
   if(REP_MOVING[k]){const[e,n]=enu(0,c*.5);pt=toLL(e,n)}
@@ -953,6 +958,11 @@ if(PLAY){
   if(Q.has("dbg"))window.__g={S,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R};
 }
 
+// iOS Safari ignoruje user-scalable=no: zablokuj priblíženie stránky (pinch a dvojťuk); 3D kamera používa vlastné dotyky na canvase
+for(const ev of["gesturestart","gesturechange","gestureend"])document.addEventListener(ev,e=>e.preventDefault(),{passive:false});
+document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});
+{let lt=0;document.addEventListener("touchend",e=>{const n=Date.now();if(n-lt<350&&e.target.tagName!=="CANVAS"&&!e.target.closest("input,textarea,select")){e.preventDefault();const b=e.target.closest("button,a");if(b)b.click()}lt=n},{passive:false})}
+document.addEventListener("touchmove",e=>{if(e.touches.length>1&&e.target.tagName!=="CANVAS")e.preventDefault()},{passive:false});
 let lastT=0;
 function loop(now){const dt=Math.min(.05,lastT?(now-lastT)/1000:0);lastT=now;
   if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;

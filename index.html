@@ -2,7 +2,7 @@
 <html lang="sk">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0f6b4a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -865,8 +865,13 @@ function onErr(err){
   $("gpstxt").textContent=err.code===1?"Poloha zakázaná":"GPS nedostupné";
   if(err.code===1)showToast("Povoľ polohu pre tento web: na iPhone Nastavenia → Súkromie → Polohové služby → Safari, na Androide ikonka zámku vedľa adresy.");
 }
+// GPS: po zamietnutí sa už automaticky nepýtame; ťuknutím na odznak GPS sa dá skúsiť znova
+const gpsLS=v=>{try{if(v!=null)localStorage.setItem("for.gps",v);return localStorage.getItem("for.gps")}catch(e){return null}};
+let gpsW=null;
+function startGPS(){if(gpsW!=null)return;gpsW=navigator.geolocation.watchPosition(p=>{gpsLS("1");onPos(p)},e=>{if(e.code===1){gpsLS("0");navigator.geolocation.clearWatch(gpsW);gpsW=null}onErr(e)},{enableHighAccuracy:true,maximumAge:0,timeout:30000})}
 if("geolocation" in navigator){
-  navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:30000});
+  if(gpsLS()==="0"){$("gpsbadge").className="bad";$("gpstxt").textContent="Poloha vypnutá · ťukni"}else startGPS();
+  $("gpsbadge").addEventListener("click",()=>{if(gpsW==null){gpsLS("");startGPS()}});
 }else onErr({code:2});
 setInterval(()=>{if(lastFix&&Date.now()-lastFix>20000){$("gpsbadge").className="mid";$("gpstxt").textContent="GPS: posledná poloha pred "+Math.round((Date.now()-lastFix)/1000)+" s"}},5000);
 
