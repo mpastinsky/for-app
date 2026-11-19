@@ -29,6 +29,7 @@ canvas{display:block;touch-action:none}
 .ric{width:1.3em;height:1.3em;vertical-align:-.28em;object-fit:contain}
 #r3grid>button span .ric,.repmk .ric{width:80%;height:80%;vertical-align:middle}
 #fab3[hidden]{display:none!important}
+#r3grid>button.off{opacity:.45;filter:grayscale(1)}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
@@ -422,18 +423,24 @@ const bunkersL=DATA.bunkers.map(B=>B.map(loc));
 function where(){if(repAt)return{p:repAt,src:"na bode, ktorý si označil",k:"pt"};if(meLL)return{p:meLL,src:"na tvojej polohe",k:"gps"};
   return{p:toLL(...DATA.gc[hNum-1]),src:"pri greene jamky "+hNum+" (poloha nie je známa)",k:"approx"}}
 function bunkerOk(){const w=where(),[x,y]=loc(toEN(...w.p));let d=1e9;for(const B of bunkersL)d=Math.min(d,Math.max(0,sdist(x,y,B)));
-  return d<=(w.k==="gps"?5+Math.min(meAcc||10,15):w.k==="approx"?40:5)}
+  // „neupravený bunker“ len priamo v bunkri (ťuknutý bod do 1 m, poloha do 2 m), nikde inde
+  return w.k==="pt"?d<=3+.05*repAtD:w.k==="gps"?d<=3:false}
+let repAtD=0;   // vzdialenosť kamery od ťuknutého bodu: ďaleko je ťuk menej presný
+// bod hlásenia bunkra vždy presunieme do bunkra (ak je ťuknuté tesne vedľa, do stredu najbližšieho bunkra)
+function snapBunker(pt){const[x,y]=loc(toEN(...pt));let best=null,bd=1e9;for(const B of bunkersL){const d=sdist(x,y,B);if(d<bd){bd=d;best=B}}
+  if(!best||bd<=0)return pt;let cx=0,cy=0;for(const[a,b]of best){cx+=a;cy+=b}cx/=best.length;cy/=best.length;if(!inPoly([cx,cy],best)){let m=1e9;for(const q of best){const dd=Math.hypot(q[0]-x,q[1]-y);if(dd<m){m=dd;cx=q[0]+(cx-q[0])*.3;cy=q[1]+(cy-q[1])*.3}}}
+  return toLL(...enu(cx,cy))}
 // v bunkri nedávajú zmysel hlásenia trávnika
 const NOT_IN_BUNKER=["divot","mole","pitch","greenbad"];
 function inBunker(){const w=where();if(w.k==="approx")return false;const[x,y]=loc(toEN(...w.p));return bunkersL.some(B=>sdist(x,y,B)<0)}
-const allowed=k=>!(k==="bunker"&&!bunkerOk())&&!(NOT_IN_BUNKER.includes(k)&&inBunker());
+const allowed=k=>!(NOT_IN_BUNKER.includes(k)&&inBunker());
 let level=null;
 const DIAL={top:["mic","g:pace","g:green","g:info"],pace:["slow","fast"],green:["trash","wet","greenbad","divot","mole","bunker","other"],info:["ball","help","text"]};
 const DG={pace:{i:"⏱️",t:"Tempo hry"},green:{i:"🌳",t:"Ihrisko"},info:{i:"ℹ️",t:"Info"}};
 function tile(k){if(k==="mic")return SR?`<button data-mic="1" class="mic ${rec?"on":""}"><span>🎤</span><em>${rec?"Počúvam…":"Povedať hlasom"}</em></button>`:"";
   if(k==="back")return `<button data-back="1"><span>‹</span><em>Späť</em></button>`;
   if(k.startsWith("g:")){const g=DG[k.slice(2)];return `<button data-g="${k.slice(2)}" class="grp ${g.hot?"hot":""}"><span>${g.i}</span><em>${g.t} ›</em></button>`}
-  const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${icH(r)}</span><em>${SHORT[r.k]||r.t}</em></button>`}
+  const r=repInfo(k),off=k==="bunker"&&!bunkerOk();return `<button data-k="${r.k}" class="${r.hot?"hot":""}${off?" off":""}" ${off?"data-off=1":""}><span>${icH(r)}</span><em>${SHORT[r.k]||r.t}</em></button>`}
 const SHORT={trash:"Neporiadok",wet:"Mokro",greenbad:"Zlý green",divot:"Divoty",mole:"Krtince",bunker:"Bunker",other:"Iné",slow:"Pomalí",fast:"Rýchli",ball:"Loptička",help:"SOS",text:"Text"};
 function layoutArc(){const fb=$3("fab3").getBoundingClientRect(),cx=fb.left+fb.width/2,cy=fb.top+fb.height/2;
   const items=[...$3("r3grid").querySelectorAll(":scope>button")];const rings=items.length<=4?[items]:[items.slice(0,3),items.slice(3)];
@@ -454,6 +461,7 @@ function openSheet(){level=null;$3("r3voice").textContent="";$3("pop3").hidden=t
 function closeSheet(){$3("rep3").hidden=true;$3("fab3").classList.remove("open");$3("fab3").firstChild.nodeValue="⚠️";level=null;stopVoice();repAt=null}
 function saveRep(k,note){const w=where(),ri=repInfo(k);let pt=w.p;
   if(REP_MOVING[k]){const[e,n]=enu(0,c*.5);pt=toLL(e,n)}
+  if(k==="bunker")pt=snapBunker(pt);
   const r={k,t:Date.now(),exp:Date.now()+(REP_TTL[k]||360)*60000,hole:hNum,lat:+pt[0].toFixed(6),lon:+pt[1].toFixed(6),mine:1};if(note)r.note=note.slice(0,120);if(w.k==="approx")r.approx=1;
   loadR();reports.push(r);saveR();drawPins();closeSheet();if(navigator.vibrate)navigator.vibrate(40);
   if(ri.hot){shareRep([r]);toast(ri.i+" "+ri.t+": uložené. Pošli to hneď ďalej.")}
@@ -462,7 +470,7 @@ async function shareRep(list){const txt="Fór · hlásenie z ihriska Apex Báč\
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e&&e.name==="AbortError")return}try{await navigator.clipboard.writeText(txt);toast("Text je skopírovaný, vlož ho do správy.")}catch(e){}}
 $3("r3grid").onclick=e=>{if(e.target.closest("button[data-back]")){level=null;renderSheet();return}if(e.target.closest("button[data-mic]")){if(rec)stopVoice();else startVoice();renderSheet();return}
   const tx=e.target.closest("button[data-k='text'],button[data-k='other']");if(tx){askText(tx.dataset.k);return}
-  const g=e.target.closest("button[data-g]");if(g){level=g.dataset.g;renderSheet();return}const b=e.target.closest("button[data-k]");if(b)saveRep(b.dataset.k,b.dataset.note?b.dataset.note:null)};
+  const g=e.target.closest("button[data-g]");if(g){level=g.dataset.g;renderSheet();return}const b=e.target.closest("button[data-k]");if(b&&b.dataset.off){toast("🏖️ Neupravený bunker sa dá položiť len do bunkra. Ťukni priamo do bunkra a nahlás ho tam.");closeSheet();return}if(b)saveRep(b.dataset.k,b.dataset.note?b.dataset.note:null)};
 $3("r3back").onclick=()=>{level=null;renderSheet()};$3("r3x").onclick=closeSheet;$3("rep3").onclick=e=>{if(e.target.id==="rep3")closeSheet()};
 // podržanie prsta na ⚠️ = možnosti v oblúku; posun prsta na ikonu a pustenie = výber (na skupine sa po chvíli rozbalí)
 {const fab=$3("fab3");let holdT=null,byHold=false,hovEl=null,hovT=null;
@@ -508,7 +516,7 @@ function repTick(){if(!popR||$3("pop3").hidden)return;const p=popR.v.clone().pro
    if(moved>8||dt>600)return;v2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(v2,camera);
    const ph=pinG.visible&&ray.intersectObjects(pinG.children)[0];if(ph){showPop(ph.object.userData.idx);return}$3("pop3").hidden=true;
    if(document.body.classList.contains("playing"))return;
-   const hit=ray.intersectObject(ground)[0];if(!hit)return;const[E,N]=enu(hit.point.x,-hit.point.z);repAt=toLL(E,N);
+   const hit=ray.intersectObject(ground)[0];if(!hit)return;const[E,N]=enu(hit.point.x,-hit.point.z);repAt=toLL(E,N);repAtD=hit.distance;
    const now=performance.now();if(lastTap&&now-lastTap[0]<450&&Math.hypot(e.clientX-lastTap[1],e.clientY-lastTap[2])<35){lastTap=null;openSheet();return}
    if(pillWas){lastTap=[now,e.clientX,e.clientY];repAt=null;return} // druhé ťuknutie skryje „Nahlásiť tu“
    lastTap=[now,e.clientX,e.clientY];$3("here3").style.left=e.clientX+"px";$3("here3").style.top=e.clientY+"px";$3("here3").hidden=false})}

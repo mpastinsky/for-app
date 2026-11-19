@@ -713,9 +713,12 @@ function bunkerDist(p){const B=(course.feat||[]).flat().filter(f=>f&&f.t==="bunk
   for(const f of B){const P=f.p.map(q=>[(q[1]-p[1])*kx,(q[0]-p[0])*ky]);let ins=false,m=1e9;
     for(let i=0,j=P.length-1;i<P.length;j=i++){const[a,b]=P[j],[c,d]=P[i];if(((b>0)!==(d>0))&&(0<(c-a)*(0-b)/(d-b)+a))ins=!ins;
       const vx=c-a,vy=d-b,l=vx*vx+vy*vy;let t=l?(-a*vx-b*vy)/l:0;t=Math.max(0,Math.min(1,t));m=Math.min(m,Math.hypot(a+t*vx,b+t*vy))}
-    best=Math.min(best,ins?0:m)}return best}
-function bunkerOk(){const w=repWhere();if(!w)return true;const d=bunkerDist(w.p);if(d==null)return true;
-  const tol=w.src.startsWith("na tvojej")?5+Math.min(meAccM||10,15):w.approx?40:5;return d<=tol}
+    const dd=ins?0:m;if(dd<best){best=dd;bunkerDist.f=f}}return best}
+// hlásenie bunkra vždy do bunkra: tesne vedľa → stred najbližšieho bunkra
+function snapBunker(p){const d=bunkerDist(p);if(!d||!bunkerDist.f)return p;const P=bunkerDist.f.p;return[P.reduce((a,q)=>a+q[0],0)/P.length,P.reduce((a,q)=>a+q[1],0)/P.length]}
+function bunkerOk(){const w=repWhere();if(!w)return false;const d=bunkerDist(w.p);if(d==null)return false;
+  // „neupravený bunker“ len priamo v bunkri, nikde inde
+  if(w.approx)return false;return d<=3}
 function repTile(k){if(k.startsWith("g:")){const g=REP_GROUPS[k.slice(2)];return `<button data-g="${k.slice(2)}"><span>${g.i}</span>${g.t} ›</button>`}
   const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${icH(r)}</span>${r.t}</button>`}
 function renderRepSheet(){const w=repWhere();
@@ -731,6 +734,7 @@ function closeReport(){$("rep").hidden=true;stopVoice()}
 function repButtons(w){return REPORTS.map(r=>`<button data-k="${r.k}" ${w?"":"disabled"}><span>${icH(r)}</span>${r.t}</button>`).join("")}
 function saveReport(k,note){const w=repWhere();if(!w)return false;const ri=repInfo(k);
   let pt=w.p;if(REP_MOVING[k]){const g=course.greens[round.hole],te=course.tees&&course.tees[round.hole];if(g&&te)pt=[(g[0]+te[0])/2,(g[1]+te[1])/2];else if(g)pt=g}
+  if(k==="bunker")pt=snapBunker(pt);
   const r={k,t:Date.now(),exp:Date.now()+(REP_TTL[k]||360)*60000,hole:round.hole+1,lat:+pt[0].toFixed(6),lon:+pt[1].toFixed(6),mine:1};if(note)r.note=note.slice(0,120);if(w.approx)r.approx=1;
   reports.push(r);store.set("reports",reports);drawReports();renderRepList();closeReport();tapPt=null;renderTap();
   if(navigator.vibrate)navigator.vibrate(40);
