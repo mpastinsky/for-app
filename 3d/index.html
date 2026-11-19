@@ -936,6 +936,8 @@ if(PLAY){
   function penalty(t){S.strokes++;SHOTS.pop();S.x=S.prev[0];S.y=S.prev[1];S.z=gS(S.x,S.y)+R;msg(t);setTimeout(()=>{if(S.mode!=="in")prepare()},900);S.mode="wait"}
   function stopBall(){if(Math.hypot(S.x-PIN[0],S.y-PIN[1])<CUP+.006){S.mode="drop";S.t=0;S.sink=0;return}S.vx=S.vy=0;S.mode="wait";const sf=surf(S.x,S.y);shotInfo();
     msg(sf===SURF.green?"Na greene":sf===SURF.sand?"V bunkri":sf===SURF.rough?"V roughu":sf===SURF.collar?"Na lemu greenu":"Na "+sf.n);
+    // úder z odpaliska, ktorý nedoletel za červené odpalisko
+    {const rp=DATA.pads[hNum],red=rp&&loc(rp[rp.length-1]);if(S.strokes===1&&red&&S.y<red[1]-2){msg("Paráda, berieš kolo pre celý flight 🍻");setTimeout(()=>{if(S.mode==="wait")prepare()},2600);return}}
     setTimeout(()=>{if(S.mode==="wait")prepare()},900)}
   // jamka: polomer 54 mm, loptička 21 mm. Skúšame celý úsek pohybu (nie len bod), aby loptička „nepreskočila“ jamku medzi krokmi.
   // Padne, ak je dosť pomalá vzhľadom na to, ako blízko stredu ide (stred ~1,7 m/s, pri okraji menej); trochu rýchlejšia sa od okraja odrazí (lip-out),
