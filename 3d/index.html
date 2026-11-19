@@ -22,7 +22,8 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
 .lab{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:3px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35);pointer-events:none}
 .lab.arc{background:rgba(0,0,0,.55);color:#fff;font-weight:600}
 #top b{white-space:nowrap}#top small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top>div:nth-child(2){min-width:0}
-@media (max-width:480px){#top a{width:36px;height:38px}#holes{gap:4px}#top b{font-size:1.1rem}#tees>span{display:none}#tees{top:calc(env(safe-area-inset-top,0px) + 66px)}
+#tees.many i{border:1px solid #0006}
+@media (max-width:480px){#tees.many b{display:none}#tees.many a{padding:7px 9px}#top a{width:36px;height:38px}#holes{gap:4px}#top b{font-size:1.1rem}#tees>span{display:none}#tees{top:calc(env(safe-area-inset-top,0px) + 66px)}
  #bar{gap:6px}#bar button{font-size:.82rem;padding:0 4px}}
 #fab3{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:20;width:56px;height:56px;border-radius:50%;background:#ff8a00;display:grid;place-items:center;font-size:1.6rem;text-decoration:none;box-shadow:0 3px 12px rgba(0,0,0,.4)}
 #fab3 small{position:absolute;top:58px;left:50%;transform:translateX(-50%);font:700 .7rem var(--font);color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
@@ -49,12 +50,21 @@ import {OrbitControls} from "./lib/OrbitControls.js";
 
 // Akadémia Apex Golf, Báč. Terén z DMR 5.0 (ÚGKK SR, CC BY 4.0), greeny/bunkre/stromy obkreslené zo satelitu
 // a zarovnané na terén. Dáta: akademia.json (ENU metre od greenu 1, x = východ, y = sever).
-const DATA=await (await fetch("akademia.json")).json();
 const Q=new URLSearchParams(location.search);
-const hNum=Math.min(3,Math.max(1,parseInt(Q.get("h"))||1));
-const tIdx=Math.min(2,Math.max(0,parseInt(Q.get("t"))||0));
-const TEE_N=["biele","žlté","červené"];
-const STYLE={1:{},2:{},3:{sunWest:true}}[hNum];
+// ihrisko: ?c=apex = 18-jamkové Apex Báč (apex.json), inak akadémia
+const CRS=Q.get("c")==="apex"?"apex":"akademia",CQ=CRS==="apex"?"c=apex&":"";
+const DATA=await (await fetch(CRS+".json")).json();
+const READY=DATA.ready||DATA.gc.map((_,i)=>i+1),LASTH=READY[READY.length-1];
+const PARS=DATA.par||READY.map(()=>3);
+const hNum=READY.includes(parseInt(Q.get("h")))?parseInt(Q.get("h")):READY[0];
+const TEE_N=DATA.teeNames||["biele","žlté","červené"],TEE_C=DATA.teeColors||["#fff","#ffd400","#e0312b"];
+const tIdx=Math.min(TEE_N.length-1,Math.max(0,parseInt(Q.get("t"))||0));
+const PAR=PARS[hNum-1]||3;
+const STYLE=(CRS==="apex"?{}:{1:{},2:{},3:{sunWest:true}}[hNum])||{};
+// navigácia jamiek a odpalísk podľa dát ihriska
+if(CRS==="apex"){document.getElementById("holes").innerHTML=READY.map(h=>`<a data-h="${h}">${h}</a>`).join("");
+  document.getElementById("tees").innerHTML="<span>Odpalisko:</span>"+TEE_N.map((nm,j)=>`<a data-t="${j}" title="${nm}"><i style="background:${TEE_C[j]}"></i><b>${nm}</b></a>`).join("");
+  document.getElementById("tees").classList.add("many")}
 
 // --- terén
 const TR=DATA.terrain,Hcm=new Int16Array(Uint8Array.from(atob(TR.cm),c=>c.charCodeAt(0)).buffer);
@@ -97,19 +107,20 @@ hBump=(x,y)=>{const M=9;let h=0;
   return h};
 const hG=hL(0,c);
 const cen=P=>[P.reduce((a,p)=>a+p[0],0)/P.length,P.reduce((a,p)=>a+p[1],0)/P.length];
-const nearestGreen=B=>{const q=cen(B);let bi=0,bd=1e9;DATA.gc.forEach((g,i)=>{const d=(g[0]-q[0])**2+(g[1]-q[1])**2;if(d<bd){bd=d;bi=i}});return bi};
+const nearestGreen=B=>{const q=cen(B);let bi=0,bd=1e9;DATA.gc.forEach((g,i)=>{if(!g)return;const d=(g[0]-q[0])**2+(g[1]-q[1])**2;if(d<bd){bd=d;bi=i}});return bi};
 for(const B of DATA.bunkers)if(nearestGreen(B)===hNum-1)myBunkers.push(B.map(loc));
 for(const B of myBunkers){let a=1e9,b=-1e9,c2=1e9,d=-1e9;for(const[x,y]of B){a=Math.min(a,x);b=Math.max(b,x);c2=Math.min(c2,y);d=Math.max(d,y)}B.bb=[a-4,b+4,c2-4,d+4];B.gd=Math.min(...B.map(([x,y])=>sdist(x,y,green)))}
-document.getElementById("h-t").textContent="Jamka "+hNum+" · Par 3";
-document.getElementById("h-s").textContent=TEE_N[tIdx]+" · "+f+" / "+c+" / "+b+" m";
-document.querySelectorAll("#holes a").forEach(a=>{a.href="?h="+a.dataset.h+"&t="+tIdx;a.classList.toggle("on",+a.dataset.h===hNum)});
-document.querySelectorAll("#tees a").forEach(a=>{a.href="?h="+hNum+"&t="+a.dataset.t;a.classList.toggle("on",+a.dataset.t===tIdx)});
+document.getElementById("h-t").textContent="Jamka "+hNum+" · Par "+PAR;
+const BD=DATA.bend&&DATA.bend[hNum]?loc(DATA.bend[hNum]):null,cP=BD?Math.round(Math.hypot(...BD)+Math.hypot(BD[0],c-BD[1])):c;
+document.getElementById("h-s").textContent=TEE_N[tIdx]+" · "+(f+cP-c)+" / "+cP+" / "+(b+cP-c)+" m";
+document.querySelectorAll("#holes a").forEach(a=>{a.href="?"+CQ+"h="+a.dataset.h+"&t="+tIdx;a.classList.toggle("on",+a.dataset.h===hNum)});
+document.querySelectorAll("#tees a").forEach(a=>{a.href="?"+CQ+"h="+hNum+"&t="+a.dataset.t;a.classList.toggle("on",+a.dataset.t===tIdx)});
 document.getElementById("note").textContent="Terén © ÚGKK SR, DMR 5.0 (CC BY 4.0)";
 
 // --- scéna
 const scene=new THREE.Scene();
 const sky=STYLE.sunWest?0xc9dbe8:0x9fc6e8;
-scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,350,900);
+scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,Math.max(350,c+120),Math.max(900,c+550));
 const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,1,1500);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
@@ -145,6 +156,10 @@ if(MOW){for(const poly of MOW.slice().reverse()){const P=poly.map(loc);g2.save()
 else{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8));g2.quadraticCurveTo(tx(-w),ty(y0),tx(0),ty(y0));g2.quadraticCurveTo(tx(w),ty(y0),tx(w),ty(y0+8));
  g2.lineTo(tx(w+2),ty(y1-6));g2.quadraticCurveTo(tx(w),ty(y1+2),tx(0),ty(y1+2));g2.quadraticCurveTo(tx(-w),ty(y1+2),tx(-w-2),ty(y1-6));g2.closePath();g2.clip();
  g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);g2.fillStyle="rgba(40,90,25,.18)";for(let y=y0;y<y1+4;y+=12){const a=ty(y),b2=ty(y+6);g2.fillRect(0,Math.min(a,b2),TEX,Math.abs(a-b2))}g2.restore()}
+// voda (jazierka)
+const waterL=(DATA.water||[]).map(P=>P.map(loc));
+for(const P of waterL){g2.save();path(P);g2.lineWidth=2.5*ppm;g2.strokeStyle="#6f9a4a";g2.stroke();g2.fillStyle="#3d7397";g2.fill();g2.clip();
+  g2.fillStyle="rgba(255,255,255,.07)";for(let k=0;k<40;k++){g2.beginPath();g2.ellipse(rnd()*TEX,rnd()*TEX,(8+rnd()*20)*ppm,1.2*ppm,0,0,7);g2.fill()}g2.restore()}
 // greeny: lem (fringe) + plocha
 // farby trávnika okolo greenu (detail v jemnej textúre nižšie)
 const TURF={cut:"#7cba4b",collar:"#8bcb55",green:"#9fd95e"};
@@ -223,7 +238,10 @@ function fadeTrees(){const cp=camera.position,goals=[controls.target,...(PIN_V||
       for(const[pt,rr]of[[f.c,f.r+1.2],[f.b,1.6]]){const s=pt.clone().sub(cp).dot(d);if(s>0&&s<L-1){const q=cp.clone().addScaledVector(d,s);if(q.distanceTo(pt)<rr){hit=true;break}}}if(hit)break}
     const to=hit?.28:1;if(Math.abs(f.op-to)<.01)continue;f.op+=(to-f.op)*.18;if(Math.abs(f.op-to)<.02)f.op=to;
     for(const m of f.m){const M=m.material,tr=f.op<1;if(M.transparent!==tr){M.transparent=tr;M.depthWrite=!tr;M.needsUpdate=true}M.opacity=f.op}}}
-const inPlay=(x,y,r)=>y>-2&&y<c-5&&Math.abs(x)<r+9;
+// lomená jamka (dogleg): bod zlomu DATA.bend[h] = [východ, sever]
+const BL=DATA.bend&&DATA.bend[hNum]?loc(DATA.bend[hNum]):null;
+const segD=(x,y,a,b)=>{const vx=b[0]-a[0],vy=b[1]-a[1],l=vx*vx+vy*vy;let t=((x-a[0])*vx+(y-a[1])*vy)/l;t=t<0?0:t>1?1:t;return Math.hypot(a[0]+t*vx-x,a[1]+t*vy-y)};
+const inPlay=BL?(x,y,r)=>Math.min(segD(x,y,[0,0],BL),segD(x,y,BL,[0,c-5]))<r+9:(x,y,r)=>y>-2&&y<c-5&&Math.abs(x)<r+9;
 // --- krajšie stromy: koruna zo zhlukov listov (low-poly), tieň zospodu, svetlejšie navrchu
 function mergeG(list){let n=0;const gs=list.map(g=>{g=g.index?g.toNonIndexed():g;n+=g.attributes.position.count;return g});
   const P=new Float32Array(n*3),C=new Float32Array(n*3);let o=0;for(const g of gs){P.set(g.attributes.position.array,o*3);if(g.attributes.color)C.set(g.attributes.color.array,o*3);o+=g.attributes.position.count}
@@ -294,16 +312,19 @@ function waveFlag(t){const p=flagG.attributes.position,gust=.75+.25*Math.sin(t*.
   p.setZ(i,(Math.sin(x*6.5-t*3.4+y*1.4)*.1+Math.sin(x*11-t*5.1)*.025)*k*gust);p.setY(i,y-k*k*.05*(1.3-gust)+Math.sin(x*5-t*2.6)*.015*k);p.setX(i,x*(1-.05*k*gust))}
   p.needsUpdate=true;flagG.computeVertexNormals();flag.rotation.y=Math.sin(t*.45)*.28+Math.sin(t*1.3)*.06}
 // kolíky na odpaliskách: zadné biele, stredné žlté, predné červené
-const MK=[0xffffff,0xffd400,0xe0312b];
+const MK=TEE_C.map(c=>new THREE.Color(c).getHex());
 DATA.pads[hNum].forEach((pd,j)=>{const[cx,cy]=loc(pd);const m=new THREE.MeshStandardMaterial({color:MK[j],roughness:.5});
   for(const sx of [-2.3,2.3]){const x=cx+sx,y=cy+1.2,z=hL(x,y);
     const tp=new THREE.Mesh(new THREE.SphereGeometry(.1,12,10),m);tp.position.copy(W(x,y,z+.1));tp.castShadow=true;scene.add(tp)}});
 // --- oblúky a línia hry (prilepené na terén)
 const arcs=[];
-for(const d of [50,100]){if(d>=c-10)continue;const pts=[];for(let a=-0.45;a<=0.451;a+=0.03){const x=Math.sin(a)*d,y=c-Math.cos(a)*d;pts.push(W(x,y,hL(x,y)+.35))}
+{const A=BL||[0,0],dl=Math.hypot(A[0],A[1]-c),ux=A[0]/dl,uy=(A[1]-c)/dl,full=BL?dl+Math.hypot(...BL):c;
+ for(const d of (PAR>3?[50,100,150,200]:[50,100])){if(d>=full-10)continue;const pts=[],P=a=>{const ca=Math.cos(a),sa=Math.sin(a);return[(ux*ca-uy*sa)*d,c+(ux*sa+uy*ca)*d]};
+  for(let a=-0.45;a<=0.451;a+=0.03){const[x,y]=P(a);pts.push(W(x,y,hL(x,y)+.35))}
   scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.8})));
-  arcs.push({d,pos:W(Math.sin(.45)*d,c-Math.cos(.45)*d,hL(Math.sin(.45)*d,c-Math.cos(.45)*d)+1.2)})}
-{const pts=[];for(let y=0;y<=c;y+=2)pts.push(W(0,y,hL(0,y)+.3));
+  const[lx,ly]=P(.45);arcs.push({d,pos:W(lx,ly,hL(lx,ly)+1.2)})}}
+{const pts=[],seg=(a,b)=>{const L=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let t=0;t<=L;t+=2){const x=a[0]+(b[0]-a[0])*t/L,y=a[1]+(b[1]-a[1])*t/L;pts.push(W(x,y,hL(x,y)+.3))}};
+ if(BL){seg([0,0],BL);seg(BL,[0,c])}else seg([0,0],[0,c]);
  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:0xd23b2a,dashSize:3,gapSize:2})).computeLineDistances())}
 
 // ================= HLÁSENIA priamo v 3D (zdieľané s appkou cez localStorage "for.reports") =================
@@ -575,7 +596,7 @@ function repTick(){if(!popR||$3("pop3").hidden)return;const p=popR.v.clone().pro
 // --- štítky
 const labels=[];
 function label(text,v,cls=""){const el=document.createElement("div");el.className="lab "+cls;el.textContent=text;document.body.appendChild(el);labels.push({el,v})}
-label("Green · "+c+" m",W(...PIN,hP+3.6));
+label("Green · "+cP+" m",W(...PIN,hP+3.6));
 for(const a of arcs)label(a.d+" m",a.pos,"arc");
 function placeLabels(){for(const l of labels){const p=l.v.clone().project(camera);const vis=p.z<1&&Math.abs(p.x)<1.1&&Math.abs(p.y)<1.1;
   l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=((p.x+1)/2*innerWidth)+"px";l.el.style.top=((1-p.y)/2*innerHeight)+"px"}}}
@@ -600,7 +621,8 @@ controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.scr
 if(matchMedia("(pointer:fine)").matches){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=1.2}
 renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?1.2:1},{capture:true});controls.minDistance=8;controls.maxDistance=230;
 const eye=1.7;
-const views={tee:{pos:W(0,-15,hL(0,-15)+eye+2.6),target:W(0,c*.9,hL(0,c*.9))},top:{pos:W(0,c*.5-25,230),target:W(0,c*.5,0)}};
+const TT=BL?[BL[0]*1.1,BL[1]*1.1]:[0,c*.9],TB=BL?[-BL[0]/Math.hypot(...BL)*15,-BL[1]/Math.hypot(...BL)*15]:[0,-15];
+const views={tee:{pos:W(TB[0],TB[1],hL(...TB)+eye+2.6),target:W(TT[0],TT[1],hL(...TT))},top:{pos:W(0,c*.5-25,230),target:W(0,c*.5,0)}};
 function go(v){camera.position.copy(v.pos);controls.target.copy(v.target);controls.update()}
 go(views.tee);
 let fly=null;
@@ -608,9 +630,9 @@ const btns={tee:document.getElementById("v-tee"),fly:document.getElementById("v-
 function setOn(k){for(const x in btns)btns[x].classList.toggle("on",x===k)}
 btns.tee.onclick=()=>{fly=null;go(views.tee);setOn("tee")};
 btns.top.onclick=()=>{fly=null;go(views.top);setOn("top")};
-document.getElementById("v-play").onclick=()=>{location.href="?h=1&t="+tIdx+"&play=1"};
+document.getElementById("v-play").onclick=()=>{location.href="?"+CQ+"h="+READY[0]+"&t="+tIdx+"&play=1"};
 btns.fly.onclick=()=>{fly={t0:performance.now()};setOn("fly")};
-const curve=new THREE.CatmullRomCurve3([views.tee.pos.clone(),W(0,c*.3,hL(0,c*.3)+22),W(0,c*.65,hL(0,c*.65)+16),W(0,c-38,hG+9)]);
+const curve=new THREE.CatmullRomCurve3(BL?[views.tee.pos.clone(),W(BL[0]*.5,BL[1]*.5,hL(BL[0]*.5,BL[1]*.5)+22),W(BL[0],BL[1],hL(...BL)+18),W(BL[0]*.4,BL[1]*.4+(c-BL[1]*.4)*.6,hL(0,c*.7)+14),W(0,c-38,hG+9)]:[views.tee.pos.clone(),W(0,c*.3,hL(0,c*.3)+22),W(0,c*.65,hL(0,c*.65)+16),W(0,c-38,hG+9)]);
 renderer.domElement.addEventListener("pointerdown",()=>{if(fly){fly=null;setOn("")}});
 // ================= HRA: 3-jamková akadémia (skúšobná verzia) =================
 const PLAY=Q.get("play")==="1";
@@ -622,9 +644,9 @@ if(PLAY){
   const $=id=>document.getElementById(id);
   document.body.classList.add("playing");
   document.querySelectorAll("#tees a").forEach(a=>{a.href+="&play=1"+(SC.length?"&sc="+SC.join("-"):"")});
-  document.querySelectorAll("#holes a").forEach(a=>{a.href="?h="+a.dataset.h+"&t="+tIdx+"&play=1"});
+  document.querySelectorAll("#holes a").forEach(a=>{a.href="?"+CQ+"h="+a.dataset.h+"&t="+tIdx+"&play=1"});
   // palice: dĺžka letu (carry) pri plnej sile a uhol odpalu
-  const CLUBS=[{n:"5 železo",k:"5ž",c:165,a:21},{n:"7 železo",k:"7ž",c:142,a:27},{n:"8 železo",k:"8ž",c:130,a:31},{n:"9 železo",k:"9ž",c:118,a:35},
+  const CLUBS=[...(PAR>3?[{n:"Driver",k:"D",c:215,a:11},{n:"3 drevo",k:"3d",c:195,a:14},{n:"Hybrid",k:"H",c:178,a:18}]:[]),{n:"5 železo",k:"5ž",c:165,a:21},{n:"7 železo",k:"7ž",c:142,a:27},{n:"8 železo",k:"8ž",c:130,a:31},{n:"9 železo",k:"9ž",c:118,a:35},
     {n:"PW",k:"PW",c:102,a:40},{n:"SW",k:"SW",c:72,a:50},{n:"Patovačka",k:"P",c:22,a:0}];
   // povrchy: odskok, zachovaná rýchlosť po dopade, trenie pri kotúľaní (m/s²), vplyv na dĺžku úderu
   const SURF={green:{n:"green",r:.22,k:.55,f:.56,m:1},collar:{n:"lem greenu",r:.24,k:.6,f:1.2,m:1},cut:{n:"prvý kos",r:.26,k:.6,f:1.6,m:.97},
@@ -675,9 +697,10 @@ if(PLAY){
   const msg=t=>{$("p-msg").textContent=t};
   const S={x:0,y:0,z:gS(0,0)+R,vx:0,vy:0,vz:0,mode:"aim",strokes:0,prev:[0,0],aim:0,club:0,lie:SURF.fair,tee:true,over:false,view:0,t:0,tr:0};
   const toPin=()=>Math.hypot(PIN[0]-S.x,PIN[1]-S.y);
-  function pickClub(){const d=toPin();const sd=sdist(S.x,S.y,green);
-    if(sd<1.5){S.club=6;return}let best=5;for(let i=0;i<6;i++){if(CLUBS[i].c*S.lie.m>=d*.97)best=i}S.club=best}
-  function setAim(){S.aim=Math.atan2(PIN[0]-S.x,PIN[1]-S.y)}
+  function pickClub(){const d=bendAim()?Math.min(toPin(),Math.hypot(BL[0]-S.x,BL[1]-S.y)+15):toPin();const sd=sdist(S.x,S.y,green);
+    const NP=CLUBS.length-1;if(sd<1.5){S.club=NP;return}let best=0;for(let i=0;i<NP;i++){if(CLUBS[i].c*S.lie.m>=d*.97)best=i}if(!S.tee&&best<NP&&CLUBS[best].k==="D")best=Math.min(1,NP-1);S.club=best}
+  const bendAim=()=>BL&&Math.hypot(BL[0]-S.x,BL[1]-S.y)>45&&(S.x*BL[0]+S.y*BL[1])/Math.hypot(...BL)<Math.hypot(...BL)-30;
+  function setAim(){const A=bendAim()?BL:PIN;S.aim=Math.atan2(A[0]-S.x,A[1]-S.y)}
   function info(){const d=toPin();$("h-s").textContent=`Úder ${S.strokes+1} · do jamky ${d<10?d.toFixed(1).replace(".",","):Math.round(d)} m · ${S.tee?"odpalisko":S.lie.n}`;
     const cl=CLUBS[S.club];$("p-cn").textContent=cl.n+(cl.a?" · "+Math.round(cl.c*S.lie.m)+" m":"")}
   function drawAim(){const cl=CLUBS[S.club],dx=Math.sin(S.aim),dy=Math.cos(S.aim);
@@ -700,13 +723,13 @@ if(PLAY){
   function holed(){S.mode="in";ball.visible=false;document.body.classList.add("done");$("h-s").textContent="Jamka dohraná";const n=S.strokes,d=n-3;
     const nm={"-2":"Eagle!","-1":"Birdie!","0":"Par","1":"Bogey","2":"Double bogey"}[d]||(n===1?"Hole in one!":(d>0?"+"+d:String(d)));
     msg((n===1?"Hole in one! 🎉":nm)+" · "+n+(n===1?" úder":n<5?" údery":" úderov"));setTimeout(()=>showRes(n),1400)}
-  function showRes(n){const all=SC.concat([n]);const tot=all.reduce((a,b)=>a+b,0),par=all.length*3,dd=tot-par;
-    const rows=[1,2,3].map(i=>`<tr><td>Jamka ${i}</td><td>Par 3</td><td><b>${all[i-1]??"–"}</b></td></tr>`).join("");
-    const last=hNum===3;const nx=`?h=${hNum+1}&t=${tIdx}&play=1&sc=${all.join("-")}`;
+  function showRes(n){const all=SC.concat([n]);const tot=all.reduce((a,b)=>a+b,0),par=all.reduce((a,_,i)=>a+(PARS[READY[i]-1]||3),0),dd=tot-par;
+    const rows=READY.map((h,i)=>`<tr><td>Jamka ${h}</td><td>Par ${PARS[h-1]||3}</td><td><b>${all[i]??"–"}</b></td></tr>`).join("");
+    const last=hNum===LASTH;const nx=`?${CQ}h=${READY[READY.indexOf(hNum)+1]}&t=${tIdx}&play=1&sc=${all.join("-")}`;
     $("p-res").innerHTML=`<h2>${last?"Koniec kola":"Jamka "+hNum+" dohraná"}</h2><div>${last?"Spolu "+tot+" úderov · "+(dd===0?"na par":dd>0?"+"+dd+" nad par":dd+" pod par"):"Zatiaľ "+tot+" · "+(dd===0?"na par":dd>0?"+"+dd:dd)}</div>
       <table><tr><th></th><th></th><th>Údery</th></tr>${rows}<tr><td><b>Spolu</b></td><td>Par ${par}</td><td><b>${tot}</b></td></tr></table>
-      ${last?`<a class="go" href="?h=1&t=${tIdx}&play=1">Hrať znova</a>`:`<a class="go" href="${nx}">Ďalšia jamka ›</a>`}
-      <a class="go alt" href="?h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="?h=${hNum}&t=${tIdx}">Ukončiť hru</a>`;
+      ${last?`<a class="go" href="?${CQ}h=${READY[0]}&t=${tIdx}&play=1">Hrať znova</a>`:`<a class="go" href="${nx}">Ďalšia jamka ›</a>`}
+      <a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}">Ukončiť hru</a>`;
     $("p-res").hidden=false}
   function penalty(t){S.strokes++;S.x=S.prev[0];S.y=S.prev[1];S.z=gS(S.x,S.y)+R;msg(t);setTimeout(()=>{if(S.mode!=="in")prepare()},900);S.mode="wait"}
   function stopBall(){S.vx=S.vy=0;S.mode="wait";const sf=surf(S.x,S.y);
@@ -732,6 +755,7 @@ if(PLAY){
       if(dc<.1&&sp<.5){holed();return}}
     if(S.mode==="fly"||S.mode==="roll"){S.t+=dt;
       if(S.x<X0+3||S.x>X1-3||S.y<Y0+3||S.y>Y1-3){penalty("Mimo ihriska · trestná rana");return}
+      if(S.mode==="roll"&&waterL.some(P=>inPoly([S.x,S.y],P))){penalty("Voda · trestná rana");return}
       if(S.t>25)stopBall()}}
   // kamera
   const camP=new THREE.Vector3(),camT=new THREE.Vector3();
@@ -768,7 +792,7 @@ if(PLAY){
         if(S.mode==="roll"||S.mode==="wait")info()}
       if(S.mode!=="in")camUpd(dt,false);
       ball.scale.setScalar(Math.min(2.5,Math.max(.35,camera.position.distanceTo(ball.position)/14)))}};
-  document.getElementById("h-t").textContent="Jamka "+hNum+" · Par 3"+(SC.length?" · zatiaľ "+SC.reduce((a,b)=>a+b,0):"");
+  document.getElementById("h-t").textContent="Jamka "+hNum+" · Par "+PAR+(SC.length?" · zatiaľ "+SC.reduce((a,b)=>a+b,0):"");
   prepare();{const[p,t]=camGoal();camP.copy(W(...p));camT.copy(W(...t))}camUpd(0,true);
 }
 
