@@ -18,7 +18,7 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
 #bar button.on{background:#0f6b4a;color:#fff}
 #tees{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 70px);display:flex;gap:6px;align-items:center;color:#fff;font-size:.85rem;text-shadow:0 1px 3px #000}
 #tees a{color:#14211a;background:rgba(255,255,255,.85);border-radius:999px;padding:7px 12px;text-decoration:none;font-weight:600;text-shadow:none}#tees a.on{background:#0f6b4a;color:#fff}#tees i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;border:1px solid #0005;vertical-align:-1px}
-#note{position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);color:#fff;font-size:9px;text-shadow:0 1px 2px #000;opacity:.6;pointer-events:none}
+#note{position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);color:#fff;font-size:11px;text-shadow:0 1px 2px #000;opacity:.9;pointer-events:auto;cursor:pointer}#note:not(.open){font-size:0;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.3);display:grid;place-items:center;opacity:.7}#note:not(.open)::after{content:"i";font:700 12px var(--font)}
 .lab{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:3px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35);pointer-events:none}
 .lab.arc{background:rgba(0,0,0,.55);color:#fff;font-weight:600}
 #top b{white-space:nowrap}#top small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top>div:nth-child(2){min-width:0}
@@ -41,7 +41,7 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
 <div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div></div>
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
-<div id="note">Načítavam terén…</div>
+<div id="note" onclick="this.classList.toggle('open')">Načítavam terén…</div>
 <div id="bar"><button id="v-tee" class="on">Z odpaliska</button><button id="v-fly">Let ku greenu</button><button id="v-top">Zhora</button><button id="v-play">⛳ Hrať</button></div>
 <script type="module">
 import * as THREE from "three";
