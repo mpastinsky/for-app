@@ -263,11 +263,8 @@ function tree(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);const see=inPlay
   if(!see)FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.25),r:r*1.15,op:1})}
 // 5. hodnota 1 = strom s korunou až po zem (bez viditeľného kmeňa)
 DATA.trees.forEach(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(g)bush(x,y,r,h,k);else tree(x,y,r,h,k)});
-// rad stromov (napr. topole): štíhle vysoké koruny
-DATA.row.forEach((p,k)=>{const[x,y]=loc(p);if(!inside(x,y))return;const z=hL(x,y),h=6+rnd()*2;
-  const lo=new THREE.Mesh(CROWNS.bush[k%4],leafV.clone());lo.scale.set(2,h*.22,2);lo.rotation.y=k*.7;lo.position.copy(W(x,y,z+h*.2));lo.castShadow=true;scene.add(lo);
-  const cr=new THREE.Mesh(CROWNS.tall[k%3],leafV.clone());cr.scale.set(2.2,h*.5/1.15,2.2);cr.rotation.y=k;cr.position.copy(W(x,y,z+h*.5));cr.castShadow=true;scene.add(cr);   // koruna až po zem
-  FADE.push({m:[cr,lo],c:cr.position.clone(),b:W(x,y,z+1),r:2.4,op:1})});
+// rad stromov pozdĺž okraja (vpravo od jednotky): obyčajné listnaté stromy
+DATA.row.forEach((p,k)=>{const[x,y]=loc(p);tree(x,y,2.4+((k*37)%10)/10,7+((k*53)%15)/10,k+100)});
 for(const wd of DATA.woods){const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;
   for(let k=0;k<3000&&n<90;k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;n++;const[x,y]=loc([e,nn]);bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}}
