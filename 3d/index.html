@@ -166,7 +166,9 @@ const TURF={cut:"#7cba4b",collar:"#8bcb55",green:"#9fd95e"};
 g2.lineJoin="round";path(green);g2.lineWidth=8*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
 path(green);g2.lineWidth=3*ppm;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill();
 // bunkre
-for(const B of DATA.bunkers){if(nearestGreen(B)!==hNum-1)continue;const P=B.map(loc);path(P);g2.fillStyle="#eadcae";g2.fill();g2.lineWidth=.6*ppm;g2.strokeStyle="#c8b88a";g2.stroke()}
+// všetky bunkre v zábere (aj fairwayové a pri iných jamkách)
+const allBunkL=DATA.bunkers.map(B=>B.map(loc)).filter(P=>P.some(([x,y])=>x>X0&&x<X1&&y>Y0&&y<Y1));
+for(const P of allBunkL){path(P);g2.fillStyle="#eadcae";g2.fill();g2.lineWidth=.6*ppm;g2.strokeStyle="#c8b88a";g2.stroke()}
 // odpaliská
 for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);
   g2.fillStyle=(+k===hNum&&j===tIdx)?"#a7e874":(+k===hNum?"#8fd062":"#86c45a");g2.fill();g2.lineWidth=.5*ppm;g2.strokeStyle="#5d9a3c";g2.stroke()});
@@ -653,7 +655,7 @@ if(PLAY){
     fair:{n:"fairway",r:.3,k:.65,f:1.5,m:1},rough:{n:"rough",r:.14,k:.4,f:3.6,m:.88},sand:{n:"bunker",r:.02,k:.12,f:12,m:.72}};
   scene.children.filter(o=>o.isLine).forEach(o=>o.visible=false);   // oblúky a línia hry v hre netreba
   const mowL=MOW?MOW.map(p=>p.map(loc)):null;
-  function surf(x,y){for(const B of myBunkers)if(inPoly([x,y],B))return SURF.sand;
+  function surf(x,y){for(const B of allBunkL)if(inPoly([x,y],B))return SURF.sand;
     const sd=sdist(x,y,green);if(sd<0)return SURF.green;if(sd<1.5)return SURF.collar;if(sd<4)return SURF.cut;
     if(mowL){for(const P of mowL)if(inPoly([x,y],P))return SURF.fair}else if(Math.abs(x)<12&&y>22&&y<f-2)return SURF.fair;
     return SURF.rough}
