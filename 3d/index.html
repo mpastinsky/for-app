@@ -595,7 +595,7 @@ if(matchMedia("(pointer:fine)").matches){controls.zoomToCursor=true;
  document.getElementById("nav3").addEventListener("pointerdown",e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();act(b.dataset.a);stop();timer=setInterval(()=>act(b.dataset.a),30)});
  addEventListener("pointerup",stop);addEventListener("pointercancel",stop);document.getElementById("nav3").addEventListener("pointerleave",stop)}
 // dotyk: 1 prst = posun po ihrisku (dopredu, dozadu, do strán), 2 prsty = sklon hore/dole, otáčanie a priblíženie
-controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;
+controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;controls.panYFactor=.6;
 // na telefóne pôvodná rýchlosť, s myšou na počítači pomalšie
 if(matchMedia("(pointer:fine)").matches){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=1.2}
 renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?1.2:1},{capture:true});controls.minDistance=8;controls.maxDistance=230;

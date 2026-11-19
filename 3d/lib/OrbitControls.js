@@ -572,7 +572,7 @@ class OrbitControls extends EventDispatcher {
 
 					// we use only clientHeight here so aspect ratio does not distort speed
 					panLeft( 2 * deltaX * targetDistance / element.clientHeight, scope.object.matrix );
-					panUp( 2 * deltaY * targetDistance / element.clientHeight, scope.object.matrix );
+					panUp( 2 * deltaY * ( scope.panYFactor || 1 ) * targetDistance / element.clientHeight, scope.object.matrix );
 
 				} else if ( scope.object.isOrthographicCamera ) {
 
