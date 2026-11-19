@@ -316,7 +316,9 @@ function waveFlag(t){const p=flagG.attributes.position,gust=.75+.25*Math.sin(t*.
 // kolíky na odpaliskách: zadné biele, stredné žlté, predné červené
 const MK=TEE_C.map(c=>new THREE.Color(c).getHex());
 DATA.pads[hNum].forEach((pd,j)=>{const[cx,cy]=loc(pd);const m=new THREE.MeshStandardMaterial({color:MK[j],roughness:.5});
-  for(const sx of [-2.3,2.3]){const x=cx+sx,y=cy+1.2,z=hL(x,y);
+  // kolíky kolmo na smer hry z tohto odpaliska (pri lomenej jamke na zlom)
+  const A=BL||[0,c],dl=Math.hypot(A[0]-cx,A[1]-cy)||1,ux=(A[0]-cx)/dl,uy=(A[1]-cy)/dl;
+  for(const sx of [-2.3,2.3]){const x=cx+sx*uy+1.2*ux,y=cy-sx*ux+1.2*uy,z=hL(x,y);
     const tp=new THREE.Mesh(new THREE.SphereGeometry(.1,12,10),m);tp.position.copy(W(x,y,z+.1));tp.castShadow=true;scene.add(tp)}});
 // --- oblúky a línia hry (prilepené na terén)
 const arcs=[];
