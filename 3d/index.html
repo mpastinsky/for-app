@@ -20,6 +20,8 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}body.playing,b
 #tees{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 70px);display:flex;gap:6px;align-items:center;color:#fff;font-size:.85rem;text-shadow:0 1px 3px #000}
 #tees a{color:#14211a;background:rgba(255,255,255,.85);border-radius:999px;padding:7px 12px;text-decoration:none;font-weight:600;text-shadow:none}#tees a.on{background:#0f6b4a;color:#fff}#tees i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;border:1px solid #0005;vertical-align:-1px}
 #note{position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);color:#fff;font-size:11px;text-shadow:0 1px 2px #000;opacity:.9;pointer-events:auto;cursor:pointer}#note:not(.open){font-size:0;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.3);display:grid;place-items:center;opacity:.7}#note:not(.open)::after{content:"i";font:700 12px var(--font)}
+.lab.hole{display:none!important;pointer-events:auto;text-decoration:none;font-size:20px;width:40px;height:40px;line-height:40px;padding:0;text-align:center;border-radius:50%;transform:translate(-50%,-50%);background:#0f6b4a;color:#fff;border:3px solid #fff}
+body.allv .lab.hole{display:block!important}.lab.hole.cur{background:#ffd400;color:#14211a}
 .lab{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:3px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,.35);pointer-events:none}
 .lab.arc{background:rgba(0,0,0,.55);color:#fff;font-weight:600}
 #top b{white-space:nowrap}#top small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#top>div:nth-child(2){min-width:0}
@@ -44,7 +46,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}body.playing,b
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
 <div id="note" onclick="this.classList.toggle('open')">Načítavam terén…</div>
-<div id="bar"><button id="v-tee" class="on">Z odpaliska</button><button id="v-fly">Let ku greenu</button><button id="v-top">Zhora</button><button id="v-play">⛳ Hrať</button></div>
+<div id="bar"><button id="v-tee" class="on">Z odpaliska</button><button id="v-fly">Let ku greenu</button><button id="v-top">Zhora</button><button id="v-all">Všetky jamky</button><button id="v-play">⛳ Hrať</button></div>
 <script type="module">
 import * as THREE from "three";
 import {OrbitControls} from "./lib/OrbitControls.js";
@@ -187,6 +189,12 @@ else{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8))
 const waterL=(DATA.water||[]).map(P=>P.map(loc));
 for(const P of waterL){g2.save();path(P);g2.lineWidth=2.5*ppm;g2.strokeStyle="#6f9a4a";g2.stroke();g2.fillStyle="#3d7397";g2.fill();g2.clip();
   g2.fillStyle="rgba(255,255,255,.07)";for(let k=0;k<40;k++){g2.beginPath();g2.ellipse(rnd()*TEX,rnd()*TEX,(8+rnd()*20)*ppm,1.2*ppm,0,0,7);g2.fill()}g2.restore()}
+// ostatné jamky v zábere (kvôli prehľadu „Všetky jamky“): fairway, green, odpaliská – zjednodušene
+READY.forEach(h=>{if(h===hNum||!DATA.greens[h-1])return;
+  for(const poly of (DATA.mow&&DATA.mow[h])||[]){path(poly.map(loc));g2.fillStyle="#74b04a";g2.fill()}
+  const G=DATA.greens[h-1].map(loc);path(G);g2.lineJoin="round";g2.lineWidth=8*ppm;g2.strokeStyle="#7cba4b";g2.stroke();g2.fillStyle="#7cba4b";g2.fill();
+  path(G);g2.lineWidth=3*ppm;g2.strokeStyle="#8bcb55";g2.stroke();g2.fillStyle="#9fd95e";g2.fill();
+  (DATA.pads[h]||[]).forEach(pd=>{const[x,y]=loc(pd);g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);g2.fillStyle="#86c45a";g2.fill()})});
 // greeny: lem (fringe) + plocha
 // farby trávnika okolo greenu (detail v jemnej textúre nižšie)
 const TURF={cut:"#7cba4b",collar:"#8bcb55",green:"#9fd95e"};
@@ -507,7 +515,7 @@ function pinTex(icon,hot,svg,n){const k=icon+hot+(n||1);if(texC[k])return texC[k
   g.font="56px system-ui,'Apple Color Emoji','Segoe UI Emoji'";g.textAlign="center";g.textBaseline="middle";const t=new THREE.CanvasTexture(c);
   const badge=()=>{if(!(n>1))return;g.beginPath();g.arc(100,26,26,0,7);g.fillStyle="#e0312b";g.fill();g.lineWidth=4;g.strokeStyle="#fff";g.stroke();
     g.fillStyle="#fff";g.font="bold 34px system-ui";g.fillText(n>9?"9+":String(n),100,28);t.needsUpdate=true};
-  if(svg){const im=new Image();im.onload=()=>{g.drawImage(im,26,20,76,76);badge()};im.src=svg}else{g.fillText(icon,64,62);badge()}
+  if(svg){const im=new Image();im.onload=()=>{g.drawImage(im,26,20,76,76);t.needsUpdate=true;badge()};im.src=svg}else{g.fillText(icon,64,62);badge()}
   t.colorSpace=THREE.SRGBColorSpace;return texC[k]=t}
 function drawPins(){pinG.clear();const now=Date.now();
   // blízke hlásenia (do 8 m) zlúčime do jedného špendlíka s počtom; naliehavé (SOS) majú prednosť v ikonke
@@ -663,7 +671,7 @@ if(matchMedia("(pointer:fine)").matches){controls.zoomToCursor=true;
 controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;controls.panXFactor=.6;
 // na telefóne pôvodná rýchlosť, s myšou na počítači pomalšie
 if(matchMedia("(pointer:fine)").matches){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=1.2}
-renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?1.2:1},{capture:true});controls.minDistance=8;controls.maxDistance=230;
+renderer.domElement.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?1.2:1},{capture:true});controls.minDistance=8;controls.maxDistance=CRS==="apex"?230:650;
 const eye=1.7;
 const TT=BL?[BL[0]*1.1,BL[1]*1.1]:[0,c*.9],TB=BL?[-BL[0]/Math.hypot(...BL)*15,-BL[1]/Math.hypot(...BL)*15]:[0,-15];
 const views={tee:{pos:W(TB[0],TB[1],hL(...TB)+eye+2.6),target:W(TT[0],TT[1],hL(...TT))},top:{pos:W(0,c*.5-25,230),target:W(0,c*.5,0)}};
@@ -671,9 +679,24 @@ function go(v){camera.position.copy(v.pos);controls.target.copy(v.target);contro
 go(views.tee);
 let fly=null;
 const btns={tee:document.getElementById("v-tee"),fly:document.getElementById("v-fly"),top:document.getElementById("v-top")};
-function setOn(k){for(const x in btns)btns[x].classList.toggle("on",x===k)}
+function setOn(k){for(const x in btns)btns[x].classList.toggle("on",x===k);document.body.classList.toggle("allv",k==="all")}
 btns.tee.onclick=()=>{fly=null;go(views.tee);setOn("tee")};
 btns.top.onclick=()=>{fly=null;go(views.top);setOn("top")};
+// prehľad celej akadémie zhora: všetky jamky, ťuknutím na číslo jamky sa prejde na ňu
+if(CRS==="apex")document.getElementById("v-all").style.display="none";
+if(CRS!=="apex"){btns.all=document.getElementById("v-all");
+  const P=[...Object.values(DATA.pads).flat(),...DATA.gc].map(loc);let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+  const cx=(x0+x1)/2,cy=(y0+y1)/2,tv=Math.tan(55*Math.PI/360),asp=innerWidth/innerHeight,
+    hh=Math.max((x1-x0+70)/2/(tv*asp),(y1-y0+60)/2/tv)*1.05;
+  views.all={pos:W(cx,cy-hh*.12,hL(cx,cy)+hh),target:W(cx,cy,hL(cx,cy))};
+  btns.all.onclick=()=>{fly=null;go(views.all);setOn("all")};
+  // čísla jamiek a čiary od odpaliska ku greenu
+  READY.forEach(h=>{const t=loc(DATA.pads[h][Math.min(tIdx,DATA.pads[h].length-1)]),g=loc(DATA.gc[h-1]);
+    if(h!==hNum){const n=24,a=new Float32Array(n*3);for(let i=0;i<n;i++){const k=i/(n-1),x=t[0]+(g[0]-t[0])*k,y=t[1]+(g[1]-t[1])*k;a.set([x,hL(x,y)+.3,-y],i*3)}
+      const lg=new THREE.BufferGeometry();lg.setAttribute("position",new THREE.BufferAttribute(a,3));const ln=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0xffffff,dashSize:3,gapSize:2,transparent:true,opacity:.85}));ln.computeLineDistances();scene.add(ln)}
+    const el=document.createElement("a");el.className="lab hole"+(h===hNum?" cur":"");el.textContent=h;el.href="?"+CQ+"h="+h+"&t="+tIdx+"&v=all";document.body.appendChild(el);
+    labels.push({el,v:W(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5,hL(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5)+4),all:1})});
+  if(Q.get("v")==="all"){go(views.all);setOn("all")}}
 document.getElementById("v-play").onclick=()=>{location.href="?"+CQ+"h="+READY[0]+"&t="+tIdx+"&play=1"};
 btns.fly.onclick=()=>{fly={t0:performance.now()};setOn("fly")};
 const curve=new THREE.CatmullRomCurve3(BL?[views.tee.pos.clone(),W(BL[0]*.5,BL[1]*.5,hL(BL[0]*.5,BL[1]*.5)+22),W(BL[0],BL[1],hL(...BL)+18),W(BL[0]*.4,BL[1]*.4+(c-BL[1]*.4)*.6,hL(0,c*.7)+14),W(0,c-38,hG+9)]:[views.tee.pos.clone(),W(0,c*.3,hL(0,c*.3)+22),W(0,c*.65,hL(0,c*.65)+16),W(0,c-38,hG+9)]);
