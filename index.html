@@ -968,7 +968,7 @@ $("st-lback").onclick=()=>stStep("st-1");
 $("st-back").onclick=()=>stStep("st-l");
 document.querySelectorAll("#start .lay").forEach(b=>b.onclick=()=>{
   // akadémia: rovno 3D jamka 1
-  if(b.dataset.l==="akad"){try{localStorage.setItem("for.layout","akad")}catch(e){}location.href="3d/?h=1&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]??1);return}
+  if(b.dataset.l==="akad"){try{localStorage.setItem("for.layout","akad")}catch(e){}location.href="3d/?h=1&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]??1)+"&v=all";return}
   if(b.dataset.l===LAYOUT){stStep("st-2");return}
   try{localStorage.setItem("for.layout",b.dataset.l);sessionStorage.setItem("for.next","q")}catch(e){}
   location.reload()});
