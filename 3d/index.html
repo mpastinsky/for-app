@@ -30,6 +30,9 @@ canvas{display:block;touch-action:none}
 #r3grid>button span .ric,.repmk .ric{width:80%;height:80%;vertical-align:middle}
 #fab3[hidden]{display:none!important}
 #r3grid>button.off{opacity:.45;filter:grayscale(1)}
+#guard3{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);width:min(320px,86vw);background:#fff;border-radius:16px;padding:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);font:600 .95rem var(--font);z-index:60;color:#123}
+#guard3 .bb{display:flex;gap:8px;margin:12px 0 8px}#guard3 .bb button{flex:1;min-height:42px;border:0;border-radius:10px;font:700 .9rem var(--font);background:#e8eee6}#guard3 .bb button[data-g=ok]{background:#0f6b4a;color:#fff}
+#guard3 small{display:block;font-weight:500;color:#556;font-size:.75rem;line-height:1.3}#r3test{border:0;border-radius:8px;background:#ffe9a8;font:700 .72rem var(--font);padding:3px 7px;margin-right:4px}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
@@ -333,6 +336,23 @@ const REPORTS=[
 // vlastné ikonky (SVG) tam, kde emoji nesedí; ri.i zostáva pre text (zdieľanie)
 const REP_SVG={"trash": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M14%2030%209%2021l10-6%205-9%2011%204%2010-4%206%2010%209%205-4%2010%204%2010-9%206-3%2010-11-2-9%205-8-8-10-2%202-10z%22%20fill%3D%22%23f4f1e8%22%20stroke%3D%22%238a8578%22%20stroke-width%3D%222.2%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M24%206l4%2014-9%206m16-16-3%2012%2010%206m14-2-12%204%201%2012m15%204-12-2-6%209m-6%2014%201-14-10-4m-12%206%2011-7-1-12m-6-1%209%204%207-5%208%205%22%20fill%3D%22none%22%20stroke%3D%22%23b3ad9e%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M19%2026l6%203%206-5%206%206-2%208-8%202-5-6z%22%20fill%3D%22%23e2ddd0%22%2F%3E%3C%2Fsvg%3E", "wet": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M6%2042c0-7%209-9%2015-11%207-3%2012-1%2019-2%209-1%2018%202%2018%209s-6%207-9%2010c-4%204-13%205-22%204C16%2051%206%2049%206%2042z%22%20fill%3D%22%237a5a3a%22%2F%3E%3Cpath%20d%3D%22M11%2041c1-5%208-6%2013-8%206-2%2010%200%2016-1%208%200%2013%202%2013%206s-5%206-8%208c-4%202-11%203-18%202-8%200-16-2-16-7z%22%20fill%3D%22%233a8fd6%22%2F%3E%3Cellipse%20cx%3D%2232%22%20cy%3D%2240%22%20rx%3D%2210%22%20ry%3D%223%22%20fill%3D%22none%22%20stroke%3D%22%23bfe2ff%22%20stroke-width%3D%222%22%2F%3E%3Cellipse%20cx%3D%2232%22%20cy%3D%2240%22%20rx%3D%224%22%20ry%3D%221.2%22%20fill%3D%22%23bfe2ff%22%2F%3E%3Cpath%20d%3D%22M45%2014c3%205%205%208%205%2011a5%205%200%200%201-10%200c0-3%202-6%205-11z%22%20fill%3D%22%233a8fd6%22%2F%3E%3Cpath%20d%3D%22M20%2020c2%203%203%205%203%207a3%203%200%200%201-6%200c0-2%201-4%203-7z%22%20fill%3D%22%233a8fd6%22%2F%3E%3C%2Fsvg%3E", "greenbad": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2228%22%20fill%3D%22%235fae3e%22%2F%3E%3Cpath%20d%3D%22M14%2030c2-9%2010-14%2018-12%205-6%2015-3%2016%204%207%202%209%2012%203%2017%201%207-7%2011-13%208-5%205-15%204-17-2-8%200-12-9-7-15z%22%20fill%3D%22%236b4423%22%2F%3E%3Cpath%20d%3D%22M22%2029c3-4%208-5%2012-3m2%2010c4%200%207-2%208-5m-20%209c3%202%206%202%209%201%22%20fill%3D%22none%22%20stroke%3D%22%234a2e16%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2240%22%20cy%3D%2224%22%20r%3D%222.4%22%20fill%3D%22%238a5d34%22%2F%3E%3Ccircle%20cx%3D%2225%22%20cy%3D%2240%22%20r%3D%222%22%20fill%3D%22%238a5d34%22%2F%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2220%22%20r%3D%222.4%22%20fill%3D%22%236b4423%22%2F%3E%3Ccircle%20cx%3D%2254%22%20cy%3D%2247%22%20r%3D%222%22%20fill%3D%22%236b4423%22%2F%3E%3C%2Fsvg%3E", "divot": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%224%2010%2058%2048%22%3E%3Cellipse%20cx%3D%2222%22%20cy%3D%2248%22%20rx%3D%2215%22%20ry%3D%226%22%20fill%3D%22%236b4423%22%2F%3E%3Cellipse%20cx%3D%2222%22%20cy%3D%2247%22%20rx%3D%2211%22%20ry%3D%223.6%22%20fill%3D%22%234a2e16%22%2F%3E%3Cg%20transform%3D%22rotate%28-14%2042%2030%29%22%3E%3Cpath%20d%3D%22M26%2030c4-3%2028-3%2032%200l-2%209c-3%202-25%202-28%200z%22%20fill%3D%22%237a5130%22%2F%3E%3Cpath%20d%3D%22M28%2034c3%201%2022%201%2026%200%22%20stroke%3D%22%235a3a1e%22%20stroke-width%3D%221.6%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M26%2030c4-3%2028-3%2032%200-4%202-28%202-32%200z%22%20fill%3D%22%234f9a33%22%2F%3E%3Cpath%20d%3D%22M29%2029l-1-6m4%206%201-7m3%207-1-8m4%208%201-7m3%207v-8m4%208%201-6m3%206%201-7m3%207%201-5%22%20stroke%3D%22%233e8a25%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E", "mole": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M2%2052h60%22%20stroke%3D%22%234f9a33%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M6%2052c2-14%209-22%2017-22s14%208%2016%2022z%22%20fill%3D%22%237a5130%22%2F%3E%3Cpath%20d%3D%22M30%2052c2-10%207-16%2014-16s12%206%2014%2016z%22%20fill%3D%22%238a5d34%22%2F%3E%3Cpath%20d%3D%22M12%2044c2-5%206-8%2010-8m14%2010c2-4%205-6%208-6%22%20stroke%3D%22%23a87a4c%22%20stroke-width%3D%222.2%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2242%22%20r%3D%221.8%22%20fill%3D%22%234a2e16%22%2F%3E%3Ccircle%20cx%3D%2228%22%20cy%3D%2246%22%20r%3D%221.6%22%20fill%3D%22%234a2e16%22%2F%3E%3Ccircle%20cx%3D%2246%22%20cy%3D%2245%22%20r%3D%221.6%22%20fill%3D%22%235a3a1e%22%2F%3E%3Ccircle%20cx%3D%2217%22%20cy%3D%2248%22%20r%3D%221.4%22%20fill%3D%22%235a3a1e%22%2F%3E%3C%2Fsvg%3E"};
 const icH=r=>REP_SVG[r.k]?`<img class="ric" src="${REP_SVG[r.k]}" alt="">`:r.i;
+// --- ochrana proti zlomyseľným hláseniam: len z ihriska, blízko miesta, limit, zlučovanie, potvrdzovanie
+const TESTMODE=()=>{try{return localStorage.getItem("for.testmode")==="1"}catch(e){return false}};
+const setTestmode=v=>{try{v?localStorage.setItem("for.testmode","1"):localStorage.removeItem("for.testmode")}catch(e){}};
+const distM=(a,b)=>{const kx=111320*Math.cos(a[0]*Math.PI/180);return Math.hypot((a[1]-b[1])*kx,(a[0]-b[0])*111200)};
+const REP_NEAR=150,REP_RATE=5,REP_RATE_MIN=10,REP_DUP_M=15,REP_NO_KILL=2;
+function repTimes(){try{return JSON.parse(localStorage.getItem("for.repTimes")||"[]").filter(t=>t>Date.now()-REP_RATE_MIN*60000)}catch(e){return[]}}
+function noteRepTime(){const a=repTimes();a.push(Date.now());try{localStorage.setItem("for.repTimes",JSON.stringify(a))}catch(e){}}
+// vráti text prekážky alebo null; pt = miesto hlásenia (null = len kontrola polohy)
+function repGuard(k,pt,me,acc,onCourse){if(TESTMODE())return null;
+  if(!me)return "Zapni polohu. Hlásiť sa dá len priamo z ihriska.";
+  if(acc>60)return "Poloha je zatiaľ nepresná, počkaj pár sekúnd.";
+  if(!onCourse(me))return "Hlásiť sa dá len na ihrisku.";
+  if(k&&pt&&!REP_MOVING[k]&&distM(me,pt)>REP_NEAR)return "Označené miesto je od teba ďaleko. Hlásiť sa dá do "+REP_NEAR+" m.";
+  if(k&&repTimes().length>=REP_RATE)return "Veľa hlásení naraz. Skús to o pár minút.";
+  return null}
+// rovnaké platné hlásenie (pevné do 15 m, tempo na tej istej jamke) → len predĺžime
+const findDup=(list,k,pt,hole)=>list.findIndex(r=>r.k===k&&repExp(r)>Date.now()&&(REP_MOVING[k]?r.hole===hole:distM([r.lat,r.lon],pt)<REP_DUP_M));
 // platnosť hlásení v minútach; m = viaže sa na jamku (pohyblivé: tempo), inak pevný bod
 const REP_TTL={slow:15,fast:15,pass:10,ball:10,text:240,fore:15,help:60,storm:60,animal:30,drink:240,great:360,flag:720,
   wet:1440,bunker:1440,tee:1440,trash:2880,other:1440,branch:4320,pitch:4320,divot:4320,mole:4320,greenbad:4320};
@@ -404,7 +424,7 @@ body.playing #fab3{bottom:calc(env(safe-area-inset-bottom,0px) + 140px)!importan
 #r3where,#r3voice{position:fixed;right:12px;max-width:min(300px,80vw)}
 #r3txt{position:fixed;right:12px;width:min(260px,80vw)!important}
 #pop3 b{display:block}#pop3 .bb{display:flex;gap:6px;margin-top:8px}#pop3 .bb button{flex:1;border:1px solid #d6ddd3;background:#fff;border-radius:10px;min-height:38px;font:600 .85rem var(--font)}`;document.head.appendChild(RS);
-document.body.insertAdjacentHTML("beforeend",`<button id="here3" hidden>⚠️ Nahlásiť tu</button><div id="toast3"></div><div id="pop3" hidden></div>
+document.body.insertAdjacentHTML("beforeend",`<button id="here3" hidden>⚠️ Nahlásiť tu</button><div id="toast3"></div><div id="guard3" hidden></div><div id="pop3" hidden></div>
  <div id="rep3" hidden><div id="r3where"></div><div id="r3voice"></div><div id="r3grid"></div><span id="r3t" hidden></span><button id="r3back" hidden></button><button id="r3x" hidden></button></div>`);
 const $3=id=>document.getElementById(id);
 const toast=t=>{$3("toast3").textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>$3("toast3").textContent="",3500)};
@@ -452,7 +472,7 @@ function layoutArc(){const fb=$3("fab3").getBoundingClientRect(),cx=fb.left+fb.w
   $3("fab3").firstChild.nodeValue=level?"‹":"✕"}
 function renderSheet(){const w=where();
   $3("r3grid").innerHTML=(level?DIAL[level]:DIAL.top).filter(allowed).map(tile).join("");
-  $3("r3where").innerHTML="📍 "+w.src+(repAt&&meLL?'<button id="r3me">moja poloha</button>':"");if($3("r3me"))$3("r3me").onclick=()=>{repAt=null;renderSheet()};layoutArc()}
+  $3("r3where").innerHTML="📍 "+w.src+(repAt&&meLL?'<button id="r3me">moja poloha</button>':"");if(TESTMODE()){$3("r3where").insertAdjacentHTML("afterbegin",'<button id="r3test">🧪 skúšobný režim · vypnúť</button> ');$3("r3test").onclick=e=>{e.stopPropagation();setTestmode(0);closeSheet();toast("Skúšobný režim je vypnutý.")}}if($3("r3me"))$3("r3me").onclick=()=>{repAt=null;renderSheet()};layoutArc()}
 function askText(k){stopVoice();const ri=repInfo(k);
   level=level||"info";$3("r3grid").innerHTML=`<div id="r3txt" style="background:#fff;border-radius:14px;padding:8px;box-shadow:0 2px 8px rgba(0,0,0,.35);width:min(230px,62vw);box-sizing:border-box;margin-right:2px">
     <div style="font:700 .85rem var(--font);margin-bottom:6px">${icH(ri)} ${k==="other"?"Iné na ihrisku":"Vlastný text"}</div>
@@ -460,13 +480,21 @@ function askText(k){stopVoice();const ri=repInfo(k);
     <button id="r3ok" style="width:100%;margin-top:6px;min-height:40px;border:0;border-radius:10px;background:#0f6b4a;color:#fff;font:700 .95rem var(--font)">Uložiť</button></div>`;
   layoutArc();const inp=$3("r3in");setTimeout(()=>inp.focus(),50);
   $3("r3ok").onclick=ev=>{ev.stopPropagation();const v=inp.value.trim();if(!v&&k==="text"){inp.focus();return}saveRep(k,v||null)}}
-function openSheet(){level=null;$3("r3voice").textContent="";$3("pop3").hidden=true;$3("here3").hidden=true;$3("rep3").hidden=false;$3("fab3").classList.add("open");renderSheet();startVoice()}
+// je bod na ihrisku akadémie? (greeny a odpaliská + 80 m okolo)
+const COURSE_BB=(()=>{const P=[...DATA.greens.flat(),...Object.values(DATA.pads).flat()];let a=1e9,b=-1e9,c2=1e9,d=-1e9;for(const[e,n]of P){a=Math.min(a,e);b=Math.max(b,e);c2=Math.min(c2,n);d=Math.max(d,n)}return[a-80,b+80,c2-80,d+80]})();
+const onCourse=ll=>{const[e,n]=toEN(...ll);return e>COURSE_BB[0]&&e<COURSE_BB[1]&&n>COURSE_BB[2]&&n<COURSE_BB[3]};
+function guardCard(msg){const g=$3("guard3");g.innerHTML=`<b>🛡️ ${msg}</b><div class="bb"><button data-g="ok">OK</button><button data-g="test">🧪 Skúšobný režim</button></div><small>Skúšobný režim je na testovanie mimo ihriska. Takéto hlásenia sú označené ako skúšobné.</small>`;g.hidden=false;
+  g.onclick=e=>{const b=e.target.closest("button[data-g]");if(!b)return;g.hidden=true;if(b.dataset.g==="test"){setTestmode(1);openSheet()}}}
+function openSheet(){{const m=repGuard(null,null,meLL,meAcc,onCourse);if(m){closeSheet();guardCard(m);return}}level=null;$3("r3voice").textContent="";$3("pop3").hidden=true;$3("here3").hidden=true;$3("rep3").hidden=false;$3("fab3").classList.add("open");renderSheet();startVoice()}
 function closeSheet(){$3("rep3").hidden=true;$3("fab3").classList.remove("open");$3("fab3").firstChild.nodeValue="⚠️";level=null;stopVoice();repAt=null}
 function saveRep(k,note){const w=where(),ri=repInfo(k);let pt=w.p;
   if(REP_MOVING[k]){const[e,n]=enu(0,c*.5);pt=toLL(e,n)}
   if(k==="bunker")pt=snapBunker(pt);
-  const r={k,t:Date.now(),exp:Date.now()+(REP_TTL[k]||360)*60000,hole:hNum,lat:+pt[0].toFixed(6),lon:+pt[1].toFixed(6),mine:1};if(note)r.note=note.slice(0,120);if(w.k==="approx")r.approx=1;
-  loadR();reports.push(r);saveR();drawPins();closeSheet();if(navigator.vibrate)navigator.vibrate(40);
+  {const m=repGuard(k,pt,meLL,meAcc,onCourse);if(m){closeSheet();guardCard(m);return}}
+  loadR();{const i=findDup(reports,k,pt,hNum);if(i>=0){const d=reports[i];d.exp=Date.now()+(REP_TTL[k]||360)*60000;d.yes=(d.yes||0)+1;saveR();drawPins();closeSheet();toast(ri.i+" Už je to nahlásené, predĺžil som platnosť.");return}}
+  noteRepTime();
+  const r={k,t:Date.now(),exp:Date.now()+(REP_TTL[k]||360)*60000,hole:hNum,lat:+pt[0].toFixed(6),lon:+pt[1].toFixed(6),mine:1};if(note)r.note=note.slice(0,120);if(w.k==="approx")r.approx=1;if(TESTMODE())r.test=1;
+  reports.push(r);saveR();drawPins();closeSheet();if(navigator.vibrate)navigator.vibrate(40);
   if(ri.hot){shareRep([r]);toast(ri.i+" "+ri.t+": uložené. Pošli to hneď ďalej.")}
   else toast(REP_MOVING[k]?ri.i+" "+(k==="pass"?ri.t:MV_T[k])+" pri jamke "+hNum+" · platí "+(REP_TTL[k]||15)+" min":ri.i+" "+ri.t+": ďakujeme, je to v mape.")}
 async function shareRep(list){const txt="Fór · hlásenie z ihriska Apex Báč\n\n"+list.map(r=>{const ri=repInfo(r.k);return `${ri.i} ${ri.t}${r.note?" („"+r.note+"“)":""} – jamka ${r.hole}\nhttps://maps.google.com/?q=${r.lat},${r.lon}`}).join("\n\n");
@@ -507,10 +535,13 @@ function startVoice(){if(!SR||rec)return;rec=new SR();rec.lang="sk-SK";rec.inter
 let popR=null;
 function showPop(idx,cx,cy){const r=reports[idx];if(!r)return;const ri=repInfo(r.k),mv=REP_MOVING[r.k];popR={idx,v:W(...loc(toEN(r.lat,r.lon)),hL(...loc(toEN(r.lat,r.lon)))+2.2)};
   $3("pop3").innerHTML=`<b>${icH(ri)} ${mv?MV_T[r.k]+" pri jamke "+r.hole:ri.t}</b>${mv?"":"Jamka "+r.hole+" · "}${ago(r.t)} · platí ešte ${left(repExp(r)-Date.now())}${r.note?`<br><i>„${escH(r.note)}“</i>`:""}
-   <div class="bb"><button data-a="ext">${mv?MV_EXT[r.k]:"Stále tam"}</button><button data-a="res">${mv?(r.k==="slow"?"✓ Už ide":"✓ Už nie"):"✓ Vyriešené"}</button></div>`;
+   ${(r.yes||r.no)?`<br><small>👍 ${r.yes||0} · 👎 ${r.no||0}</small>`:""}${r.test?"<br><small>🧪 skúšobné hlásenie</small>":""}
+   <div class="bb">${r.mine?`<button data-a="ext">${mv?MV_EXT[r.k]:"Stále tam"}</button><button data-a="res">${mv?(r.k==="slow"?"✓ Už ide":"✓ Už nie"):"✓ Vyriešené"}</button>`:r.voted?"<small>Ďakujeme za potvrdenie.</small>":`<button data-a="yes">👍 Stále tam</button><button data-a="no">👎 Nie je tam</button>`}</div>`;
   $3("pop3").hidden=false}
 $3("pop3").onclick=e=>{const b=e.target.closest("button[data-a]");if(!b||!popR)return;loadR();const r=reports[popR.idx];if(!r)return;
-  if(b.dataset.a==="res"){reports.splice(popR.idx,1);toast("Ďakujeme, hlásenie je zrušené.")}else{const ttl=(REP_TTL[r.k]||360)*60000;r.exp=REP_MOVING[r.k]?Math.max(repExp(r),Date.now())+ttl:Date.now()+ttl;r.conf=(r.conf||0)+1;toast(REP_MOVING[r.k]?"Predĺžené o 15 min.":"Ďakujeme, platí ďalej.")}
+  if(b.dataset.a==="no"){r.no=(r.no||0)+1;r.voted=1;if(r.no>=REP_NO_KILL){reports.splice(popR.idx,1);toast("Hlásenie potvrdilo viac hráčov ako neplatné, zmizlo.")}else toast("Ďakujeme. Ak to potvrdí ďalší hráč, hlásenie zmizne.")}
+  else if(b.dataset.a==="yes"){r.yes=(r.yes||0)+1;r.voted=1;r.exp=Math.max(repExp(r),Date.now()+(REP_TTL[r.k]||360)*60000*(REP_MOVING[r.k]?1:.5));toast("Ďakujeme, platnosť sa predĺžila.")}
+  else if(b.dataset.a==="res"){reports.splice(popR.idx,1);toast("Ďakujeme, hlásenie je zrušené.")}else{const ttl=(REP_TTL[r.k]||360)*60000;r.exp=REP_MOVING[r.k]?Math.max(repExp(r),Date.now())+ttl:Date.now()+ttl;r.conf=(r.conf||0)+1;toast(REP_MOVING[r.k]?"Predĺžené o 15 min.":"Ďakujeme, platí ďalej.")}
   saveR();drawPins();$3("pop3").hidden=true;popR=null};
 function repTick(){if(!popR||$3("pop3").hidden)return;const p=popR.v.clone().project(camera);if(p.z>1){$3("pop3").hidden=true;return}$3("pop3").style.left=((p.x+1)/2*innerWidth)+"px";$3("pop3").style.top=((1-p.y)/2*innerHeight)+"px"}
 {const ray=new THREE.Raycaster(),v2=new THREE.Vector2();let down=null,lastTap=null,pillWas=false;
