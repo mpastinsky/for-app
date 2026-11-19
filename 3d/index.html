@@ -953,8 +953,8 @@ if(PLAY){
   addEventListener("keydown",e=>{if(e.code!=="Space"||e.repeat||$("p-res").hidden===false)return;e.preventDefault();if(SW&&SW.ph===2)swHit();else{zones();swDown()}});
   addEventListener("keyup",e=>{if(e.code==="Space"){e.preventDefault();swUp()}});
   for(const[id,dv]of[["p-l",-1],["p-r",1]]){const b=$(id);b.addEventListener("pointerdown",e=>{e.preventDefault();turn=dv});for(const ev of["pointerup","pointerleave","pointercancel"])b.addEventListener(ev,()=>{turn=0})}
-  $("p-cp").onclick=()=>{if(S.mode!=="aim")return;S.club=Math.min(CLUBS.length-1,S.club+1);info();drawAim()};
-  $("p-cm").onclick=()=>{if(S.mode!=="aim")return;S.club=Math.max(0,S.club-1);info();drawAim()};
+  $("p-cp").onclick=()=>{if(S.mode!=="aim")return;S.club=(S.club+1)%CLUBS.length;info();drawAim()};
+  $("p-cm").onclick=()=>{if(S.mode!=="aim")return;S.club=(S.club+CLUBS.length-1)%CLUBS.length;info();drawAim()};
   $("p-v").onclick=()=>{S.view=1-S.view};
   // potiahnutie prstom po scéne = mierenie
   let drag=null;renderer.domElement.addEventListener("pointerdown",e=>{drag=e.clientX});
