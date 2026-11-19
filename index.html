@@ -75,7 +75,7 @@ body.noscore .scoreonly{display:none!important}
 #top .hole{flex:1;text-align:center;line-height:1.15}
 #top .hole b{font-size:1.35rem}
 #top .hole small{display:block;color:var(--muted);font-size:.85rem}
-#top button{min-width:52px;font-size:1.3rem;padding:6px 0}
+#top button{min-width:52px;font-size:1.3rem;padding:6px 0}#top #b-courses{min-width:44px;font-size:1.45rem}
 
 main{flex:1;position:relative;min-height:0}
 section.view{position:absolute;inset:0;overflow:auto;display:none;padding:14px 14px 24px}
@@ -219,6 +219,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
  </div>
 </div>
 <header id="top">
+  <button id="b-courses" aria-label="Výber ihriska" title="Výber ihriska">⌂</button>
   <button id="prev" aria-label="Predošlá jamka">‹</button>
   <div class="hole"><b id="h-title">Jamka 1</b><small id="h-sub">Par 4</small></div>
   <button id="next" aria-label="Ďalšia jamka">›</button>
@@ -987,6 +988,8 @@ function choose(score){
 $("st-yes").onclick=()=>choose(true);
 $("st-no").onclick=()=>choose(false);
 $("b-home").onclick=()=>showStart(true);
+// ⌂ hore vľavo: späť na výber ihriska (z mapy, hlásení, tempa aj kreslenia)
+$("b-courses").onclick=()=>{location.href="./?start=1"};
 /* ---------- kolo: začiatok, koniec a súhrn s trasou ---------- */
 const HCOL=["#ff7a00","#2bb5ff","#ff3d8b","#ffd400","#7cff6b","#b07cff"];
 function renderRoundBtn(){const on=!!(modeSt&&modeSt.score);$("round-btn").textContent=on?"🏁 Ukončiť kolo":"▶ Začať kolo";$("round-btn").className=on?"danger":"primary"}
