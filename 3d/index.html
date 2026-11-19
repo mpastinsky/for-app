@@ -266,17 +266,16 @@ for(const wd of DATA.woods){const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;
   for(let k=0;k<3000&&n<90;k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;n++;const[x,y]=loc([e,nn]);bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}}
 
-// --- nízke kríky: pri pätách stromov, na okraji lesa a roztrúsené v roughu (nie na fairwayi, greene, v bunkri, na odpalisku)
+// --- nízke kríky (len na určených miestach)
 {const SHR=[0,1,2,3,4].map(i=>crownGeo(i+31,"bush"));const shrM=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.95});
  let sd=777;const r=()=>((sd=(sd*16807)%2147483647)/2147483647);
  const greensL=DATA.greens.map(g=>g.map(loc)),mowL=(MOW||[]).map(P=>P.map(loc)),padsL=Object.values(DATA.pads).flat().map(loc),bunkL=DATA.bunkers.map(B=>B.map(loc));
  const ok=(x,y)=>inside(x,y)&&!inPlay(x,y,3)&&greensL.every(g=>sdist(x,y,g)>9)&&!mowL.some(P=>inPoly([x,y],P))&&padsL.every(([px,py])=>Math.hypot(x-px,y-py)>9)&&bunkL.every(B=>sdist(x,y,B)>3);
  let n=0;const put=(x,y,s)=>{if(n>260||!ok(x,y))return;n++;const z=hL(x,y),h=s*(.8+r()*.5);
    const m=new THREE.Mesh(SHR[n%5],shrM);m.scale.set(s*(.9+r()*.4),h*.85,s*(.9+r()*.4));m.rotation.y=r()*6.28;m.position.copy(W(x,y,z+h*.6));m.castShadow=true;m.receiveShadow=true;scene.add(m)};
- DATA.trees.forEach(([e,nn,R])=>{if(r()<.35)return;const[x,y]=loc([e,nn]);const k=1+Math.floor(r()*3);for(let i=0;i<k;i++){const a=r()*6.28,d=R*.6+r()*2.5;put(x+Math.cos(a)*d,y+Math.sin(a)*d,.7+r()*.6)}});
- for(const wd of DATA.woods){const L=wd.map(loc);for(let i=0;i<L.length;i++){const[a,b]=L[i],[c2,d]=L[(i+1)%L.length],len=Math.hypot(c2-a,d-b);
-   for(let s=0;s<len;s+=4+r()*4){const q=s/len,x=a+(c2-a)*q,y=b+(d-b)*q,nx=(d-b)/len,ny=-(c2-a)/len,o=(r()-.3)*4;put(x+nx*o,y+ny*o,.8+r()*.7);put(x-nx*o,y-ny*o,.8+r()*.7)}}}
- for(let i=0;i<500&&n<260;i++){const x=X0+r()*(X1-X0),y=Y0+r()*(Y1-Y0);if(r()<.6)put(x,y,.6+r()*.5)}}
+ // kríky len tam, kde ich Martin určí: DATA.shrubs = [[východ, sever, veľkosť m], …] v akademia.json
+ (DATA.shrubs||[]).forEach(([e,nn,s])=>{const[x,y]=loc([e,nn]);if(!inside(x,y))return;n++;const z=hL(x,y),S=s||1,h=S*(.8+r()*.5);
+   const m=new THREE.Mesh(SHR[n%5],shrM);m.scale.set(S,h*.85,S);m.rotation.y=r()*6.28;m.position.copy(W(x,y,z+h*.6));m.castShadow=true;scene.add(m)})}
 
 // --- vlajka, značky odpaliska
 // jamka (10,8 cm), tyčka 2,1 m, červená viajúca vlajka
