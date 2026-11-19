@@ -908,7 +908,7 @@ if(PLAY){
   // Pat: drž a pusti (len sila).
   let SW=null,turn=0;const H=$("p-hit"),M=$("p-meter");
   const powOf=t=>{const ph=(t/2300)%2;return ph<1?ph:2-ph};
-  const perT=()=>(3.4-.9*SW.p)/(S.lie===SURF.sand?1.15:S.lie===SURF.rough?1.07:1);   // perióda kyvadla (s): silnejší úder = rýchlejšie
+  const perT=()=>(4.2-2.6*Math.pow(SW.p,1.3))/(S.lie===SURF.sand?1.15:S.lie===SURF.rough?1.07:1);   // perióda kyvadla (s): silnejší úder = rýchlejšie
   const needle=()=>-Math.cos(2*Math.PI*(performance.now()-SW.t0)/1000/perT());
   function swEnd(){SW=null;document.body.classList.remove("swing");M.className="";H.classList.remove("ph2")}
   function swDown(){if(S.mode!=="aim")return;if(!SW){SW={ph:1,t0:performance.now()};document.body.classList.add("swing");M.className=CLUBS[S.club].a?"":"putt"}}
