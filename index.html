@@ -1043,7 +1043,8 @@ let nextQ=false;try{nextQ=sessionStorage.getItem("for.next")==="q";sessionStorag
 const QP=new URLSearchParams(location.search);
 if(QP.has("start")||QP.has("map"))history.replaceState(null,"",location.pathname);
 // akadémia nemá satelitnú mapu: všetko je v 3D
-if(AKAD&&!QP.has("start")&&!QP.has("map")){location.replace("3d/?h="+(round.hole+1)+"&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]??1))}
+// akadémia nemá satelitnú mapu (Martin 19.11.): vždy rovno do 3D
+if(AKAD&&!QP.has("start")){location.replace("3d/?h="+(round.hole+1)+"&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]??1))}
 else if(QP.has("start"))showStart();
 else if(QP.has("map")){$("start").hidden=true;showView("v-map");if(QP.has("at")){const q=QP.get("at").split(",").map(Number);if(q.length===2&&q.every(isFinite)){tapPt=q;renderTap();map.setView(q,18)}}if(QP.has("rep"))setTimeout(openReport,400)}
 else if(nextQ){showStart();stStep("st-2")}
