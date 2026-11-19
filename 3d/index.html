@@ -256,12 +256,13 @@ function tree(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);const see=inPlay
   const tr=new THREE.Mesh(trunkGeo(h*.62,.5,3,k+1),barkM);tr.position.copy(W(x,y,z));tr.rotation.y=k;tr.castShadow=true;scene.add(tr);
   const cr=new THREE.Mesh(CROWNS.round[k%6],see?seeM:leafV.clone());cr.scale.set(r*1.05,r*1.2,r*1.05);cr.rotation.y=k*2.1;cr.position.copy(W(x,y,z+h*.5+r*.8));cr.castShadow=!see;scene.add(cr);
   if(!see)FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.25),r:r*1.15,op:1})}
-DATA.trees.forEach(([e,n,r,h],k)=>{const[x,y]=loc([e,n]);tree(x,y,r,h,k)});
+// 5. hodnota 1 = strom s korunou až po zem (bez viditeľného kmeňa)
+DATA.trees.forEach(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(g)bush(x,y,r,h,k);else tree(x,y,r,h,k)});
 // rad stromov (napr. topole): štíhle vysoké koruny
 DATA.row.forEach((p,k)=>{const[x,y]=loc(p);if(!inside(x,y))return;const z=hL(x,y),h=6+rnd()*2;
-  const tr=new THREE.Mesh(trunkGeo(h*.55,.2,0,k+40),barkM);tr.position.copy(W(x,y,z));scene.add(tr);
-  const cr=new THREE.Mesh(CROWNS.tall[k%3],leafV.clone());cr.scale.set(1.9,2.6,1.9);cr.rotation.y=k;cr.position.copy(W(x,y,z+h*.62));cr.castShadow=true;scene.add(cr);
-  FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.25),r:2.2,op:1})});
+  const lo=new THREE.Mesh(CROWNS.bush[k%4],leafV.clone());lo.scale.set(2,h*.22,2);lo.rotation.y=k*.7;lo.position.copy(W(x,y,z+h*.2));lo.castShadow=true;scene.add(lo);
+  const cr=new THREE.Mesh(CROWNS.tall[k%3],leafV.clone());cr.scale.set(2.2,h*.5/1.15,2.2);cr.rotation.y=k;cr.position.copy(W(x,y,z+h*.5));cr.castShadow=true;scene.add(cr);   // koruna až po zem
+  FADE.push({m:[cr,lo],c:cr.position.clone(),b:W(x,y,z+1),r:2.4,op:1})});
 for(const wd of DATA.woods){const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;
   for(let k=0;k<3000&&n<90;k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;n++;const[x,y]=loc([e,nn]);bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}}
@@ -577,7 +578,7 @@ if(PLAY){
   const gS=(x,y)=>hL(x,y)+.08;   // výška povrchu (vrátane jemnej siete greenu)
   const R=.06,G=9.81;
   // stromy ako prekážky (koruny)
-  const OBST=DATA.trees.map(([e,n,r,h])=>{const[x,y]=loc([e,n]);return{x,y,r:r*1.05,z0:hL(x,y)+h*.5-r*.2,z1:hL(x,y)+h*.5+r*2}});
+  const OBST=DATA.trees.map(([e,n,r,h,g])=>{const[x,y]=loc([e,n]);return{x,y,r:r*1.05,z0:g?hL(x,y):hL(x,y)+h*.5-r*.2,z1:hL(x,y)+h*.5+r*2}});
   // loptička, stopa, mierenie
   const ball=new THREE.Mesh(new THREE.SphereGeometry(.11,16,12),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.35,emissive:0x333333}));ball.castShadow=true;scene.add(ball);
   const trailG=new THREE.BufferGeometry();const trailP=new Float32Array(600*3);trailG.setAttribute("position",new THREE.BufferAttribute(trailP,3));trailG.setDrawRange(0,0);
