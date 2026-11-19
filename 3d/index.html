@@ -219,20 +219,49 @@ function fadeTrees(){const cp=camera.position,goals=[controls.target,...(PIN_V||
     const to=hit?.28:1;if(Math.abs(f.op-to)<.01)continue;f.op+=(to-f.op)*.18;if(Math.abs(f.op-to)<.02)f.op=to;
     for(const m of f.m){const M=m.material,tr=f.op<1;if(M.transparent!==tr){M.transparent=tr;M.depthWrite=!tr;M.needsUpdate=true}M.opacity=f.op}}}
 const inPlay=(x,y,r)=>y>-2&&y<c-5&&Math.abs(x)<r+9;
-// pás stromov a kríkov (napr. vpravo od dvojky): husté koruny až po zem, bez kmeňov
+// --- krajšie stromy: koruna zo zhlukov listov (low-poly), tieň zospodu, svetlejšie navrchu
+function mergeG(list){let n=0;const gs=list.map(g=>{g=g.index?g.toNonIndexed():g;n+=g.attributes.position.count;return g});
+  const P=new Float32Array(n*3),C=new Float32Array(n*3);let o=0;for(const g of gs){P.set(g.attributes.position.array,o*3);if(g.attributes.color)C.set(g.attributes.color.array,o*3);o+=g.attributes.position.count}
+  const m=new THREE.BufferGeometry();m.setAttribute("position",new THREE.BufferAttribute(P,3));m.setAttribute("color",new THREE.BufferAttribute(C,3));m.computeVertexNormals();return m}
+const LEAF_PAL=[[0x2f6b2c,0x5b9a3c],[0x2a5f2a,0x4f8f36],[0x3b7d33,0x6fa843],[0x34622a,0x7a9a3a]];
+function crownGeo(seed,kind){let s=seed*9301+49297;const r=()=>((s=(s*16807)%2147483647)/2147483647);
+  const blobs=[];const tall=kind==="tall",bush=kind==="bush";
+  const N=tall?7:bush?6:9;
+  for(let i=0;i<N;i++){let x,y,z,rr;
+    if(i===0){x=0;y=0;z=0;rr=tall?.55:.72}
+    else if(tall){const a=r()*6.28;y=-.9+i/(N-1)*1.9;const rad=.28*(1-Math.abs(y)/1.3);x=Math.cos(a)*rad;z=Math.sin(a)*rad;rr=.36+r()*.14}
+    else{const a=i*2.4+r()*.6,el=-.35+r()*1.0;x=Math.cos(a)*.55*Math.cos(el);z=Math.sin(a)*.55*Math.cos(el);y=Math.sin(el)*.55+(bush?-.1:.05);rr=.38+r()*.22}
+    const g=new THREE.IcosahedronGeometry(rr,1).toNonIndexed();const p=g.attributes.position;
+    for(let k=0;k<p.count;k++){const vx=p.getX(k),vy=p.getY(k),vz=p.getZ(k);const j=1+(Math.sin(vx*9+seed)*Math.cos(vz*7+i)+Math.sin(vy*11+i))*.07;p.setXYZ(k,vx*j+x,vy*j+y,vz*j+z)}
+    blobs.push(g)}
+  const g=mergeG(blobs),p=g.attributes.position,col=g.attributes.color;const pal=LEAF_PAL[seed%LEAF_PAL.length],c0=new THREE.Color(pal[0]),c1=new THREE.Color(pal[1]),cc=new THREE.Color();
+  const sun=new THREE.Vector3(-.5,.7,.5).normalize();
+  for(let k=0;k<p.count;k+=3){let mx=0,my=0,mz=0;for(let q=0;q<3;q++){mx+=p.getX(k+q);my+=p.getY(k+q);mz+=p.getZ(k+q)}mx/=3;my/=3;mz/=3;
+    const up=Math.min(1,Math.max(0,(my+.9)/1.8)),side=Math.max(0,(mx*sun.x+my*sun.y+mz*sun.z)/(Math.hypot(mx,my,mz)+.01));
+    cc.copy(c0).lerp(c1,Math.min(1,up*.6+side*.45+(r()-.5)*.25));const dark=.72+.28*up;
+    for(let q=0;q<3;q++)col.setXYZ(k+q,cc.r*dark,cc.g*dark,cc.b*dark)}
+  return g}
+const CROWNS={round:[0,1,2,3,4,5].map(i=>crownGeo(i+1,"round")),tall:[0,1,2].map(i=>crownGeo(i+11,"tall")),bush:[0,1,2,3].map(i=>crownGeo(i+21,"bush"))};
+const leafV=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.9});
+const barkM=new THREE.MeshStandardMaterial({color:0x5a3f28,roughness:1,flatShading:true});
+function trunkGeo(h,r0,branches,seed){const parts=[];const t=new THREE.CylinderGeometry(r0*.62,r0,h,7);t.translate(0,h/2,0);parts.push(t);
+  let s=seed*7+3;const r=()=>((s=(s*16807)%2147483647)/2147483647);
+  for(let i=0;i<branches;i++){const L=h*.45,b=new THREE.CylinderGeometry(r0*.22,r0*.38,L,5);b.translate(0,L/2,0);b.rotateZ(.55+r()*.35);b.rotateY(r()*6.28);b.translate(0,h*(.55+r()*.3),0);parts.push(b)}
+  const g=mergeG(parts);const col=g.attributes.color;for(let k=0;k<col.count;k++)col.setXYZ(k,1,1,1);return g}
+// pás stromov a kríkov (napr. vpravo od dvojky): husté koruny až po zem
 function bush(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);
-  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),leafM[k%3].clone());cr.scale.set(1.15,(h*.5)/r,1.15);cr.position.copy(W(x,y,z+h*.45));cr.castShadow=true;scene.add(cr);
-  const lo=new THREE.Mesh(new THREE.SphereGeometry(r*.9,8,6),leafM[(k+1)%3].clone());lo.scale.y=.7;lo.position.copy(W(x+(rnd()-.5)*r,y+(rnd()-.5)*r,z+r*.45));scene.add(lo);
-  FADE.push({m:[cr,lo],c:cr.position.clone(),b:W(x,y,z+1),r:Math.max(r*1.15,h*.5),op:1})}
+  const cr=new THREE.Mesh(CROWNS.bush[k%4],leafV.clone());cr.scale.set(r*1.15,h*.5,r*1.15);cr.rotation.y=k*1.7;cr.position.copy(W(x,y,z+h*.45));cr.castShadow=true;scene.add(cr);
+  FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+1),r:Math.max(r*1.15,h*.5),op:1})}
 function tree(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);const see=inPlay(x,y,r);
-  const tr=new THREE.Mesh(new THREE.CylinderGeometry(.35,.55,h*.5,6),trunkM);tr.position.copy(W(x,y,z+h*.25));tr.castShadow=true;scene.add(tr);
-  const cr=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),see?seeM:leafM[k%3].clone());cr.scale.y=1.2;cr.position.copy(W(x,y,z+h*.5+r*.8));cr.castShadow=!see;scene.add(cr);
+  const tr=new THREE.Mesh(trunkGeo(h*.62,.5,3,k+1),barkM);tr.position.copy(W(x,y,z));tr.rotation.y=k;tr.castShadow=true;scene.add(tr);
+  const cr=new THREE.Mesh(CROWNS.round[k%6],see?seeM:leafV.clone());cr.scale.set(r*1.05,r*1.2,r*1.05);cr.rotation.y=k*2.1;cr.position.copy(W(x,y,z+h*.5+r*.8));cr.castShadow=!see;scene.add(cr);
   if(!see)FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.25),r:r*1.15,op:1})}
 DATA.trees.forEach(([e,n,r,h],k)=>{const[x,y]=loc([e,n]);tree(x,y,r,h,k)});
-{const thin=new THREE.MeshStandardMaterial({color:0x6f9f45,roughness:.9});
- DATA.row.forEach(p=>{const[x,y]=loc(p);if(!inside(x,y))return;const z=hL(x,y),h=6+rnd()*2;
-  const tr=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,h*.5,6),trunkM);tr.position.copy(W(x,y,z+h*.25));scene.add(tr);
-  const cr=new THREE.Mesh(new THREE.SphereGeometry(1.9,8,6),thin);cr.scale.y=1.5;cr.position.copy(W(x,y,z+h*.62));cr.castShadow=true;scene.add(cr)})}
+// rad stromov (napr. topole): štíhle vysoké koruny
+DATA.row.forEach((p,k)=>{const[x,y]=loc(p);if(!inside(x,y))return;const z=hL(x,y),h=6+rnd()*2;
+  const tr=new THREE.Mesh(trunkGeo(h*.55,.2,0,k+40),barkM);tr.position.copy(W(x,y,z));scene.add(tr);
+  const cr=new THREE.Mesh(CROWNS.tall[k%3],leafV.clone());cr.scale.set(1.9,2.6,1.9);cr.rotation.y=k;cr.position.copy(W(x,y,z+h*.62));cr.castShadow=true;scene.add(cr);
+  FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.25),r:2.2,op:1})});
 for(const wd of DATA.woods){const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;
   for(let k=0;k<3000&&n<90;k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;n++;const[x,y]=loc([e,nn]);bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}}
