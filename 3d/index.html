@@ -712,8 +712,14 @@ if(PLAY){
    <div id="p-row"><button id="p-l" aria-label="Mieriť vľavo">◀</button>
      <div id="p-club"><button id="p-cp" aria-label="Kratšia palica">‹</button><span id="p-cn"></span><button id="p-cm" aria-label="Dlhšia palica">›</button></div>
      <button id="p-r" aria-label="Mieriť vpravo">▶</button><button id="p-v" aria-label="Zmeniť pohľad">👁</button></div>
-   <button id="p-hit"><span id="p-pow"></span><b id="p-ht">Drž a pusti – úder</b></button>
-   <div id="p-res" hidden></div>`;
+   <button id="p-hit"><b id="p-ht">Drž a pusti – úder</b></button>
+   <div id="p-res" hidden></div>
+   <div id="p-meter"><svg viewBox="0 0 240 132"><defs><linearGradient id="pmg" x1="0" x2="1"><stop offset="0" stop-color="#ffd84d"/><stop offset=".6" stop-color="#ff8a2b"/><stop offset="1" stop-color="#e0312b"/></linearGradient></defs>
+     <path class="trk" d="M20 120A100 100 0 0 1 220 120"/><path id="pm-pow" d="M20 120A100 100 0 0 1 220 120"/>
+     <g id="pm-acc"><path class="z3" d="M36 120A84 84 0 0 1 204 120"/><path class="z2" id="pm-z2"/><path class="z1" id="pm-z1"/></g>
+     <line id="pm-mk" x1="0" y1="0" x2="0" y2="0"/>
+     <g id="pm-nd"><line x1="120" y1="120" x2="120" y2="30"/><circle cx="120" cy="30" r="5"/></g><circle cx="120" cy="120" r="7" class="pv"/>
+     <text id="pm-v" x="120" y="96">0 %</text><text id="pm-d" x="120" y="112"></text></svg></div>`;
   document.body.appendChild(hud);
   const st=document.createElement("style");st.textContent=`
    body.playing #bar{display:none}body.playing #note{bottom:calc(env(safe-area-inset-bottom,0px) + 136px)}body.started #tees,body.done #p-row,body.done #p-hit{display:none}
@@ -722,17 +728,33 @@ if(PLAY){
    #p-club{flex:1;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.92);border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.25)}
    #p-club button{box-shadow:none;background:transparent}#p-cn{font:700 1rem var(--font);color:#14211a;text-align:center}
    #p-hit{position:relative;overflow:hidden;min-height:58px;border:0;border-radius:14px;background:#0f6b4a;color:#fff;font:700 1.05rem var(--font);box-shadow:0 3px 12px rgba(0,0,0,.3);touch-action:none;user-select:none;-webkit-user-select:none}
-   #p-pow{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#ffd84d,#ff8a2b,#e0312b)}#p-ht{position:relative}
+   #p-ht{position:relative}
    #p-hit:disabled{background:#6f8f80}
    #p-msg{align-self:center;background:rgba(0,0,0,.55);color:#fff;padding:7px 14px;border-radius:999px;font-weight:600;font-size:.95rem;text-align:center}
    #p-msg:empty{display:none}
    #p-res{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,calc(100vw - 32px));background:#fff;color:#14211a;border-radius:18px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.4);text-align:center}
    #p-res h2{margin:.1em 0 .2em;font-size:1.6rem}#p-res table{width:100%;border-collapse:collapse;margin:12px 0;font-size:1rem}
    #p-res td,#p-res th{border-bottom:1px solid #e3e8e5;padding:6px}#p-res .go{display:block;width:100%;min-height:50px;margin-top:8px;border:0;border-radius:12px;font:700 1rem var(--font);background:#0f6b4a;color:#fff;text-decoration:none;line-height:50px}
-   #p-res .go.alt{background:#eef3f0;color:#14211a}`;
+   #p-res .go.alt{background:#eef3f0;color:#14211a}
+   #p-meter{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 134px);width:min(260px,72vw);transform:translateX(-50%);pointer-events:none;z-index:6;filter:drop-shadow(0 3px 8px rgba(0,0,0,.45))}
+   body:not(.swing) #p-meter{display:none}body.swing #p-shot{display:none!important}
+   #p-meter svg{display:block;width:100%;height:auto;overflow:visible}
+   #p-meter path{fill:none;stroke-linecap:round}#p-meter .trk{stroke:rgba(10,30,20,.6);stroke-width:18}
+   #pm-pow{stroke:url(#pmg);stroke-width:12;stroke-dasharray:0 999}
+   #pm-acc path{stroke-width:9;stroke-linecap:butt}#pm-acc .z3{stroke:rgba(224,49,43,.75)}#pm-acc .z2{stroke:#ffd84d}#pm-acc .z1{stroke:#3ddc84;stroke-width:13}
+   #p-meter:not(.ph2) #pm-acc,#p-meter:not(.ph2) #pm-nd,#p-meter:not(.ph2) .pv,#p-meter.putt #pm-mk{display:none}
+   #pm-mk{stroke:#fff;stroke-width:4;stroke-linecap:round}#p-meter:not(.ph2) #pm-mk{display:none}
+   #pm-nd line{stroke:#fff;stroke-width:4;stroke-linecap:round}#pm-nd circle,#p-meter .pv{fill:#fff}
+   #p-meter text{text-anchor:middle;fill:#fff;font-family:var(--font);font-weight:800;font-size:22px}#pm-d{font-size:12px!important;font-weight:600!important}
+   #p-meter.ph2 #pm-v,#p-meter.ph2 #pm-d{display:none}
+   #p-hit.ph2{background:#14211a}`;
   document.head.appendChild(st);
   controls.enabled=false;labels.length=0;document.querySelectorAll(".lab").forEach(e=>e.remove());
   const msg=t=>{$("p-msg").textContent=t};
+  // swing meter: u ∈ [-1,1] po oblúku (−1 vľavo, 0 hore = stred, 1 vpravo)
+  const arcPt=(u,r)=>[120+r*Math.sin(u*Math.PI/2),120-r*Math.cos(u*Math.PI/2)];
+  const arcD=(u0,u1,r)=>{const[a,b]=arcPt(u0,r),[c,d]=arcPt(u1,r);return`M${a.toFixed(1)} ${b.toFixed(1)}A${r} ${r} 0 0 1 ${c.toFixed(1)} ${d.toFixed(1)}`};
+  const ZP=.08,ZG=.28;   // perfektný stred / mierna odchýlka
   const S={x:0,y:0,z:gS(0,0)+R,vx:0,vy:0,vz:0,mode:"aim",strokes:0,prev:[0,0],aim:0,club:0,lie:SURF.fair,tee:true,over:false,view:0,t:0,tr:0};
   const toPin=()=>Math.hypot(PIN[0]-S.x,PIN[1]-S.y);
   // ---- HUD podľa vzoru golfových hier: vietor, mini-mapa, cieľ, dĺžka úderu
@@ -802,14 +824,19 @@ if(PLAY){
     $("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";place()}
   function place(){const rb=.11*ball.scale.x;ball.position.set(S.x,(S.mode==="fly"?S.z:S.z-R+rb)-(S.sink||0),-S.y)}
   let rs=Date.now()%100000+11;const rr=()=>((rs=(rs*16807)%2147483647)/2147483647)*2-1;
-  function shoot(p){if(S.mode!=="aim")return;const cl=CLUBS[S.club];S.prev=[S.x,S.y];S.strokes++;S.tee=false;
-    let a=S.aim,dist;
-    if(cl.a){const acc=S.lie===SURF.rough?2.2:S.lie===SURF.sand?2.8:1.3;a+=rr()*acc*Math.PI/180*(.5+p*.5);
-      dist=cl.c*S.lie.m*p*(1+rr()*.035);const th=cl.a*Math.PI/180,v=Math.sqrt(dist*G/Math.sin(2*th));
+  function shoot(p,u=0){if(S.mode!=="aim")return;const cl=CLUBS[S.club];S.prev=[S.x,S.y];S.strokes++;S.tee=false;
+    let a=S.aim,dist;S.side=0;
+    if(cl.a){const acc=S.lie===SURF.rough?1.2:S.lie===SURF.sand?1.5:.6;a+=rr()*acc*Math.PI/180*(.5+p*.5);
+      // presnosť z kyvadla: v strede rovno, mimo stredu hák (vľavo) / slajs (vpravo) a strata dĺžky
+      const e=Math.abs(u)<ZP?0:Math.sign(u)*(Math.abs(u)-ZP)/(1-ZP),cf=cl.c/215;
+      a+=e*6*cf*Math.PI/180;S.side=e*1.6*cf*p;
+      dist=cl.c*S.lie.m*p*(1-.25*e*e)*(1+rr()*.03);const th=cl.a*Math.PI/180,v=Math.sqrt(dist*G/Math.sin(2*th));
       S.vx=Math.sin(a)*v*Math.cos(th);S.vy=Math.cos(a)*v*Math.cos(th);S.vz=v*Math.sin(th);S.mode="fly"}
     else{dist=cl.c*p;   // „Pat ≈ X m“ = skutočná dĺžka po línii mierenia: do kopca treba silnejšie, z kopca slabšie
       const dh=gS(S.x+Math.sin(a)*dist,S.y+Math.cos(a)*dist)-gS(S.x,S.y),v=Math.sqrt(Math.max(.05,2*(SURF.green.f*dist+G*.71*dh)));S.vx=Math.sin(a)*v;S.vy=Math.cos(a)*v;S.vz=0;S.mode="roll"}
-    document.body.classList.add("started");$("p-shot").hidden=true;SHOTS.push([S.x,S.y]);S.tr=0;trailG.setDrawRange(0,0);aimL.visible=false;ring.visible=false;$("p-hit").disabled=true;$("p-ht").textContent=cl.a?"Letí…":"Kotúľa sa…";S.t=0;msg("")}
+    document.body.classList.add("started");$("p-shot").hidden=true;SHOTS.push([S.x,S.y]);S.tr=0;trailG.setDrawRange(0,0);aimL.visible=false;ring.visible=false;$("p-hit").disabled=true;$("p-ht").textContent=cl.a?"Letí…":"Kotúľa sa…";S.t=0;
+    msg(!cl.a?"":Math.abs(u)<ZP?"Perfektne! 🎯":Math.abs(u)<ZG?(u<0?"Mierne doľava":"Mierne doprava"):(u<0?"Hák ↶":"Slajs ↷"));
+    const m=$("p-msg").textContent;if(m)setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1800)}
   function grad(x,y){const e=.3;return[(gS(x+e,y)-gS(x-e,y))/(2*e),(gS(x,y+e)-gS(x,y-e))/(2*e)]}
   function holed(){S.mode="in";ball.visible=false;$("p-shot").hidden=true;$("p-tgt").hidden=true;document.body.classList.add("done");$("h-s").textContent="Jamka dohraná";const n=S.strokes,d=n-3;
     const nm={"-2":"Eagle!","-1":"Birdie!","0":"Par","1":"Bogey","2":"Double bogey"}[d]||(n===1?"Hole in one!":(d>0?"+"+d:String(d)));
@@ -844,6 +871,7 @@ if(PLAY){
     if(S.mode==="fly"){S.vz-=G*dt;
       // jemný odpor vzduchu
       S.vx+=WIND.x*.12*dt;S.vy+=WIND.y*.12*dt;   // vietor
+      if(S.side){const h=Math.hypot(S.vx,S.vy)||1,ux=S.vy/h,uy=-S.vx/h;S.vx+=ux*S.side*dt;S.vy+=uy*S.side*dt}   // zakrivenie (hák/slajs)
       const sp=Math.hypot(S.vx,S.vy,S.vz),kd=.0016*sp;S.vx-=S.vx*kd*dt;S.vy-=S.vy*kd*dt;S.vz-=S.vz*kd*dt;
       S.x+=S.vx*dt;S.y+=S.vy*dt;S.z+=S.vz*dt;
       for(const o of OBST){const dx=S.x-o.x,dy=S.y-o.y;if(dx*dx+dy*dy<o.r*o.r&&S.z>o.z0&&S.z<o.z1){S.vx*=.15;S.vy*=.15;S.vz=Math.min(S.vz,0)*.3;msg("Strom!")}}
@@ -875,23 +903,41 @@ if(PLAY){
   function camUpd(dt,snap){const[p,t]=camGoal();const P=W(p[0],p[1],Math.max(p[2],gS(p[0],p[1])+1.2)),T=W(...t);
     const k=snap?1:1-Math.exp(-dt*(S.mode==="fly"?2.2:4));camP.lerp(P,k);camT.lerp(T,k);camera.position.copy(camP);camera.lookAt(camT)}
   // ovládanie
-  let hold=null,turn=0;
+  // úder: drž = sila (po oblúku), pusti = sila zamknutá a rozkolíše sa ručička, ťukni (kdekoľvek) keď je v strede.
+  // Pat: drž a pusti (len sila).
+  let SW=null,turn=0;const H=$("p-hit"),M=$("p-meter");
   const powOf=t=>{const ph=(t/2300)%2;return ph<1?ph:2-ph};
-  $("p-hit").addEventListener("pointerdown",e=>{if(S.mode!=="aim")return;e.preventDefault();hold=performance.now();$("p-hit").setPointerCapture(e.pointerId)});
-  const rel=e=>{if(hold==null)return;const p=Math.max(.04,powOf(performance.now()-hold));hold=null;$("p-pow").style.width="0";shoot(p)};
-  $("p-hit").addEventListener("pointerup",rel);$("p-hit").addEventListener("pointercancel",()=>{hold=null;$("p-pow").style.width="0"});
+  const perT=()=>(1.45-.6*SW.p)/(S.lie===SURF.sand?1.3:S.lie===SURF.rough?1.15:1);   // perióda kyvadla (s): silnejší úder = rýchlejšie
+  const needle=()=>-Math.cos(2*Math.PI*(performance.now()-SW.t0)/1000/perT());
+  function swEnd(){SW=null;document.body.classList.remove("swing");M.className="";H.classList.remove("ph2")}
+  function swDown(){if(S.mode!=="aim")return;if(!SW){SW={ph:1,t0:performance.now()};document.body.classList.add("swing");M.className=CLUBS[S.club].a?"":"putt"}}
+  function swUp(){if(!SW||SW.ph!==1)return;const p=Math.max(.04,powOf(performance.now()-SW.t0));
+    if(!CLUBS[S.club].a){swEnd();shoot(p);return}
+    SW={ph:2,t0:performance.now(),p};M.className="ph2";$("pm-pow").style.strokeDasharray=(p*314.16).toFixed(1)+" 999";H.classList.add("ph2");
+    const[x,y]=arcPt(-1+2*p,111),[x2,y2]=arcPt(-1+2*p,89);const k=$("pm-mk");k.setAttribute("x1",x);k.setAttribute("y1",y);k.setAttribute("x2",x2);k.setAttribute("y2",y2)}
+  function swHit(){if(!SW||SW.ph!==2||performance.now()-SW.t0<150)return;const u=needle(),p=SW.p;swEnd();if(navigator.vibrate)navigator.vibrate(Math.abs(u)<ZP?[10,40,10]:20);shoot(p,u)}
+  // zóny presnosti: na piesku a v roughu užší stred
+  function zones(){const f=S.lie===SURF.sand?.7:S.lie===SURF.rough?.85:1;$("pm-z1").setAttribute("d",arcD(-ZP*f,ZP*f,84));$("pm-z2").setAttribute("d",arcD(-ZG*f,ZG*f,84))}
+  H.addEventListener("pointerdown",e=>{if(SW&&SW.ph===2)return;e.preventDefault();if(S.mode!=="aim")return;zones();swDown();try{H.setPointerCapture(e.pointerId)}catch(_){}});
+  H.addEventListener("pointerup",swUp);H.addEventListener("pointercancel",()=>{if(SW&&SW.ph===1)swEnd()});
+  addEventListener("pointerdown",e=>{if(SW&&SW.ph===2){e.preventDefault();e.stopPropagation();swHit()}},true);
+  addEventListener("keydown",e=>{if(e.code!=="Space"||e.repeat||$("p-res").hidden===false)return;e.preventDefault();if(SW&&SW.ph===2)swHit();else{zones();swDown()}});
+  addEventListener("keyup",e=>{if(e.code==="Space"){e.preventDefault();swUp()}});
   for(const[id,dv]of[["p-l",-1],["p-r",1]]){const b=$(id);b.addEventListener("pointerdown",e=>{e.preventDefault();turn=dv});for(const ev of["pointerup","pointerleave","pointercancel"])b.addEventListener(ev,()=>{turn=0})}
   $("p-cp").onclick=()=>{if(S.mode!=="aim")return;S.club=Math.min(CLUBS.length-1,S.club+1);info();drawAim()};
   $("p-cm").onclick=()=>{if(S.mode!=="aim")return;S.club=Math.max(0,S.club-1);info();drawAim()};
   $("p-v").onclick=()=>{S.view=1-S.view};
   // potiahnutie prstom po scéne = mierenie
   let drag=null;renderer.domElement.addEventListener("pointerdown",e=>{drag=e.clientX});
-  addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim")return;S.aim+=(e.clientX-drag)*.0011;drag=e.clientX;drawAim()});
+  addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim"||SW)return;S.aim+=(e.clientX-drag)*.0011;drag=e.clientX;drawAim()});
   addEventListener("pointerup",()=>{drag=null});
   game={update(dt){hudTick();
       if(turn&&S.mode==="aim"){S.aim+=turn*dt*.16;drawAim()}
-      if(hold!=null){const p=powOf(performance.now()-hold);$("p-pow").style.width=(p*100)+"%";const cl=CLUBS[S.club];
-        $("p-ht").textContent=cl.a?"Sila "+Math.round(p*100)+" % · ≈ "+Math.round(cl.c*S.lie.m*p)+" m":"Pat ≈ "+(cl.c*p).toFixed(1).replace(".",",")+" m"}
+      if(SW){const cl=CLUBS[S.club];
+        if(SW.ph===1){const p=powOf(performance.now()-SW.t0);$("pm-pow").style.strokeDasharray=(p*314.16).toFixed(1)+" 999";
+          $("pm-v").textContent=Math.round(p*100)+" %";$("pm-d").textContent=cl.a?"≈ "+Math.round(cl.c*S.lie.m*p)+" m":"pat ≈ "+(cl.c*p).toFixed(1).replace(".",",")+" m";
+          $("p-ht").textContent=cl.a?"Pusti pri správnej sile":"Pusti – pat ≈ "+(cl.c*p).toFixed(1).replace(".",",")+" m"}
+        else{$("pm-nd").setAttribute("transform","rotate("+(needle()*90).toFixed(1)+" 120 120)");$("p-ht").textContent="Ťukni, keď je ručička v strede"}}
       else if(S.mode==="aim")$("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";
       const n=4;for(let i=0;i<n;i++)step(dt/n);
       if(S.mode==="fly"||S.mode==="roll"||S.mode==="drop"){place();if(S.tr<600){trailP.set([S.x,S.z+.05,-S.y],S.tr*3);S.tr++;trailG.setDrawRange(0,S.tr);trailG.attributes.position.needsUpdate=true}
