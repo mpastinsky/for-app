@@ -70,7 +70,8 @@ if(CRS==="apex"){document.getElementById("holes").innerHTML=READY.map(h=>`<a dat
   document.getElementById("tees").classList.add("many")}
 
 // --- terén
-const TR=DATA.terrain,Hcm=new Int16Array(Uint8Array.from(atob(TR.cm),c=>c.charCodeAt(0)).buffer);
+// terén: pri 18-ke v samostatných dlaždiciach (juh / sever za diaľnicou), načíta sa len tá, ktorú jamka potrebuje
+const TR=DATA.terrain||await (await fetch(DATA.tiles[DATA.holeTile[hNum]])).json(),Hcm=new Int16Array(Uint8Array.from(atob(TR.cm),c=>c.charCodeAt(0)).buffer);
 function hENU(e,n){let c=(e-TR.e0)/TR.step,r=(n-TR.n0)/TR.step;c=Math.min(TR.w-1.001,Math.max(0,c));r=Math.min(TR.h-1.001,Math.max(0,r));
   const c0=c|0,r0=r|0,fc=c-c0,fr=r-r0,i=r0*TR.w+c0;
   return TR.base+(Hcm[i]*(1-fc)*(1-fr)+Hcm[i+1]*fc*(1-fr)+Hcm[i+TR.w]*(1-fc)*fr+Hcm[i+TR.w+1]*fc*fr)/100}
