@@ -40,6 +40,7 @@ body.allv .lab.hole{display:block!important}.lab.hole.cur{background:#ffd400;col
 #guard3 small{display:block;font-weight:500;color:#556;font-size:.75rem;line-height:1.3}#r3test{border:0;border-radius:8px;background:#ffe9a8;font:700 .72rem var(--font);padding:3px 7px;margin-right:4px}
 #pop3 .pl{display:flex;align-items:center;gap:6px;width:100%;margin-top:6px;border:0;border-radius:10px;background:#f0f4ee;padding:7px 9px;font:600 .85rem var(--font);text-align:left}#pop3 .pl .ric{width:1.4em;height:1.4em}#pop3 .pl small{font-weight:500;color:#667}
 #top,#bar,#tees,#note{z-index:3}
+#ldpill{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:3;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none}#ldpill i{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:ldsp .8s linear infinite}@keyframes ldsp{to{transform:rotate(360deg)}}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
@@ -439,10 +440,11 @@ const seeM=new THREE.MeshStandardMaterial({color:0x3b7d33,roughness:.95,transpar
 // stromy, ktoré stoja v ploche hrania (medzi odpaliskom a greenom), sú priesvitné, aby bolo vidno cez ne
 // stromy medzi kamerou a tým, na čo sa pozeráme, sa priebežne zprehľadnia
 const FADE=[];let PIN_V=null;const TRUNKS=[];   // kmene stromov pre kolíziu loptičky: [x,y,polomer,výška vrchu]
+const _fd=new THREE.Vector3(),_fq=new THREE.Vector3();   // bez nových objektov v každom snímku (menej upratovania pamäte na telefóne)
 function fadeTrees(){const cp=camera.position,goals=[controls.target,...(PIN_V||(PIN_V=[[0,c],[GB.x0+2,(GB.y0+GB.y1)/2],[GB.x1-2,(GB.y0+GB.y1)/2],[0,GB.y0+1],[0,GB.y1-1]].map(([x,y])=>W(x,y,hL(x,y)+.5))))];
   for(const f of FADE){let hit=false;const dc=f.c.distanceTo(cp);if(dc<f.r+4)hit=true;
-    else for(const g of goals){const d=g.clone().sub(cp),L=d.length();d.divideScalar(L);
-      for(const[pt,rr]of[[f.c,f.r+1.2],[f.b,1.6]]){const s=pt.clone().sub(cp).dot(d);if(s>0&&s<L-1){const q=cp.clone().addScaledVector(d,s);if(q.distanceTo(pt)<rr){hit=true;break}}}if(hit)break}
+    else for(const g of goals){const d=_fd.copy(g).sub(cp),L=d.length();d.divideScalar(L);
+      for(let j=0;j<2;j++){const pt=j?f.b:f.c,rr=j?1.6:f.r+1.2,s=_fq.copy(pt).sub(cp).dot(d);if(s>0&&s<L-1){_fq.copy(cp).addScaledVector(d,s);if(_fq.distanceTo(pt)<rr){hit=true;break}}}if(hit)break}
     const to=hit?.28:1;if(Math.abs(f.op-to)<.01)continue;f.op+=(to-f.op)*.18;if(Math.abs(f.op-to)<.02)f.op=to;
     for(const m of f.m){const M=m.material,tr=f.op<1;if(M.transparent!==tr){M.transparent=tr;M.depthWrite=!tr;M.needsUpdate=true;if(M.map===LEAFTEX&&LEAFTEX)M.alphaTest=tr?.12:.45}M.opacity=f.op}}}
 // lomená jamka (dogleg): bod zlomu DATA.bend[h] = [východ, sever]
@@ -1506,9 +1508,9 @@ let lastT=0;const _bv=new THREE.Vector3();
 function snapGo(url){forNav(url)}
 window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
 // pred prechodom na inú 3D obrazovku: posledný záber ostane ako obrázok a 3D scéna sa hneď uvoľní (na mobile naraz len jedna 3D scéna v pamäti – inak sa iPhone zasekol)
-window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(scene,camera);u=renderer.domElement.toDataURL("image/jpeg",.85)}catch(e){}
+window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(scene,camera);const D=renderer.domElement,k=Math.min(1,900/Math.max(D.width,D.height)),cv=document.createElement("canvas");cv.width=D.width*k|0;cv.height=D.height*k|0;cv.getContext("2d").drawImage(D,0,0,cv.width,cv.height);u=cv.toDataURL("image/jpeg",.8)}catch(e){}
  document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
- const done=()=>{document.body.appendChild(i);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
+ const done=()=>{document.body.appendChild(i);const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
 
 window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}};
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
@@ -1522,6 +1524,14 @@ function loop(now){if(window.__stopped)return;const rdt=lastT?(now-lastT)/1000:0
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
      const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
+// shadery pre všetko, čo sa ukáže až neskôr (steblá trávy pri zemi, efekty), sa pripravia hneď po načítaní –
+// inak sa kompilovali uprostred preletu ku jamke a obraz sa na chvíľu zasekol
+setTimeout(()=>{if(window.__stopped)return;const hid=[];scene.traverse(o=>{if(!o.visible){hid.push(o);o.visible=true}});
+  // aj priesvitná verzia lístia (stromy medzi kamerou a jamkou sa pri prelete zprehľadnia)
+  const fm=[];for(const f of FADE)for(const m of f.m){const M=m.material;if(!M.transparent){fm.push(M);M.transparent=true;M.depthWrite=false;M.needsUpdate=true}}
+  let p=null;try{renderer.compile(scene,camera);for(const M of fm){M.transparent=false;M.depthWrite=true;M.needsUpdate=true}
+    p=renderer.compileAsync?renderer.compileAsync(scene,camera):(renderer.compile(scene,camera),null)}catch(e){for(const M of fm){M.transparent=false;M.depthWrite=true;M.needsUpdate=true}}for(const o of hid)o.visible=false;
+  if(p&&p.catch)p.catch(()=>{})},400);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // kvalita grafiky podľa výkonu: na telefóne začína strednou (menšie rozlíšenie, menej stebiel); ak je stále pod ~40 fps, zníži sa ešte o stupeň
 // (rozlíšenie 1×, ešte menej stebiel, menšia mapa tieňov). Počas hry sa späť nezvyšuje, aby obraz neskákal. ?q=0/1/2 vynúti stupeň.
