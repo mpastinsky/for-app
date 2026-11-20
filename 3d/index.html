@@ -1294,6 +1294,7 @@ if(PLAY){
   const CUP=.054,CAP=CUP+.012;
   function cupHit(ox,oy){const dx=S.x-ox,dy=S.y-oy,L2=dx*dx+dy*dy;let t=L2>0?((PIN[0]-ox)*dx+(PIN[1]-oy)*dy)/L2:1;t=Math.max(0,Math.min(1,t));
     const cx=ox+dx*t-PIN[0],cy=oy+dy*t-PIN[1],b=Math.hypot(cx,cy);if(b>=CAP){S.inCup=0;return false}
+    if(b<CUP){S.mode="drop";S.t=0;S.sink=0;return true}   // ide priamo cez jamku: vždy spadne (Martinovo želanie)
     const sp=Math.hypot(S.vx,S.vy),vmax=1.75*Math.sqrt(Math.max(0,1-(b/CAP)**2))+.25;
     if(sp<vmax){S.mode="drop";S.t=0;S.sink=0;return true}
     if(S.inCup)return false;S.inCup=1;
@@ -1308,7 +1309,7 @@ if(PLAY){
       S.vx+=WIND.x*.12*dt;S.vy+=WIND.y*.12*dt;   // vietor
       if(S.side){const h=Math.hypot(S.vx,S.vy)||1,ux=S.vy/h,uy=-S.vx/h;S.vx+=ux*S.side*dt;S.vy+=uy*S.side*dt}   // zakrivenie (hák/slajs)
       const sp=Math.hypot(S.vx,S.vy,S.vz),kd=.0016*sp;S.vx-=S.vx*kd*dt;S.vy-=S.vy*kd*dt;S.vz-=S.vz*kd*dt;
-      S.x+=S.vx*dt;S.y+=S.vy*dt;S.z+=S.vz*dt;
+      {const ox=S.x,oy=S.y;S.x+=S.vx*dt;S.y+=S.vy*dt;S.z+=S.vz*dt;if(S.z-gS(S.x,S.y)<.25&&cupHit(ox,oy))return}
       // strom: pri vlete do koruny sa raz rozhodne – loptička buď preletí cez lístie (spomalí, mierne sa odchýli), alebo ju strom zastaví a spadne; v oboch prípadoch padá lístie
       {let inT=null;for(const o of OBST){const dx=S.x-o.x,dy=S.y-o.y;if(dx*dx+dy*dy<o.r*o.r&&S.z>o.z0&&S.z<o.z1){inT=o;break}}
        if(inT&&S.tIn!==inT){S.tIn=inT;const sp=Math.hypot(S.vx,S.vy),thru=Math.random()<.5;leafBurst(S.x,S.y,S.z,thru?14:26);
