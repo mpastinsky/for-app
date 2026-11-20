@@ -220,10 +220,13 @@ function greenDetail(mat){mat.onBeforeCompile=sh=>{sh.uniforms.gTex={value:GRT};
  float v=(s1-.5)*2.8+(s4-.5)*1.9*nr+(s2-.5)*.55+(s3-.5)*.35;
  diffuseColor.rgb*=max(vec3(.3),1.+v*vec3(1.05,.85,1.25))*mix(vec3(.95,.98,1.03),vec3(1.06,1.03,.9),s3);}`)};
   return mat}
-function grassDetail(mat,amt){mat.onBeforeCompile=sh=>{sh.uniforms.dTex={value:DN};sh.uniforms.dA={value:amt};
+function grassDetail(mat,amt,under){mat.onBeforeCompile=sh=>{sh.uniforms.dTex={value:DN};sh.uniforms.dA={value:amt};const UND=!!(under&&HQ&&BGU.kT.value);if(UND)Object.assign(sh.uniforms,{bC:BGU.uC,bS:BGU.uS,bK:BGU.kT,bG:BGU.uG});
   sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying vec2 vWp;varying float vDd;").replace("#include <begin_vertex>","#include <begin_vertex>\nvec4 wp4=modelMatrix*vec4(transformed,1.);vWp=wp4.xz;vDd=distance(wp4.xyz,cameraPosition);");
-  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform sampler2D dTex;uniform float dA;varying vec2 vWp;varying float vDd;")
-   .replace("#include <map_fragment>",HQ?`#include <map_fragment>
+  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform sampler2D dTex;uniform float dA;varying vec2 vWp;varying float vDd;"+(UND?"uniform vec2 bC;uniform float bS;uniform sampler2D bK;uniform vec4 bG;":""))
+   .replace("#include <map_fragment>",HQ?`#include <map_fragment>`+(UND?`
+{vec2 bp=vec2(vWp.x,-vWp.y);float bk=texture2D(bK,(bp-bG.xy)/(bG.zw-bG.xy)).r,bf=pow(1.-smoothstep(bS*.08,bS*.5,length(bp-bC)),1.4);
+ float cl=texture2D(dTex,vWp*5.3+.13).r,cs=texture2D(dTex,vWp*13.+.71).r;
+ diffuseColor.rgb*=mix(vec3(1.),vec3(.66,.7,.6)+.22*cl+.14*cs,clamp(bk*1.25,0.,1.)*bf);}`:"")+`
 {float n1=1.-smoothstep(4.,40.,vDd),n2=1.-smoothstep(15.,110.,vDd);
  float f1=texture2D(dTex,vWp*2.6).r,f2=texture2D(dTex,vWp*.9+.37).r,cl=texture2D(dTex,vWp*.05).g,cm=texture2D(dTex,vWp*.27).g;
  float gm=((f1-.5)*1.1*n1+(f2-.5)*.7*n2)*(.35+dA*3.)+((cl-.5)*.8+(cm-.5)*.45)*dA*1.6;
@@ -243,6 +246,8 @@ scene.add(sun,sun.target);
 
 // --- terén + "namaľovaný" povrch (rough, fairway, greeny, bunkre, odpaliská)
 const X0=-170,X1=170,Y0=-70,Y1=c+150,SEG=2;
+// zdieľané s 3D steblami: zem pod steblami je tmavšia (tieň pri koreňoch), aby steblá z nej rástli a nevznášali sa
+const BGU={uC:{value:new THREE.Vector2(1e6,1e6)},uS:{value:22},kT:{value:null},uG:{value:new THREE.Vector4(X0,Y0,X1,Y1)}};
 const geo=new THREE.PlaneGeometry(X1-X0,Y1-Y0,(X1-X0)/SEG,(Y1-Y0)/SEG);geo.rotateX(-Math.PI/2);
 geo.translate((X0+X1)/2,0,-(Y0+Y1)/2);
 {const p=geo.attributes.position,m=4.5;for(let i=0;i<p.count;i++){const x=p.getX(i),y=-p.getZ(i);let h=hL(x,y);
@@ -306,7 +311,7 @@ for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);g2.
  sx.putImageData(im,0,0);g2.save();g2.globalCompositeOperation="soft-light";g2.globalAlpha=.7;g2.drawImage(sc2,0,0,TEX,TEX);g2.restore()}
 const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
 {const p=geo.attributes.position,uv=geo.attributes.uv;for(let i=0;i<p.count;i++){uv.setXY(i,(p.getX(i)-X0)/(X1-X0),(-p.getZ(i)-Y0)/(Y1-Y0))}}
-const ground=new THREE.Mesh(geo,grassDetail(new THREE.MeshStandardMaterial({map:tex,roughness:1}),.2));ground.receiveShadow=true;scene.add(ground);
+const ground=new THREE.Mesh(geo,grassDetail(new THREE.MeshStandardMaterial({map:tex,roughness:1}),.2,1));ground.receiveShadow=true;scene.add(ground);
 // --- green v detaile: vlastná jemná sieť (0,5 m) a textúra s pruhmi, lemom a prvým kosom
 const PIN=[0,c];let GTX=null;
 {const M=7,gx0=Math.floor(GB.x0-M),gx1=Math.ceil(GB.x1+M),gy0=Math.floor(GB.y0-M),gy1=Math.ceil(GB.y1+M),gw=gx1-gx0,gh=gy1-gy0,st=.5;
@@ -391,7 +396,7 @@ if(HQ){// výšky priamo z vrcholov siete terénu (rovnaké trojuholníky ako ze
    (DATA.pads[h]||[]).forEach(pd=>{const[x,y]=loc(pd);k.beginPath();k.arc(x,y,4.5,0,7);k.fillStyle="rgb(30,0,0)";k.fill()})});
  for(const P of allBunkL){kp(P);k.lineWidth=.6;k.strokeStyle="#000";k.stroke();k.fillStyle="#000";k.fill()}
  for(const P of waterL){kp(P);k.lineWidth=1.5;k.strokeStyle="#000";k.stroke();k.fillStyle="#000";k.fill()}
- const kT=new THREE.CanvasTexture(kc);
+ const kT=new THREE.CanvasTexture(kc);BGU.kT.value=kT;
  // jedno steblo: 7 vrcholov, 3 články, zúžené ku špičke
  const mk=(N,S,seed)=>{const bg=new THREE.InstancedBufferGeometry();
  const bp=[-.5,0,.5,0,-.4,.35,.4,.35,-.25,.7,.25,.7,0,1],pos=[];for(let i=0;i<7;i++)pos.push(bp[i*2],bp[i*2+1],0);
@@ -417,11 +422,12 @@ vB=position.y;vR=aRnd.z;vF=bf*bf;`)
   .replace("#include <begin_vertex>",`float ca=cos(aRnd.x),sa=sin(aRnd.x),wv=position.x*(.007+.006*aRnd.z)*step(.001,bh);
  float yy=position.y,bend=(.25+.5*aRnd.w)*yy*yy*bh;
  vec3 transformed=vec3(bxy.x+ca*wv+sa*bend,hAt(bxy)-.004+yy*bh,-(bxy.y+sa*wv-ca*bend));if(bh<.004)transformed=vec3(0.,-1e4,0.);`);
-  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nvarying float vB,vR,vF;").replace("#include <normal_fragment_begin>","#include <normal_fragment_begin>\nnormal=normalize(vNormal);").replace("#include <map_fragment>","#include <map_fragment>\ndiffuseColor.rgb*=mix(vec3(1.),mix(.74,1.22,vB)*mix(vec3(.9,.95,.85),vec3(1.12,1.08,.9),vR),vF);")};
+  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nvarying float vB,vR,vF;").replace("#include <normal_fragment_begin>","#include <normal_fragment_begin>\nnormal=normalize(vNormal);").replace("#include <map_fragment>","#include <map_fragment>\ndiffuseColor.rgb*=mix(vec3(1.),mix(.62,1.12,sqrt(clamp(vB,0.,1.)))*mix(vec3(.9,.95,.85),vec3(1.1,1.06,.9),vR),vF);")};
  const mesh=new THREE.Mesh(bg,bm);mesh.frustumCulled=false;mesh.receiveShadow=true;scene.add(mesh);return{U,mesh}};
  // dve vrstvy: hustá tesne pred kamerou (9 m) a redšia ďalej (22 m) – hustota plynulo klesá, bez ostrej hranice
  const LAY=[[mk(36000,9,4242),4],[mk(30000,22,777),9.5]];
- BLADES={tick(t,px,py,fx,fy,camH){for(const[L,o]of LAY){L.U.uT.value=t;L.U.uC.value.set(px+fx*o,py+fy*o);L.mesh.visible=camH<28}}}}
+ BLADES={tick(t,px,py,fx,fy,camH){for(const[L,o]of LAY){L.U.uT.value=t;L.U.uC.value.set(px+fx*o,py+fy*o);L.mesh.visible=camH<28}
+   if(camH<28)BGU.uC.value.copy(LAY[1][0].U.uC.value);else BGU.uC.value.set(1e6,1e6)}}}
 if(Q.has("dbg"))Object.assign(window,{__B:BLADES,__hL:hL,__sc:scene,__cam:camera,__r:renderer});
 
 // --- stromy
@@ -741,7 +747,7 @@ const RS=document.createElement("style");RS.textContent=`
 #r3grid button.mic span{background:#1a7cff!important}#r3grid button.mic.on span{animation:pm 1s infinite}@keyframes pm{50%{box-shadow:0 0 0 8px rgba(26,124,255,.35)}}
 #fab3.open{background:#14211a}
 /* tlačidlo Nahlásiť dole vpravo, možnosti v oblúku nad ním */
-#v-fly,#v-top{display:none}
+#v-fly,#v-top,#v-tee{display:none}
 #nav3{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);display:grid;grid-template-columns:repeat(4,38px);gap:5px;z-index:40}
 #nav3 button{width:38px;height:38px;border:0;border-radius:10px;background:rgba(255,255,255,.88);color:#123;font:700 1.05rem system-ui;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;user-select:none}#nav3 button:hover{background:#fff}
 body.playing #nav3{display:none}
@@ -972,7 +978,7 @@ if(CRS!=="apex"){btns.all=document.getElementById("v-all");
     labels.push({el,v:W(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5,hL(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5)+4),all:1})});
   if(Q.get("v")==="all"){go(views.all);setOn("all")}}
 // ⛳ Hrať: v prehľade zhora celé kolo od jamky 1, inak len práve zobrazená jamka
-function playLbl(){document.getElementById("v-play").textContent=document.body.classList.contains("allv")?"⛳ Hrať kolo":"⛳ Hrať jamku "+hNum}
+function playLbl(){document.getElementById("v-play").textContent=document.body.classList.contains("allv")?"⛳ Hrať kolo":"⛳ Vyskúšať jamku"}
 playLbl();
 document.getElementById("v-play").onclick=()=>{if(!document.body.classList.contains("allv")){forNav("?"+CQ+"h="+hNum+"&t="+tIdx+"&play=1&one=1");return}
   const go2=()=>{snapGo("?"+CQ+"h="+READY[0]+"&t="+tIdx+"&play=1")};
@@ -1218,6 +1224,9 @@ if(PLAY){
     $("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";place()}
   const rotAx=new THREE.Vector3();let lastBX=null,lastBY=0;
   function place(){const rb=.11*ball.scale.x;ball.position.set(S.x,(S.mode==="fly"?S.z:S.z-R+rb)-(S.sink||0),-S.y);
+    // v jamke: zelená plocha nepíše hĺbku, preto loptičku pod úrovňou greenu kreslíme len v otvore jamky (stencil) – vidno ju padať dnu
+    {const cp=scene.userData.cupPos,sub=!!cp&&(S.mode==="drop"||S.mode==="in")&&ball.position.y<cp.y-rb*.2;
+     if(ball.material.stencilWrite!==sub)Object.assign(ball.material,{stencilWrite:sub,stencilRef:1,stencilFunc:THREE.EqualStencilFunc,stencilZPass:THREE.KeepStencilOp,stencilFail:THREE.KeepStencilOp,stencilZFail:THREE.KeepStencilOp})}
     {const gz=gS(S.x,S.y),hb=Math.max(0,ball.position.y-rb-gz),off=(rb+hb)/sunH.t*.4;bShadow.visible=!S.sink&&S.mode!=="in"&&S.mode!=="drop"&&hb<20;
      bShadow.position.set(S.x+sunH.x*off,gz+.004,-S.y+sunH.z*off);const sc=rb*(2.9+hb*.25);bShadow.scale.set(sc,1,sc*1.5);bShadow.rotation.y=Math.atan2(sunH.x,sunH.z);bShadow.material.opacity=Math.max(0,1-hb/12)}
     // otáčanie loptičky pri pohybe (vidno jamôčky a potlač, ako sa kotúľa)
@@ -1239,7 +1248,7 @@ if(PLAY){
     const[ZP,ZG]=zoneOf(p);msg(!cl.a?"":Math.abs(u)<ZP?"Perfektne! 🎯":Math.abs(u)<ZG?(u<0?"Mierne doľava":"Mierne doprava"):(u<0?"Hák ↶":"Slajs ↷"));
     const m=$("p-msg").textContent;if(m)setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1800)}
   function grad(x,y){const e=.3;return[(gS(x+e,y)-gS(x-e,y))/(2*e),(gS(x,y+e)-gS(x,y-e))/(2*e)]}
-  function holed(){S.mode="in";ball.visible=false;$("p-shot").hidden=true;$("p-tgt").hidden=true;document.body.classList.add("done");$("h-s").textContent="Jamka dohraná";const n=S.strokes,d=n-3;
+  function holed(){S.mode="in";$("p-shot").hidden=true;$("p-tgt").hidden=true;document.body.classList.add("done");$("h-s").textContent="Jamka dohraná";const n=S.strokes,d=n-3;
     const nm={"-2":"Eagle!","-1":"Birdie!","0":"Par","1":"Bogey","2":"Double bogey"}[d]||(n===1?"Hole in one!":(d>0?"+"+d:String(d)));
     cupFlash();if(n===1){holeInOne();msg("");setTimeout(()=>showRes(n),4200)}
     else{msg(nm+" · "+n+(n<5?" údery":" úderov"));setTimeout(()=>showRes(n),1600)}}
@@ -1336,7 +1345,11 @@ if(PLAY){
       if(nvx*S.vx+nvy*S.vy<0&&Math.hypot(G*gx*.71,G*gy*.71)<sf.f){stopBall();return}
       const ox=S.x,oy=S.y;S.vx=nvx;S.vy=nvy;S.x+=S.vx*dt;S.y+=S.vy*dt;S.z=gS(S.x,S.y)+R;
       if(cupHit(ox,oy))return}
-    else if(S.mode==="drop"){S.t+=dt;const k=Math.min(1,S.t/.28);S.x+=(PIN[0]-S.x)*Math.min(1,dt*18);S.y+=(PIN[1]-S.y)*Math.min(1,dt*18);S.sink=k*.09;if(k>=1){holed();return}}
+    else if(S.mode==="drop"){   // pád do jamky: gravitácia až na dno (10 cm), malé odrazenie, loptička ostane v jamke viditeľná
+      if(!S.t){S.dv=Math.max(0,-(S.vz||0))*.5;S.sink=0}S.t+=dt;const fl=gS(PIN[0],PIN[1])+R-.097;
+      S.x+=(PIN[0]-S.x)*Math.min(1,dt*9);S.y+=(PIN[1]-S.y)*Math.min(1,dt*9);
+      S.dv+=G*dt;S.z-=S.dv*dt;if(S.z<=fl){S.z=fl;S.dv=S.dv>.45?-S.dv*.22:0}
+      if(S.t>.85&&S.z<=fl+1e-3){S.z=fl;holed();return}}
     if(S.mode==="fly"||S.mode==="roll"){S.t+=dt;
       if(S.x<X0+3||S.x>X1-3||S.y<Y0+3||S.y>Y1-3){penalty("Mimo ihriska · trestná rana");return}
       if(S.mode==="roll"&&waterL.some(P=>inPoly([S.x,S.y],P))){penalty("Voda · trestná rana");return}
@@ -1346,7 +1359,7 @@ if(PLAY){
   function camGoal(){S.low=0;const dx=Math.sin(S.aim),dy=Math.cos(S.aim);const onG=sdist(S.x,S.y,green)<4;
     // loptička padá do jamky: kamera sa priblíži k jamke (vidno loptičku zblízka aj záblesk obruče)
     if(S.mode==="drop"||S.mode==="in"){if(!S.cd){const cx=camP.x-PIN[0],cy=-camP.z-PIN[1],l=Math.hypot(cx,cy)||1;S.cd=[cx/l,cy/l]}
-      const h=gS(PIN[0],PIN[1]);return[[PIN[0]+S.cd[0]*.42,PIN[1]+S.cd[1]*.42,h+.24],[PIN[0],PIN[1],h-.04]]}
+      const h=gS(PIN[0],PIN[1]);return[[PIN[0]+S.cd[0]*.34,PIN[1]+S.cd[1]*.34,h+.36],[PIN[0],PIN[1],h-.06]]}
     if(S.mode==="fly"||S.mode==="roll"){const d=Math.max(1,Math.hypot(S.vx,S.vy));const fx=S.vx/d,fy=S.vy/d;
       if(S.mode==="roll"&&!CLUBS[S.club].a&&S.view===2){const hz=Math.max(gS(S.x,S.y),gS(PIN[0],PIN[1]));return[[S.x-fx*2.6,S.y-fy*2.6,hz+1.5],[S.x+fx*2,S.y+fy*2,gS(S.x+fx*2,S.y+fy*2)]]}   // pat zhora
       if(S.mode==="roll"&&!CLUBS[S.club].a){S.low=1;return[[S.x-fx*1.3,S.y-fy*1.3,gS(S.x,S.y)+.42],[S.x+fx*2.5,S.y+fy*2.5,gS(S.x+fx*2.5,S.y+fy*2.5)]]}   // pat: kamera nízko za loptičkou
@@ -1437,7 +1450,7 @@ if(PLAY){
       if(S.mode==="fly"||S.mode==="roll"||S.mode==="drop"){place();if(S.tr<600){trailP.set([S.x,S.z+.05,-S.y],S.tr*3);S.tr++;trailG.setDrawRange(0,S.tr);trailG.attributes.position.needsUpdate=true}
         if(S.mode==="roll"||S.mode==="wait")info()}
       camUpd(dt,false);
-      {const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(2.5,Math.max(nearG?(S.low===2?.3:.24):.35,dd/(nearG?40:14))))}
+      {const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(S.mode==="drop"||S.mode==="in"?.36:2.5,Math.max(nearG?(S.low===2?.3:.24):.35,dd/(nearG?40:14))))}
       if(S.mode!=="in")place();   // výška loptičky podľa aktuálnej veľkosti (leží na tráve)
       // pri patovaní je vlajka vytiahnutá, aby bolo vidno jamku
       {const pull=S.mode!=="fly"&&!CLUBS[S.club].a&&toPin()<25;pin.visible=flag.visible=!pull}}};
