@@ -31,9 +31,9 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
 (function(){const EMB=window.parent!==window;window.__EMB=EMB;let frames=[];
  const abs=u=>new URL(u,location.href).href,in3d=u=>{const p=new URL(u,location.href).pathname;return /\/3d\/(index\.html|ihrisko\.html)?$/.test(p)};
  window.forNav=function(url){if(!in3d(url)){(EMB?top:window).location.href=abs(url);return}
-   if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
+   if(window.__freeze)window.__freeze();if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
  function openFrame(u){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");
-   f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f)}
+   f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f);f.__to=setTimeout(()=>{if(f.style.opacity!=="1")location.href=u},15000)}
  addEventListener("message",e=>{const d=e.data||{};if(EMB)return;
    if(d.forGo)openFrame(d.forGo);
    if(d.forReady){const f=frames.find(x=>x.contentWindow===e.source);if(!f)return;f.style.opacity="1";try{history.replaceState(null,"",f.__url)}catch(_){}
@@ -140,7 +140,12 @@ document.getElementById("b-go").onclick=()=>flyTo(READY[0],"./?c=apex&h="+READY[
 for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();flyTo(+l.el.textContent,l.el.href)};
 const v=new THREE.Vector3();
 let snapDone=false;
-window.__hostStop=()=>{window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
+window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
+// pred prechodom na inú 3D obrazovku: posledný záber ostane ako obrázok a 3D scéna sa hneď uvoľní (na mobile naraz len jedna 3D scéna v pamäti – inak sa iPhone zasekol)
+window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(scene,camera);u=renderer.domElement.toDataURL("image/jpeg",.85)}catch(e){}
+ document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
+ const done=()=>{document.body.appendChild(i);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
+
 function frame(){if(window.__stopped)return;if(controls.enabled)controls.update();renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{if(window.__EMB)parent.postMessage({forReady:1},"*");const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}})}
   for(const l of labels){v.copy(l.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=(v.x+1)/2*innerWidth+"px";l.el.style.top=(1-v.y)/2*innerHeight+"px"}}
   requestAnimationFrame(frame)}

@@ -49,9 +49,9 @@ body.allv .lab.hole{display:block!important}.lab.hole.cur{background:#ffd400;col
 (function(){const EMB=window.parent!==window;window.__EMB=EMB;let frames=[];
  const abs=u=>new URL(u,location.href).href,in3d=u=>{const p=new URL(u,location.href).pathname;return /\/3d\/(index\.html|ihrisko\.html)?$/.test(p)};
  window.forNav=function(url){if(!in3d(url)){(EMB?top:window).location.href=abs(url);return}
-   if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
+   if(window.__freeze)window.__freeze();if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
  function openFrame(u){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");
-   f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f)}
+   f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f);f.__to=setTimeout(()=>{if(f.style.opacity!=="1")location.href=u},15000)}
  addEventListener("message",e=>{const d=e.data||{};if(EMB)return;
    if(d.forGo)openFrame(d.forGo);
    if(d.forReady){const f=frames.find(x=>x.contentWindow===e.source);if(!f)return;f.style.opacity="1";try{history.replaceState(null,"",f.__url)}catch(_){}
@@ -1467,7 +1467,12 @@ document.addEventListener("touchmove",e=>{if(e.touches.length>1&&e.target.tagNam
 let lastT=0;const _bv=new THREE.Vector3();
 // prechod medzi obrazovkami bez zábleskov: uloží posledný záber, nová stránka ho ukáže, kým sa nevykreslí
 function snapGo(url){forNav(url)}
-window.__hostStop=()=>{window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
+window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
+// pred prechodom na inú 3D obrazovku: posledný záber ostane ako obrázok a 3D scéna sa hneď uvoľní (na mobile naraz len jedna 3D scéna v pamäti – inak sa iPhone zasekol)
+window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(scene,camera);u=renderer.domElement.toDataURL("image/jpeg",.85)}catch(e){}
+ document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
+ const done=()=>{document.body.appendChild(i);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
+
 window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}};
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
   if(CRS==="apex")snapGo("ihrisko.html?t="+tIdx);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!Q.has("play")){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
