@@ -197,6 +197,29 @@ const DN=(()=>{const n=512,cv=document.createElement("canvas");cv.width=cv.heigh
   x.putImageData(im,0,0);
   for(let i=0;i<500;i++){const px=r()*n,py=r()*n,s=1+r()*2.2;x.fillStyle=r()<.5?"rgba(0,0,90,.5)":"rgba(255,255,170,.45)";x.beginPath();x.arc(px,py,s,0,7);x.fill()}   // väčšie kamienky (ovplyvní hlavne B)
   const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t})();
+// green zblízka: hustá jemná zrnitosť trávy (svetlé/žltšie a tmavé/sýtejšie bodky), stredné trsy a veľké mäkké fľaky – ako na vzore.
+// R = jemné zrno (2–3 px), G = trsy, B = veľké fľaky. Bezšvová 512 px textúra; mipmapy samy stlmia kontrast do diaľky.
+const GRT=(()=>{const n=512,cv=document.createElement("canvas");cv.width=cv.height=n;const x=cv.getContext("2d");let sd=4242;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  const sm=t=>t*t*(3-2*t),mk=L=>{const lat=new Float32Array(L*L).map(()=>r());return(u,v)=>{const i=Math.floor(u),j=Math.floor(v),fu=sm(u-i),fv=sm(v-j),g=(a,b)=>lat[((b%L+L)%L)*L+((a%L+L)%L)];return(g(i,j)*(1-fu)+g(i+1,j)*fu)*(1-fv)+(g(i,j+1)*(1-fu)+g(i+1,j+1)*fu)*fv}};
+  const n256=mk(256),n128=mk(128),n64=mk(64),n32=mk(32),n16=mk(16),n8=mk(8),n4=mk(4);const A=[new Float32Array(n*n),new Float32Array(n*n),new Float32Array(n*n)];
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const k=j*n+i,u=i/n,v=j/n;
+    A[0][k]=n256(u*256,v*256)*.55+n128(u*128,v*128)*.3+r()*.35;
+    A[1][k]=n64(u*64,v*64)*.6+n32(u*32,v*32)*.4;
+    A[2][k]=n16(u*16,v*16)*.45+n8(u*8,v*8)*.35+n4(u*4,v*4)*.2}
+  const im=x.createImageData(n,n),o=im.data,SD=[.2,.17,.15];
+  for(let c=0;c<3;c++){const a=A[c];let m=0,q=0;for(const t of a){m+=t;q+=t*t}m/=a.length;const sdv=Math.sqrt(q/a.length-m*m);
+    for(let k=0;k<a.length;k++)o[k*4+c]=Math.max(0,Math.min(255,Math.round((.5+(a[k]-m)/sdv*SD[c])*255)))}
+  for(let k=0;k<n*n;k++)o[k*4+3]=255;x.putImageData(im,0,0);
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t})();
+function greenDetail(mat){mat.onBeforeCompile=sh=>{sh.uniforms.gTex={value:GRT};
+  sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying vec2 vWp;varying float vDd;").replace("#include <begin_vertex>","#include <begin_vertex>\nvec4 wp4=modelMatrix*vec4(transformed,1.);vWp=wp4.xz;vDd=distance(wp4.xyz,cameraPosition);");
+  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform sampler2D gTex;varying vec2 vWp;varying float vDd;")
+   .replace("#include <map_fragment>",`#include <map_fragment>
+{float s1=texture2D(gTex,vWp*.75).r,s4=texture2D(gTex,vWp*2.1+.41).r,s2=texture2D(gTex,vWp*.2+.17).g,s3=texture2D(gTex,vWp*.035+.63).b;
+ float nr=1.-smoothstep(2.5,25.,vDd);
+ float v=(s1-.5)*2.8+(s4-.5)*1.9*nr+(s2-.5)*.55+(s3-.5)*.35;
+ diffuseColor.rgb*=max(vec3(.3),1.+v*vec3(1.05,.85,1.25))*mix(vec3(.95,.98,1.03),vec3(1.06,1.03,.9),s3);}`)};
+  return mat}
 function grassDetail(mat,amt){mat.onBeforeCompile=sh=>{sh.uniforms.dTex={value:DN};sh.uniforms.dA={value:amt};
   sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying vec2 vWp;varying float vDd;").replace("#include <begin_vertex>","#include <begin_vertex>\nvec4 wp4=modelMatrix*vec4(transformed,1.);vWp=wp4.xz;vDd=distance(wp4.xyz,cameraPosition);");
   sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform sampler2D dTex;uniform float dA;varying vec2 vWp;varying float vDd;")
@@ -255,7 +278,7 @@ READY.forEach(h=>{if(h===hNum||!DATA.greens[h-1])return;
   (DATA.pads[h]||[]).forEach(pd=>{const[x,y]=loc(pd);g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);g2.fillStyle="#86c45a";g2.fill()})});
 // greeny: lem (fringe) + plocha
 // farby trávnika okolo greenu (detail v jemnej textúre nižšie)
-const TURF={cut:"#7cba4b",collar:"#8bcb55",green:"#9fd95e"};
+const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
 g2.lineJoin="round";path(green);g2.lineWidth=8*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
 path(green);g2.lineWidth=3*ppm;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill();
 // bunkre
@@ -293,7 +316,7 @@ const PIN=[0,c];let GTX=null;
  pth(green);a.fillStyle=TURF.green;a.fill();
  // kosenie greenu: rovné pásy 1,2 m po smere hry (svetlý / tmavý), veľmi jemne aj priečne
  a.save();pth(green);a.clip();
- for(let i=Math.floor(gx0/1.2);i*1.2<gx1;i++){a.fillStyle=(i&1)?"rgba(255,255,230,.10)":"rgba(20,70,10,.07)";a.fillRect(i*1.2,gy0,1.2,gh)}
+ for(let i=Math.floor(gx0/1.2);i*1.2<gx1;i++){a.fillStyle=(i&1)?"rgba(255,255,220,.075)":"rgba(20,70,10,.06)";a.fillRect(i*1.2,gy0,1.2,gh)}
  for(let j=Math.floor(gy0/1.2);j*1.2<gy1;j++)if(j&1){a.fillStyle="rgba(255,255,230,.035)";a.fillRect(gx0,j*1.2,gw,1.2)}
  a.restore();
  // (pôvodné tmavé „zrnká“ 12 cm vyzerali na telefóne ako hnedé bodky – nahradené jemnou textúrou v shaderi)
@@ -311,7 +334,7 @@ const PIN=[0,c];let GTX=null;
   hx.putImageData(im,0,0);const big=document.createElement("canvas");big.width=big.height=N;const bx=big.getContext("2d");bx.drawImage(hc,0,0,N,N);
   bx.globalCompositeOperation="destination-in";bx.drawImage(cA,0,0);a.save();a.setTransform(1,0,0,1,0,0);a.globalCompositeOperation="soft-light";a.globalAlpha=.75;a.drawImage(big,0,0);a.restore()}
  const gt=new THREE.CanvasTexture(cA);gt.colorSpace=THREE.SRGBColorSpace;gt.anisotropy=renderer.capabilities.getMaxAnisotropy();
- const gm=new THREE.Mesh(gg,grassDetail(new THREE.MeshStandardMaterial({map:gt,transparent:true,roughness:.58,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}),.07));
+ const gm=new THREE.Mesh(gg,greenDetail(new THREE.MeshStandardMaterial({map:gt,transparent:true,roughness:.58,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4})));
  gm.receiveShadow=false;gm.renderOrder=1;   // green bez tieňov stromov, aby nevyzeral odrezaný
  scene.add(gm);GTX=[gx0,gx1,gy0,gy1,cA]}
 // bunkre pri greene v detaile: jemná sieť 0,4 m (hladká hrana a val) a ostrejšia textúra 16 px/m
@@ -539,16 +562,16 @@ const hP=hL(...PIN)+.08;
    stencilWrite:true,stencilRef:1,stencilFunc:THREE.AlwaysStencilFunc,stencilZPass:THREE.ReplaceStencilOp}));mask.position.copy(pos);mask.renderOrder=1;scene.add(mask);
  const inMat=o=>Object.assign({transparent:true,stencilWrite:true,stencilRef:1,stencilFunc:THREE.EqualStencilFunc,stencilZPass:THREE.KeepStencilOp,depthFunc:THREE.AlwaysDepth},o);
  const wc=document.createElement("canvas");wc.width=256;wc.height=128;const w=wc.getContext("2d");
- {const soil=w.createLinearGradient(0,0,0,40);soil.addColorStop(0,"#4a3622");soil.addColorStop(1,"#5b4128");w.fillStyle=soil;w.fillRect(0,0,256,38);
+ {const soil=w.createLinearGradient(0,0,0,40);soil.addColorStop(0,"#3a2a1a");soil.addColorStop(1,"#2a1e12");w.fillStyle=soil;w.fillRect(0,0,256,38);
   for(let i=0;i<900;i++){const yy=Math.random()*38;w.fillStyle=`rgba(${30+Math.random()*60|0},${20+Math.random()*40|0},${10+Math.random()*25|0},.55)`;w.fillRect(Math.random()*256,yy,1+Math.random()*2,1+Math.random()*2)}
   w.strokeStyle="rgba(200,190,150,.35)";w.lineWidth=.7;for(let i=0;i<70;i++){const x0=Math.random()*256;w.beginPath();w.moveTo(x0,0);w.quadraticCurveTo(x0+(Math.random()-.5)*8,8,x0+(Math.random()-.5)*10,6+Math.random()*24);w.stroke()}   // korienky
   w.fillStyle="#3b6b2a";for(let i=0;i<256;i+=2){w.fillRect(i,0,2,2+Math.random()*4)}   // tráva na hrane
-  const lin=w.createLinearGradient(0,38,0,128);lin.addColorStop(0,"#f2f2ec");lin.addColorStop(.5,"#d8d8d0");lin.addColorStop(1,"#7a7a74");w.fillStyle=lin;w.fillRect(0,38,256,90);
+  const lin=w.createLinearGradient(0,38,0,128);lin.addColorStop(0,"#b8b8b0");lin.addColorStop(.35,"#6e6e68");lin.addColorStop(1,"#1e1e1c");   // vložka v tieni – jamka pôsobí čisto tmavá ako na vzorew.fillStyle=lin;w.fillRect(0,38,256,90);
   w.fillStyle="rgba(0,0,0,.25)";w.fillRect(0,38,256,3)}
  const wt=new THREE.CanvasTexture(wc);wt.colorSpace=THREE.SRGBColorSpace;wt.wrapS=THREE.RepeatWrapping;wt.repeat.x=2;
  const wall=new THREE.Mesh(new THREE.CylinderGeometry(R0,R0,DEP,40,1,true),new THREE.MeshLambertMaterial(inMat({map:wt,side:THREE.BackSide})));
  wall.position.copy(pos);wall.position.y-=DEP/2;wall.renderOrder=5;scene.add(wall);
- const bot=new THREE.Mesh(new THREE.CircleGeometry(R0,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial(inMat({color:0x2c2c2a})));bot.position.copy(pos);bot.position.y-=DEP;bot.renderOrder=5;scene.add(bot);
+ const bot=new THREE.Mesh(new THREE.CircleGeometry(R0,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial(inMat({color:0x121210})));bot.position.copy(pos);bot.position.y-=DEP;bot.renderOrder=5;scene.add(bot);
  // okraj: tenký lem hliny (bez stebiel nad otvorom)
  const rc=document.createElement("canvas");rc.width=rc.height=256;const r=rc.getContext("2d"),C=128,rIn=C*R0/.066;
  r.strokeStyle="rgba(60,40,22,.85)";r.lineWidth=3;r.beginPath();r.arc(C,C,rIn,0,7);r.stroke();
@@ -1002,7 +1025,13 @@ if(PLAY){
     x.fillStyle="#c0392b";x.font="bold 20px system-ui,sans-serif";x.fillText("1",Wd*.875,Ht/2);
     const mt=new THREE.CanvasTexture(cv),nt=new THREE.CanvasTexture(nc);mt.colorSpace=THREE.SRGBColorSpace;mt.anisotropy=nt.anisotropy=4;
     return new THREE.MeshStandardMaterial({transparent:true,map:mt,normalMap:nt,normalScale:new THREE.Vector2(1.1,1.1),color:0xffffff,roughness:.32,metalness:0,emissive:0x2a2a2a})})();
-  const ball=new THREE.Mesh(new THREE.SphereGeometry(.11,32,20),ballMat);ball.castShadow=true;ball.renderOrder=7;scene.add(ball);
+  const ball=new THREE.Mesh(new THREE.SphereGeometry(.11,32,20),ballMat);ball.castShadow=false;ball.renderOrder=7;scene.add(ball);
+  // mäkký tieň loptičky na tráve (green tiene z mapy nedostáva a mapa je na 4 cm loptičku príliš hrubá) – posunutý od slnka
+  const bShadow=(()=>{const cv=document.createElement("canvas");cv.width=cv.height=64;const x=cv.getContext("2d"),g=x.createRadialGradient(32,32,0,32,32,32);
+    g.addColorStop(0,"rgba(0,0,0,.75)");g.addColorStop(.45,"rgba(0,0,0,.5)");g.addColorStop(.8,"rgba(0,0,0,.1)");g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,64,64);
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false,fog:false,polygonOffset:true,polygonOffsetFactor:-10,polygonOffsetUnits:-20}));
+    m.renderOrder=6;scene.add(m);return m})();
+  const sunH=(()=>{const d=new THREE.Vector3().subVectors(sun.position,sun.target.position);const h=Math.hypot(d.x,d.z)||1;return{x:-d.x/h,z:-d.z/h,t:Math.max(.35,d.y/h)}})();
   const trailG=new THREE.BufferGeometry();const trailP=new Float32Array(600*3);trailG.setAttribute("position",new THREE.BufferAttribute(trailP,3));trailG.setDrawRange(0,0);
   scene.add(new THREE.Line(trailG,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.75})));
   const aimG=new THREE.BufferGeometry();const aimP=new Float32Array(60*3);aimG.setAttribute("position",new THREE.BufferAttribute(aimP,3));
@@ -1065,6 +1094,7 @@ if(PLAY){
   const ZP=.16,ZG=.42;   // perfektný stred / mierna odchýlka
   const S={x:0,y:0,z:gS(0,0)+R,vx:0,vy:0,vz:0,mode:"aim",strokes:0,prev:[0,0],aim:0,club:0,lie:SURF.fair,tee:true,over:false,view:0,t:0,tr:0};
   const toPin=()=>Math.hypot(PIN[0]-S.x,PIN[1]-S.y);
+  window.__G={S,PIN,green,gS,R,get prepare(){return prepare},get camUpd(){return camUpd}};   // pre automatické testy (screenshoty)
   // ---- HUD podľa vzoru golfových hier: vietor, mini-mapa, cieľ, dĺžka úderu
   const fm=d=>d<10?d.toFixed(1).replace(".",","):String(Math.round(d));
   const WIND=(()=>{const s=.5+Math.random()*4.5,a=Math.random()*Math.PI*2;return{s,a,x:Math.sin(a)*s,y:Math.cos(a)*s}})();
@@ -1125,13 +1155,16 @@ if(PLAY){
     const cl=CLUBS[S.club];$("p-cn").textContent=cl.n+(cl.a?" · "+Math.round(cl.c*S.lie.m)+" m":"")}
   function drawAim(){info();mapDirty=1;const cl=CLUBS[S.club],dx=Math.sin(S.aim),dy=Math.cos(S.aim);
     const L=cl.a?cl.c*S.lie.m:Math.min(Math.max(toPin()*1.1,3),cl.c);const n=30;
-    for(let i=0;i<n;i++){const s=L*i/(n-1),x=S.x+dx*s,y=S.y+dy*s;aimP.set([x,gS(x,y)+.06,-y],i*3)}
+    const s0=cl.a?0:.12,s1=cl.a?L:Math.max(s0+.3,Math.min(L,toPin()-.22));   // pat: čiara začína pred loptičkou a končí pred jamkou (jamka ostane čistá)
+    for(let i=0;i<n;i++){const s=s0+(s1-s0)*i/(n-1),x=S.x+dx*s,y=S.y+dy*s;aimP.set([x,gS(x,y)+(cl.a?.06:.02),-y],i*3)}
     aimG.setDrawRange(0,n);aimG.attributes.position.needsUpdate=true;aimL.computeLineDistances();aimL.visible=true;
     const ex=S.x+dx*L,ey=S.y+dy*L;TG.x=ex;TG.y=ey;TG.L=L;ring.visible=!!cl.a;ring.position.set(ex,gS(ex,ey)+.07,-ey)}
   function prepare(){S.mode="aim";S.vx=S.vy=S.vz=0;S.lie=S.tee?SURF.fair:surf(S.x,S.y);setAim();pickClub();info();drawAim();$("p-hit").disabled=false;
     $("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";place()}
   const rotAx=new THREE.Vector3();let lastBX=null,lastBY=0;
   function place(){const rb=.11*ball.scale.x;ball.position.set(S.x,(S.mode==="fly"?S.z:S.z-R+rb)-(S.sink||0),-S.y);
+    {const gz=gS(S.x,S.y),hb=Math.max(0,ball.position.y-rb-gz),off=(rb+hb)/sunH.t*.4;bShadow.visible=!S.sink&&S.mode!=="in"&&S.mode!=="drop"&&hb<20;
+     bShadow.position.set(S.x+sunH.x*off,gz+.004,-S.y+sunH.z*off);const sc=rb*(2.9+hb*.25);bShadow.scale.set(sc,1,sc*1.5);bShadow.rotation.y=Math.atan2(sunH.x,sunH.z);bShadow.material.opacity=Math.max(0,1-hb/12)}
     // otáčanie loptičky pri pohybe (vidno jamôčky a potlač, ako sa kotúľa)
     if(lastBX!=null&&(S.mode==="fly"||S.mode==="roll"||S.mode==="drop")){const dx=S.x-lastBX,dy=S.y-lastBY,d=Math.hypot(dx,dy);
       if(d>1e-5&&d<20){rotAx.set(-dy/d,0,-dx/d);ball.rotateOnWorldAxis(rotAx,Math.min(d/rb,.6)*(S.mode==="fly"?.35:1))}}
@@ -1268,12 +1301,12 @@ if(PLAY){
     if(!CLUBS[S.club].a&&S.mode!=="fly"&&S.view===2){const L=Math.min(toPin(),10),hz=Math.max(gS(S.x,S.y),gS(PIN[0],PIN[1]));
       return[[S.x-dx*(2+L*.15),S.y-dy*(2+L*.15),hz+1.4+L*.12],[S.x+dx*L*.55,S.y+dy*L*.55,gS(S.x+dx*L*.55,S.y+dy*L*.55)]]}
     // pat: detailný pohľad nízko tesne za loptičkou (vidno jamôčky aj líniu k jamke)
-    if(!CLUBS[S.club].a&&S.mode!=="fly"){S.low=1;const L=1.3;return[[S.x-dx*.62,S.y-dy*.62,gS(S.x,S.y)+.3],[S.x+dx*L,S.y+dy*L,gS(S.x+dx*L,S.y+dy*L)-.12]]}
+    if(!CLUBS[S.club].a&&S.mode!=="fly"){S.low=2;const L=1.05;return[[S.x-dx*1.3,S.y-dy*1.3,gS(S.x,S.y)+.58],[S.x+dx*L,S.y+dy*L,gS(S.x+dx*L,S.y+dy*L)]]}   // užší objektív (ako TV záber): loptička vpredu, jamka zreteľná
     if(onG){const L=Math.min(Math.max(toPin(),2),12);return[[S.x-dx*4.5,S.y-dy*4.5,S.z+1.7],[S.x+dx*L,S.y+dy*L,gS(S.x+dx*L,S.y+dy*L)]]}
     return[[S.x-dx*9,S.y-dy*9,S.z+3.2],[S.x+dx*40,S.y+dy*40,gS(S.x+dx*40,S.y+dy*40)+1]]}
   function camUpd(dt,snap){const[p,t]=camGoal();const P=W(p[0],p[1],Math.max(p[2],gS(p[0],p[1])+(S.cd||S.low?.25:1.2))),T=W(...t);
     const k=snap?1:1-Math.exp(-dt*(S.mode==="fly"?2.2:S.cd?2.6:4));camP.lerp(P,k);camT.lerp(T,k);camera.position.copy(camP);camera.lookAt(camT);
-    {const nr=(S.low||S.cd)?.06:1;if(camera.near!==nr){camera.near=nr;camera.updateProjectionMatrix()}}}
+    {const nr=(S.low||S.cd)?.06:1,fv=S.low===2?40:55,f2=snap?fv:camera.fov+(fv-camera.fov)*k;if(camera.near!==nr||Math.abs(camera.fov-f2)>.01){camera.near=nr;camera.fov=f2;camera.updateProjectionMatrix()}}}
   // ovládanie
   // úder: drž = sila (po oblúku), pusti = sila zamknutá a rozkolíše sa ručička, ťukni (kdekoľvek) keď je v strede.
   // Pat: drž a pusti (len sila).
@@ -1317,7 +1350,7 @@ if(PLAY){
       if(S.mode==="fly"||S.mode==="roll"||S.mode==="drop"){place();if(S.tr<600){trailP.set([S.x,S.z+.05,-S.y],S.tr*3);S.tr++;trailG.setDrawRange(0,S.tr);trailG.attributes.position.needsUpdate=true}
         if(S.mode==="roll"||S.mode==="wait")info()}
       camUpd(dt,false);
-      {const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(2.5,Math.max(nearG?.24:.35,dd/(nearG?40:14))))}
+      {const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(2.5,Math.max(nearG?(S.low===2?.3:.24):.35,dd/(nearG?40:14))))}
       if(S.mode!=="in")place();   // výška loptičky podľa aktuálnej veľkosti (leží na tráve)
       // pri patovaní je vlajka vytiahnutá, aby bolo vidno jamku
       {const pull=S.mode!=="fly"&&!CLUBS[S.club].a&&toPin()<25;pin.visible=flag.visible=!pull}}};
