@@ -225,9 +225,9 @@ function grassDetail(mat,amt,under){mat.onBeforeCompile=sh=>{sh.uniforms.dTex={v
   sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying vec2 vWp;varying float vDd;").replace("#include <begin_vertex>","#include <begin_vertex>\nvec4 wp4=modelMatrix*vec4(transformed,1.);vWp=wp4.xz;vDd=distance(wp4.xyz,cameraPosition);");
   sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform sampler2D dTex;uniform float dA;varying vec2 vWp;varying float vDd;"+(UND?"uniform vec2 bC;uniform float bS;uniform sampler2D bK;uniform vec4 bG;":""))
    .replace("#include <map_fragment>",HQ?`#include <map_fragment>`+(UND?`
-{vec2 bp=vec2(vWp.x,-vWp.y);float bk=texture2D(bK,(bp-bG.xy)/(bG.zw-bG.xy)).r,bf=pow(1.-smoothstep(bS*.08,bS*.5,length(bp-bC)),1.4);
+{vec2 bp=vec2(vWp.x,-vWp.y);float bd=length(bp-bC);if(bd<bS*.5){float bf=pow(1.-smoothstep(bS*.08,bS*.5,bd),1.4),bk=texture2D(bK,(bp-bG.xy)/(bG.zw-bG.xy)).r;
  float cl=texture2D(dTex,vWp*5.3+.13).r,cs=texture2D(dTex,vWp*13.+.71).r;
- diffuseColor.rgb*=mix(vec3(1.),vec3(.66,.7,.6)+.22*cl+.14*cs,clamp(bk*1.25,0.,1.)*bf);}`:"")+`
+ diffuseColor.rgb*=mix(vec3(1.),vec3(.66,.7,.6)+.22*cl+.14*cs,clamp(bk*1.25,0.,1.)*bf);}}`:"")+`
 {float n1=1.-smoothstep(4.,40.,vDd),n2=1.-smoothstep(15.,110.,vDd);
  float f1=texture2D(dTex,vWp*2.6).r,f2=texture2D(dTex,vWp*.9+.37).r,cl=texture2D(dTex,vWp*.05).g,cm=texture2D(dTex,vWp*.27).g;
  float gm=((f1-.5)*1.1*n1+(f2-.5)*.7*n2)*(.35+dA*3.)+((cl-.5)*.8+(cm-.5)*.45)*dA*1.6;
