@@ -1008,7 +1008,9 @@ window.__playHere=u=>{if(PLAY||game)return false;let U;try{U=new URL(u)}catch(e)
   if(U.pathname!==location.pathname||P.get("play")!=="1"||(P.get("c")||"")!==(Q.get("c")||"")||parseInt(P.get("h"))!==hNum||(parseInt(P.get("t"))||0)!==tIdx)return false;
   PLAY=true;ONE=P.get("one")==="1";SC=(P.get("sc")||"").split("-").filter(x=>x).map(Number).slice(0,hNum-1);
   try{history.replaceState(null,"",U.href);if(window.__EMB)parent.history.replaceState(null,"",U.href)}catch(e){}
-  if(fly){fly=null}document.body.classList.remove("allv");startPlay();return true};
+  if(fly){fly=null}document.body.classList.remove("allv");window.__from={p:camera.position.clone(),t:controls.target.clone()};startPlay();
+  // nové objekty hry (loptička, čiary, terč): shadery sa pripravia na pozadí a dovtedy ostane na obrazovke posledný záber – bez zaseknutia
+  window.__hold=true;const go=()=>{window.__hold=false};try{scene.traverse(o=>{const M=o.material;if(M)for(const k in M){const v=M[k];if(v&&v.isTexture&&renderer.initTexture)renderer.initTexture(v)}})}catch(e){}setTimeout(go,2500);const pr=preAll(false);if(pr&&pr.then)pr.then(go,go);else go();return true};
 if(PLAY)startPlay();
 function startPlay(){
   // počas hry žiadne upozornenia: skryjeme špendlíky aj tlačidlo ⚠️ (hlásenia ostávajú uložené)
@@ -1495,6 +1497,8 @@ function startPlay(){
       {const pull=S.mode!=="fly"&&!CLUBS[S.club].a&&toPin()<25;pin.visible=flag.visible=!pull}}};
   document.getElementById("h-t").innerHTML=`<span class="hn">${hNum}</span><span class="hp">PAR ${PAR}${SC.length?" · zatiaľ "+SC.reduce((a,b)=>a+b,0):""}</span>`;
   prepare();{const[p,t]=camGoal();camP.copy(W(...p));camT.copy(W(...t))}camUpd(0,true);
+  // spustené z už otvorenej jamky: kamera plynulo priletí z aktuálneho pohľadu za loptičku (nie skok)
+  if(window.__from){camP.copy(window.__from.p);camT.copy(window.__from.t);camera.position.copy(camP);camera.lookAt(camT);window.__from=null}
   if(Q.has("dbg"))window.__g={S,step,ring,setTarget,tgtL,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R,ball,camera,renderer,scene,leafBurst,OBST,TRUNKS,splash};
 }
 
@@ -1522,16 +1526,17 @@ function loop(now){if(window.__stopped)return;const rdt=lastT?(now-lastT)/1000:0
   waveFlag(now/1000);if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
-     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold)renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 // shadery pre všetko, čo sa ukáže až neskôr (steblá trávy pri zemi, efekty), sa pripravia hneď po načítaní –
 // inak sa kompilovali uprostred preletu ku jamke a obraz sa na chvíľu zasekol
-setTimeout(()=>{if(window.__stopped)return;const hid=[];scene.traverse(o=>{if(!o.visible){hid.push(o);o.visible=true}});
+function preAll(fade){if(window.__stopped)return null;const hid=[];scene.traverse(o=>{if(!o.visible){hid.push(o);o.visible=true}});
   // aj priesvitná verzia lístia (stromy medzi kamerou a jamkou sa pri prelete zprehľadnia)
-  const fm=[];for(const f of FADE)for(const m of f.m){const M=m.material;if(!M.transparent){fm.push(M);M.transparent=true;M.depthWrite=false;M.needsUpdate=true}}
-  let p=null;try{renderer.compile(scene,camera);for(const M of fm){M.transparent=false;M.depthWrite=true;M.needsUpdate=true}
+  const fm=[];if(fade)for(const f of FADE)for(const m of f.m){const M=m.material;if(!M.transparent){fm.push(M);M.transparent=true;M.depthWrite=false;M.needsUpdate=true}}
+  let p=null;try{if(fm.length)renderer.compile(scene,camera);for(const M of fm){M.transparent=false;M.depthWrite=true;M.needsUpdate=true}
     p=renderer.compileAsync?renderer.compileAsync(scene,camera):(renderer.compile(scene,camera),null)}catch(e){for(const M of fm){M.transparent=false;M.depthWrite=true;M.needsUpdate=true}}for(const o of hid)o.visible=false;
-  if(p&&p.catch)p.catch(()=>{})},400);
+  if(p&&p.catch)p.catch(()=>{});return p}
+setTimeout(()=>preAll(true),400);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // kvalita grafiky podľa výkonu: na telefóne začína strednou (menšie rozlíšenie, menej stebiel); ak je stále pod ~40 fps, zníži sa ešte o stupeň
 // (rozlíšenie 1×, ešte menej stebiel, menšia mapa tieňov). Počas hry sa späť nezvyšuje, aby obraz neskákal. ?q=0/1/2 vynúti stupeň.
