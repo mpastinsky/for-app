@@ -76,6 +76,7 @@ import {OrbitControls} from "./lib/OrbitControls.js";
 const Q=new URLSearchParams(location.search);
 // ihrisko: ?c=apex = 18-jamkové Apex Báč (apex.json), inak akadémia
 const CRS=Q.get("c")==="apex"?"apex":"akademia",CQ=CRS==="apex"?"c=apex&":"";
+const HQ=CRS!=="apex",OTHL=[];   // vylepšená grafika (zatiaľ akadémia)
 const DATA=await (await fetch(CRS+".json")).json();
 const READY=DATA.ready||DATA.gc.map((_,i)=>i+1),LASTH=READY[READY.length-1];
 const PARS=DATA.par||READY.map(()=>3);
@@ -152,7 +153,7 @@ document.getElementById("note").textContent="Terén © ÚGKK SR, DMR 5.0 (CC BY 
 // --- scéna
 const scene=new THREE.Scene();
 const sky=STYLE.sunWest?0xd9e3ea:0xc4dbee,skyTop=STYLE.sunWest?0x6f9bd0:0x4f8fd8;
-scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,Math.max(350,c+120),Math.max(900,c+550));
+scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(HQ?0xa6b9a6:sky,Math.max(350,c+120),Math.max(900,c+550));
 // obloha: jedna guľa s textúrou nakreslenou raz pri načítaní – prechod od obzoru do modra + prirodzené biele kopovité oblaky (nehýbu sa).
 // Oblaky sa počítajú ako šum na rovine vo výške nad ihriskom, premietnutej na oblohu, takže pri obzore sú menšie a riedke ako v skutočnosti.
 {const Wd=1024,Hh=256,cv=document.createElement("canvas");cv.width=Wd;cv.height=Hh*2;const x=cv.getContext("2d"),im=x.createImageData(Wd,Hh),o=im.data;
@@ -169,7 +170,7 @@ scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,Math.max(350,c
      // biele okraje, mierne sivšie hustejšie jadro
      const cr=1-.2*sh,cg=1-.18*sh,cb=1-.13*sh,q=(j*Wd+i)*4;
      o[q]=255*(br+(cr-br)*a);o[q+1]=255*(bg+(cg-bg)*a);o[q+2]=255*(bb+(cb-bb)*a);o[q+3]=255}}
- x.putImageData(im,0,0);x.fillStyle="#"+cA.getHexString();x.fillRect(0,Hh,Wd,Hh);
+ x.putImageData(im,0,0);x.fillStyle=HQ?"#6f8c55":"#"+cA.getHexString();x.fillRect(0,Hh,Wd,Hh);if(HQ){const g=x.createLinearGradient(0,Hh-6,0,Hh+10);g.addColorStop(0,"rgba(111,140,85,0)");g.addColorStop(.4,"#9fb3a0");g.addColorStop(1,"#6f8c55");x.fillStyle=g;x.fillRect(0,Hh-6,Wd,16)}
  const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;tx.wrapS=THREE.RepeatWrapping;tx.anisotropy=4;
  const dome=new THREE.Mesh(new THREE.SphereGeometry(1300,48,24),new THREE.MeshBasicMaterial({map:tx,side:THREE.BackSide,fog:false,depthWrite:false}));dome.renderOrder=-1;dome.frustumCulled=false;
  dome.onBeforeRender=(r,sc,cam)=>dome.position.copy(cam.position);scene.add(dome)}
@@ -179,7 +180,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.prepend(renderer.domElement);
 const W=(x,y,h)=>new THREE.Vector3(x,h,-y);
 // jemné detaily povrchu zblízka (jedna 512 px textúra, opakovaná): R = steblá trávy (krátke ťahy), G = väčšie trsy/fľaky, B = zrnká piesku
-const HQ=CRS!=="apex";const OTHL=[];   // vylepšená grafika (zatiaľ akadémia)
+   // vylepšená grafika (zatiaľ akadémia)
 const DN=(()=>{const n=512,cv=document.createElement("canvas");cv.width=cv.height=n;const x=cv.getContext("2d");let sd=12345;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
   // R: steblá – tisíce krátkych svetlých/tmavých ťahov (pri pohľade zhora vyzerá tráva ako hustá spleť stebiel)
   const R=document.createElement("canvas");R.width=R.height=n;const rx=R.getContext("2d");rx.fillStyle="#808080";rx.fillRect(0,0,n,n);rx.lineCap="round";
@@ -339,7 +340,7 @@ for(const B of myBunkers){const[bx0,bx1,by0,by1]=B.bb.map(Math.round),bw=bx1-bx0
   const bm=new THREE.Mesh(bg,grassDetail(new THREE.MeshStandardMaterial({map:bt,transparent:true,depthWrite:false,roughness:.8,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-8}),.12));
   bm.receiveShadow=true;bm.renderOrder=2;scene.add(bm)}
 // okolie mimo modelu (rovina)
-const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:STYLE.dry?0x9c9a52:0x6a8a3c,roughness:1}));
+const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:STYLE.dry?0x9c9a52:0x6a8a3c,roughness:1,fog:!HQ}));
 {let mn=1e9;const pp=geo.attributes.position;for(let i=0;i<pp.count;i++)mn=Math.min(mn,pp.getY(i));far.position.set(0,mn-2,-c/2)}scene.add(far);
 // --- 3D steblá trávy zblízka (len vylepšená grafika): ~22 000 stebiel v štvorci 12 × 12 m okolo miesta, kam sa pozeráme.
 // Steblá sa neprepočítavajú v JS – vertex shader ich „pretáča“ s kamerou (mod), výšku berie z mapy terénu a dĺžku z mapy povrchu
@@ -502,14 +503,14 @@ function bush(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);
 // tvary konkrétnych stromov akadémie podľa fotiek (index v akademia.json → [šírka koruny ×, výška ×]): odpalisko 3 – vľavo široký listnáč, vpravo vysoké stromy
 const TSHAPE=HQ?{25:[1.45,.95],16:[1.15,1.55],10:[1.1,1.5],9:[1.05,1.4],8:[1,1.3]}:{};
 function tree(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);const see=!HQ&&inPlay(x,y,r);const ts=TSHAPE[k];if(ts){r*=ts[0];h*=ts[1]}
-  const tr=HQ?new THREE.Mesh(trunkHQ(h*.66,.42,5,k+1),barkHQ):new THREE.Mesh(trunkGeo(h*.62,.5,3,k+1),barkM);tr.position.copy(W(x,y,z));tr.rotation.y=k;tr.castShadow=true;scene.add(tr);
+  const tr=HQ?new THREE.Mesh(trunkHQ(h*.62,.42,0,k+1),barkHQ):new THREE.Mesh(trunkGeo(h*.62,.5,3,k+1),barkM);tr.position.copy(W(x,y,z));tr.rotation.y=k;tr.castShadow=true;scene.add(tr);
   const cr=HQ?new THREE.Mesh(CARDS.round[k%6],see?Object.assign(leafHQ(k),{transparent:true,opacity:.35,alphaTest:.12,depthWrite:false}):leafHQ(k)):new THREE.Mesh(CROWNS.round[k%6],see?seeM:leafV.clone());const cy2=ts?h*.72/2.2:r*1.2;cr.scale.set(r*1.05,cy2,r*1.05);cr.rotation.y=k*2.1;cr.position.copy(W(x,y,ts?z+h*.28+cy2*1.1:z+h*.5+r*.8));cr.castShadow=!see;scene.add(cr);
   if(!see)FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.25),r:r*1.15,op:1})}
 // 5. hodnota 1 = strom s korunou až po zem (bez viditeľného kmeňa)
 DATA.trees.forEach(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(g)bush(x,y,r,h,k);else tree(x,y,r,h,k)});
 // rad stromov pozdĺž okraja (vpravo od jednotky): obyčajné listnaté stromy
 DATA.row.forEach((p,k)=>{const[x,y]=loc(p);tree(x,y,1.9+((k*37)%10)/12,6.2+((k*53)%15)/10,k+100)});   // rad pri plote: menšie stromy (podľa satelitu)
-DATA.woods.forEach((wd,wi)=>{const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;const park=HQ&&wi===1;   // za odpaliskom 3: park s vysokými borovicami a listnáčmi (podľa fotky)
+DATA.woods.forEach((wd,wi)=>{const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;const park=false;   // za odpaliskom 3: park s vysokými borovicami a listnáčmi (podľa fotky)
   for(let k=0;k<3000&&n<(park?34:90);k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;const[x,y]=loc([e,nn]);if(y<-3&&y>-30&&Math.abs(x)<10)continue;   // za odpaliskom nechaj miesto pre kameru
     n++;if(park){if(k%5<2)pine(x,y,2.6+rnd()*1.6,15+rnd()*6,k);else tree(x,y,2.6+rnd()*1.8,13+rnd()*6,k)}else bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}});
