@@ -270,15 +270,23 @@ else{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8))
 const waterL=(DATA.water||[]).map(P=>P.map(loc));
 for(const P of waterL){g2.save();path(P);g2.lineWidth=2.5*ppm;g2.strokeStyle="#6f9a4a";g2.stroke();g2.fillStyle="#3d7397";g2.fill();g2.clip();
   g2.fillStyle="rgba(255,255,255,.07)";for(let k=0;k<40;k++){g2.beginPath();g2.ellipse(rnd()*TEX,rnd()*TEX,(8+rnd()*20)*ppm,1.2*ppm,0,0,7);g2.fill()}g2.restore()}
-// ostatné jamky v zábere (kvôli prehľadu „Všetky jamky“): fairway, green, odpaliská – zjednodušene
-READY.forEach(h=>{if(h===hNum||!DATA.greens[h-1])return;
-  for(const poly of (DATA.mow&&DATA.mow[h])||[]){path(poly.map(loc));g2.fillStyle="#74b04a";g2.fill()}
-  const G=DATA.greens[h-1].map(loc);path(G);g2.lineJoin="round";g2.lineWidth=8*ppm;g2.strokeStyle="#7cba4b";g2.stroke();g2.fillStyle="#7cba4b";g2.fill();
-  path(G);g2.lineWidth=3*ppm;g2.strokeStyle="#8bcb55";g2.stroke();g2.fillStyle="#9fd95e";g2.fill();
-  (DATA.pads[h]||[]).forEach(pd=>{const[x,y]=loc(pd);g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);g2.fillStyle="#86c45a";g2.fill()})});
+const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
+// ostatné jamky v zábere (prehľad „Všetky jamky“): rovnaký vzhľad ako aktuálna jamka – fairway s pásmi kosenia po smere hry,
+// green s prvým kosom, lemom a pásmi 1,2 m, odpaliská
+{const ppx=TEX/(X1-X0),ppy=TEX/(Y1-Y0);
+ const inM=(o,d)=>{g2.setTransform(ppx,0,0,-ppy,-X0*ppx,Y1*ppy);g2.translate(o[0],o[1]);g2.rotate(Math.atan2(-d[0],d[1]))};   // lokálne: v = po smere hry
+ READY.forEach(h=>{if(h===hNum||!DATA.greens[h-1])return;
+  const pd=(DATA.pads[h]||[]).map(loc),G=DATA.greens[h-1].map(loc),gc=G.reduce((a,p)=>[a[0]+p[0]/G.length,a[1]+p[1]/G.length],[0,0]);
+  const o=pd.length?pd.reduce((a,p)=>[a[0]+p[0]/pd.length,a[1]+p[1]/pd.length],[0,0]):gc,L=Math.hypot(gc[0]-o[0],gc[1]-o[1])||1,d=[(gc[0]-o[0])/L,(gc[1]-o[1])/L];
+  for(const poly of ((DATA.mow&&DATA.mow[h])||[]).slice().reverse()){g2.save();path(poly.map(loc));g2.clip();g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);inM(o,d);
+   g2.fillStyle="rgba(40,90,25,.13)";for(let v=-40;v<L+40;v+=12)g2.fillRect(-150,v,300,6);
+   g2.fillStyle="rgba(235,255,200,.07)";for(let u=-150;u<150;u+=12)g2.fillRect(u,-40,6,L+80);g2.restore()}
+  g2.lineJoin="round";path(G);g2.lineWidth=8*ppx;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
+  path(G);g2.lineWidth=3*ppx;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill();
+  g2.save();path(G);g2.clip();inM(gc,d);for(let u=-30;u<30;u+=1.2){g2.fillStyle=(Math.round(u/1.2)&1)?"rgba(255,255,220,.075)":"rgba(20,70,10,.06)";g2.fillRect(u,-30,1.2,60)}g2.restore();
+  pd.forEach(([x,y])=>{g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppx,0,7);g2.fillStyle="#8fd062";g2.fill();g2.lineWidth=.5*ppx;g2.strokeStyle="#5d9a3c";g2.stroke()})})}
 // greeny: lem (fringe) + plocha
 // farby trávnika okolo greenu (detail v jemnej textúre nižšie)
-const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
 g2.lineJoin="round";path(green);g2.lineWidth=8*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
 path(green);g2.lineWidth=3*ppm;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill();
 // bunkre
