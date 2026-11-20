@@ -427,7 +427,8 @@ vB=position.y;vR=aRnd.z;vF=bf*bf;`)
  // dve vrstvy: hustá tesne pred kamerou (9 m) a redšia ďalej (22 m) – hustota plynulo klesá, bez ostrej hranice
  const LAY=[[mk(36000,9,4242),4],[mk(30000,22,777),9.5]];
  BLADES={tick(t,px,py,fx,fy,camH){for(const[L,o]of LAY){L.U.uT.value=t;L.U.uC.value.set(px+fx*o,py+fy*o);L.mesh.visible=camH<28}
-   if(camH<28)BGU.uC.value.copy(LAY[1][0].U.uC.value);else BGU.uC.value.set(1e6,1e6)}}}
+   if(camH<28)BGU.uC.value.copy(LAY[1][0].U.uC.value);else BGU.uC.value.set(1e6,1e6)},
+  setQ(f){for(const[L]of LAY){const g=L.mesh.geometry;g.N0=g.N0||g.instanceCount;g.instanceCount=Math.round(g.N0*f)}}}}
 if(Q.has("dbg"))Object.assign(window,{__B:BLADES,__hL:hL,__sc:scene,__cam:camera,__r:renderer});
 
 // --- stromy
@@ -1503,7 +1504,7 @@ window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;sn
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
   if(CRS==="apex")snapGo("ihrisko.html?t="+tIdx);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!Q.has("play")){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
 document.querySelectorAll("#holes a").forEach(a=>a.addEventListener("click",ev=>{if(ev.metaKey||ev.ctrlKey)return;ev.preventDefault();snapGo(a.href)}));
-function loop(now){if(window.__stopped)return;const dt=Math.min(.05,lastT?(now-lastT)/1000:0);lastT=now;
+function loop(now){if(window.__stopped)return;const rdt=lastT?(now-lastT)/1000:0,dt=Math.min(.05,rdt);lastT=now;if(rdt<1)qTick(rdt);
   if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
     camera.position.copy(curve.getPoint(e));controls.target.copy(W(0,c,hG));if(k>=1)fly=null}
   waveFlag(now/1000);if(game)game.update(dt);else{controls.update();
@@ -1512,6 +1513,15 @@ function loop(now){if(window.__stopped)return;const dt=Math.min(.05,lastT?(now-l
      const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+// kvalita grafiky podľa výkonu: na telefóne začína strednou (menšie rozlíšenie, menej stebiel); ak je stále pod ~40 fps, zníži sa ešte o stupeň
+// (rozlíšenie 1×, ešte menej stebiel, menšia mapa tieňov). Počas hry sa späť nezvyšuje, aby obraz neskákal. ?q=0/1/2 vynúti stupeň.
+const QLV=[{pr:2,bl:1},{pr:1.5,bl:.55},{pr:1,bl:.3,sh:1024}],QF={l:-1,n:0,t:0,warm:0};
+function setQL(l){l=Math.max(0,Math.min(2,l));if(l===QF.l)return;QF.l=l;const q=QLV[l];renderer.setPixelRatio(Math.min(devicePixelRatio,q.pr));renderer.setSize(innerWidth,innerHeight);
+  if(BLADES)BLADES.setQ(q.bl);if(q.sh&&sun.shadow.mapSize.x>q.sh){sun.shadow.mapSize.set(q.sh,q.sh);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}}
+const MOBILE=matchMedia("(pointer:coarse)").matches||/iPhone|iPad|Android/i.test(navigator.userAgent);
+setQL(Q.has("q")?+Q.get("q"):MOBILE?1:0);
+function qTick(dt){if(Q.has("q")||QF.l>=2||!dt)return;QF.warm+=dt;if(QF.warm<3)return;QF.n++;QF.t+=dt;
+  if(QF.t>=2){const fps=QF.n/QF.t;QF.n=0;QF.t=0;if(fps<40)setQL(QF.l+1)}}
 // nová verzia appky: service worker sa hneď aktualizuje a stránka sa raz obnoví
 if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("../sw.js",{scope:"../"}).then(r=>r.update()).catch(()=>{});
   let rl=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(rl)return;rl=true;location.reload()})}
