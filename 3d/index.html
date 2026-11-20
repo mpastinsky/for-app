@@ -48,8 +48,9 @@ body.allv .lab.hole{display:block!important}.lab.hole.cur{background:#ffd400;col
 <script>/* prechody bez preblikntia: nová obrazovka (jamka / prehľad) sa načíta v rámci nad tou súčasnou
    a ukáže sa až keď má vykreslený prvý záber; stará sa potom zahodí. Odkazy mimo 3D (späť do appky) idú normálne. */
 (function(){const EMB=window.parent!==window;window.__EMB=EMB;let frames=[];
- const abs=u=>new URL(u,location.href).href,in3d=u=>{const p=new URL(u,location.href).pathname;return /\/3d\/(index\.html|ihrisko\.html)?$/.test(p)};
- window.forNav=function(url){if(!in3d(url)){(EMB?top:window).location.href=abs(url);return}
+ const abs=u=>new URL(u,location.href).href,in3d=u=>false;   // 3D obrazovky sa otvárajú normálnym načítaním stránky (rámce s dvoma scénami naraz sekali – Martin, v140)
+ const snap=u=>{try{if(window.__snap&&/\/3d\//.test(new URL(u,location.href).pathname)){const d=window.__snap();if(d)sessionStorage.setItem("for.snap",d)}}catch(e){}};
+ window.forNav=function(url){if(!in3d(url)){snap(url);(EMB?top:window).location.href=abs(url);return}
    if(window.__playHere&&window.__playHere(abs(url)))return;   // tá istá jamka → hra sa spustí hneď, bez nového načítania scény
    if(window.__freeze)window.__freeze();if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
  function openFrame(u){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");
@@ -1512,6 +1513,8 @@ let lastT=0;const _bv=new THREE.Vector3();
 function snapGo(url){forNav(url)}
 window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
 // pred prechodom na inú 3D obrazovku: posledný záber ostane ako obrázok a 3D scéna sa hneď uvoľní (na mobile naraz len jedna 3D scéna v pamäti – inak sa iPhone zasekol)
+// posledný záber (malý JPEG) pre ďalšiu stránku, aby pri prechode nepreblikla prázdna obrazovka
+window.__snap=()=>{if(window.__stopped)return null;renderer.render(scene,camera);const D=renderer.domElement,k=Math.min(1,700/Math.max(D.width,D.height)),cv=document.createElement("canvas");cv.width=D.width*k|0;cv.height=D.height*k|0;cv.getContext("2d").drawImage(D,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",.75)};
 window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(scene,camera);const D=renderer.domElement,k=Math.min(1,900/Math.max(D.width,D.height)),cv=document.createElement("canvas");cv.width=D.width*k|0;cv.height=D.height*k|0;cv.getContext("2d").drawImage(D,0,0,cv.width,cv.height);u=cv.toDataURL("image/jpeg",.8)}catch(e){}
  document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
  const done=()=>{document.body.appendChild(i);const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
