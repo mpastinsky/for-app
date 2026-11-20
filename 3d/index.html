@@ -1116,9 +1116,13 @@ if(PLAY){
       const h=gS(PIN[0],PIN[1]);return[[PIN[0]+S.cd[0]*.42,PIN[1]+S.cd[1]*.42,h+.24],[PIN[0],PIN[1],h-.04]]}
     if(S.mode==="fly"||S.mode==="roll"){const d=Math.max(1,Math.hypot(S.vx,S.vy));const fx=S.vx/d,fy=S.vy/d;
       if(S.mode==="fly"&&S.vz>0){const bk=12;return[[S.prev[0]-dx*bk,S.prev[1]-dy*bk,gS(S.prev[0],S.prev[1])+4],[S.x,S.y,S.z]]}
+      if(S.mode==="roll"&&!CLUBS[S.club].a&&S.view===2){const hz=Math.max(gS(S.x,S.y),gS(PIN[0],PIN[1]));return[[S.x-fx*2.6,S.y-fy*2.6,hz+1.5],[S.x+fx*2,S.y+fy*2,gS(S.x+fx*2,S.y+fy*2)]]}   // pat zhora
       if(S.mode==="roll"&&!CLUBS[S.club].a){S.low=1;return[[S.x-fx*1.3,S.y-fy*1.3,gS(S.x,S.y)+.42],[S.x+fx*2.5,S.y+fy*2.5,gS(S.x+fx*2.5,S.y+fy*2.5)]]}   // pat: kamera nízko za loptičkou
       return[[S.x-fx*7-1,S.y-fy*7,S.z+3],[S.x,S.y,S.z]]}
     if(S.view===1){return[[S.x-dx*20,S.y-dy*20,S.z+40],[S.x+dx*Math.min(toPin(),120)*.6,S.y+dy*Math.min(toPin(),120)*.6,gS(PIN[0],PIN[1])]]}
+    // pat zhora: kamera vyššie za loptičkou, nad úrovňou loptičky aj jamky – vidno jamku aj v kopci
+    if(!CLUBS[S.club].a&&S.mode!=="fly"&&S.view===2){const L=Math.min(toPin(),10),hz=Math.max(gS(S.x,S.y),gS(PIN[0],PIN[1]));
+      return[[S.x-dx*(2+L*.15),S.y-dy*(2+L*.15),hz+1.4+L*.12],[S.x+dx*L*.55,S.y+dy*L*.55,gS(S.x+dx*L*.55,S.y+dy*L*.55)]]}
     // pat: detailný pohľad nízko tesne za loptičkou (vidno jamôčky aj líniu k jamke)
     if(!CLUBS[S.club].a&&S.mode!=="fly"){S.low=1;const L=1.3;return[[S.x-dx*.62,S.y-dy*.62,gS(S.x,S.y)+.3],[S.x+dx*L,S.y+dy*L,gS(S.x+dx*L,S.y+dy*L)-.12]]}
     if(onG){const L=Math.min(Math.max(toPin(),2),12);return[[S.x-dx*4.5,S.y-dy*4.5,S.z+1.7],[S.x+dx*L,S.y+dy*L,gS(S.x+dx*L,S.y+dy*L)]]}
@@ -1150,7 +1154,9 @@ if(PLAY){
   for(const[id,dv]of[["p-l",-1],["p-r",1]]){const b=$(id);b.addEventListener("pointerdown",e=>{e.preventDefault();turn=dv});for(const ev of["pointerup","pointerleave","pointercancel"])b.addEventListener(ev,()=>{turn=0})}
   $("p-cp").onclick=()=>{if(S.mode!=="aim")return;S.club=(S.club+1)%CLUBS.length;info();drawAim()};
   $("p-cm").onclick=()=>{if(S.mode!=="aim")return;S.club=(S.club+CLUBS.length-1)%CLUBS.length;info();drawAim()};
-  $("p-v").onclick=()=>{S.view=1-S.view};
+  // 👁 prepína pohľady: pri pate zblízka → zhora → prehľad, inak normálny ↔ prehľad
+  $("p-v").onclick=()=>{const putt=!CLUBS[S.club].a;S.view=putt?(S.view===0?2:S.view===2?1:0):(S.view===1?0:1);
+    msg({0:putt?"Pohľad zblízka":"Pohľad za loptičkou",1:"Prehľad zhora",2:"Pohľad zhora na jamku"}[S.view]);const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1300)};
   // potiahnutie prstom po scéne = mierenie
   let drag=null;renderer.domElement.addEventListener("pointerdown",e=>{drag=e.clientX});
   addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim"||SW)return;S.aim+=(e.clientX-drag)*.0011;drag=e.clientX;drawAim()});
