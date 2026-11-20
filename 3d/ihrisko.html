@@ -29,8 +29,9 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
 <script>/* prechody bez preblikntia: nová obrazovka (jamka / prehľad) sa načíta v rámci nad tou súčasnou
    a ukáže sa až keď má vykreslený prvý záber; stará sa potom zahodí. Odkazy mimo 3D (späť do appky) idú normálne. */
 (function(){const EMB=window.parent!==window;window.__EMB=EMB;let frames=[];
- const abs=u=>new URL(u,location.href).href,in3d=u=>{const p=new URL(u,location.href).pathname;return /\/3d\/(index\.html|ihrisko\.html)?$/.test(p)};
- window.forNav=function(url){if(!in3d(url)){(EMB?top:window).location.href=abs(url);return}
+ const abs=u=>new URL(u,location.href).href,in3d=u=>false;   // 3D obrazovky sa otvárajú normálnym načítaním stránky (rámce s dvoma scénami naraz sekali – Martin, v140)
+ const snap=u=>{try{if(window.__snap&&/\/3d\//.test(new URL(u,location.href).pathname)){const d=window.__snap();if(d)sessionStorage.setItem("for.snap",d)}}catch(e){}};
+ window.forNav=function(url){if(!in3d(url)){snap(url);(EMB?top:window).location.href=abs(url);return}
    if(window.__freeze)window.__freeze();if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
  function openFrame(u){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");
    f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f);f.__to=setTimeout(()=>{if(f.style.opacity!=="1")location.href=u},15000)}
