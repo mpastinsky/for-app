@@ -759,17 +759,23 @@ function bunkerOk(){const w=repWhere();if(!w)return false;const d=bunkerDist(w.p
   if(w.approx)return false;return d<=3}
 function repTile(k){if(k.startsWith("g:")){const g=REP_GROUPS[k.slice(2)];return `<button data-g="${k.slice(2)}"><span>${g.i}</span>${g.t} ›</button>`}
   const r=repInfo(k);return `<button data-k="${r.k}" class="${r.hot?"hot":""}"><span>${icH(r)}</span>${r.t}</button>`}
+// tempo sa dá nahlásiť aj pre jamku za nami (-1) a pred nami (+1); akadémia ide dookola, 18-ka nie
+let paceOff=0;
+const paceHole=o=>{const h=round.hole+1+o;return h>=1&&h<=HOLES?h:AKAD?(h-1+HOLES)%HOLES+1:null};
+function paceChips(){return '<div class="small" style="margin:4px 0 8px">⏱️ Tempo na jamke: '+[-1,0,1].map(o=>{const h=paceHole(o);if(!h||(o&&h===round.hole+1))return"";return `<button class="mini" data-po="${o}" style="${paceOff===o?"background:#ff8a00;color:#fff;border-color:#ff8a00":""}">${o<0?"⬅ "+h+" za nami":o>0?h+" pred nami ➡":h+" tu"}</button>`}).join(" ")+"</div>"}
 function renderRepSheet(){const w=repWhere();
   $("rep-title").textContent=repLevel?REP_GROUPS[repLevel].t:"Čo vidíš?";
   $("rep-back").hidden=!repLevel;
   $("rep-grid").innerHTML=(repLevel?REPORTS.filter(r=>r.g===repLevel&&!r.off).map(r=>r.k):REP_TOP).filter(k=>(k!=="bunker"||bunkerOk())&&!(NOT_IN_BUNKER.includes(k)&&inBunkerNow())).map(repTile).join("");
   $("rep-where").innerHTML=w?"📍 Uloží sa "+w.src+"."+(tapPt&&me?' <button class="mini" id="rep-mine">na mojej polohe</button>':""):"Poloha nie je známa. Zavri okno a ťukni na mape na miesto problému.";
   if($("rep-mine"))$("rep-mine").onclick=()=>{tapPt=null;renderTap();renderRepSheet()};
+  if(w&&[...$("rep-grid").querySelectorAll("button[data-k]")].some(b=>REP_MOVING[b.dataset.k])){$("rep-where").insertAdjacentHTML("beforeend",paceChips());
+    $("rep-where").querySelectorAll("button[data-po]").forEach(b=>b.onclick=e=>{e.stopPropagation();paceOff=+b.dataset.po;renderRepSheet()})}
   $("rep-grid").querySelectorAll("button").forEach(b=>b.disabled=!w)}
 $("rep-here").onclick=e=>{e.stopPropagation();openReport()};
 // je bod na ihrisku? (do 400 m od niektorého greenu alebo odpaliska)
 const onCourseApp=ll=>[...(course.greens||[]),...(course.tees||[])].some(g=>g&&distM(ll,g)<400);
-function openReport(){repLevel=null;$("rep-voice").textContent="";$("rep-list").hidden=true;$("rep").hidden=false;renderRepSheet();
+function openReport(){repLevel=null;paceOff=0;$("rep-voice").textContent="";$("rep-list").hidden=true;$("rep").hidden=false;renderRepSheet();
   const m=repGuard(null,null,me,meAccM,onCourseApp);
   if(m){$("rep-grid").innerHTML=`<div style="grid-column:1/-1;padding:10px;font-weight:700">🛡️ ${m}<br><button id="rep-test" class="mini" style="margin-top:10px">🧪 Skúšobný režim</button><div class="small muted" style="font-weight:400;margin-top:6px">Na testovanie mimo ihriska. Takéto hlásenia sú označené ako skúšobné.</div></div>`;
     $("rep-test").onclick=()=>{setTestmode(1);openReport()};return}
@@ -778,16 +784,17 @@ function openReport(){repLevel=null;$("rep-voice").textContent="";$("rep-list").
 function closeReport(){$("rep").hidden=true;stopVoice()}
 function repButtons(w){return REPORTS.map(r=>`<button data-k="${r.k}" ${w?"":"disabled"}><span>${icH(r)}</span>${r.t}</button>`).join("")}
 function saveReport(k,note){if(note&&badWord(note))note=null;const w=repWhere();if(!w)return false;const ri=repInfo(k);
-  let pt=w.p;if(REP_MOVING[k]){const g=course.greens[round.hole],te=course.tees&&course.tees[round.hole];if(g&&te)pt=[(g[0]+te[0])/2,(g[1]+te[1])/2];else if(g)pt=g}
+  const rh=REP_MOVING[k]?(paceHole(paceOff)||round.hole+1):round.hole+1;
+  let pt=w.p;if(REP_MOVING[k]){const g=course.greens[rh-1],te=course.tees&&course.tees[rh-1];if(g&&te)pt=[(g[0]+te[0])/2,(g[1]+te[1])/2];else if(g)pt=g}
   if(k==="bunker")pt=snapBunker(pt);
   {const m=repGuard(k,pt,me,meAccM,onCourseApp);if(m){showToast("🛡️ "+m);return false}}
-  {const i=findDup(reports,k,pt,round.hole+1);if(i>=0){const d=reports[i];d.exp=Date.now()+(REP_TTL[k]||360)*60000;d.yes=(d.yes||0)+1;store.set("reports",reports);drawReports();renderRepList();closeReport();showToast(ri.i+" Už je to nahlásené, predĺžil som platnosť.");return true}}
+  {const i=findDup(reports,k,pt,rh);if(i>=0){const d=reports[i];d.exp=Date.now()+(REP_TTL[k]||360)*60000;d.yes=(d.yes||0)+1;store.set("reports",reports);drawReports();renderRepList();closeReport();showToast(ri.i+" Už je to nahlásené, predĺžil som platnosť.");return true}}
   noteRepTime();
-  const r={k,t:Date.now(),exp:Date.now()+(REP_TTL[k]||360)*60000,hole:round.hole+1,lat:+pt[0].toFixed(6),lon:+pt[1].toFixed(6),mine:1};if(note)r.note=note.slice(0,120);if(w.approx)r.approx=1;if(TESTMODE())r.test=1;
+  const r={k,t:Date.now(),exp:Date.now()+(REP_TTL[k]||360)*60000,hole:rh,lat:+pt[0].toFixed(6),lon:+pt[1].toFixed(6),mine:1};if(note)r.note=note.slice(0,120);if(w.approx)r.approx=1;if(TESTMODE())r.test=1;
   reports.push(r);store.set("reports",reports);drawReports();renderRepList();closeReport();tapPt=null;renderTap();
   if(navigator.vibrate)navigator.vibrate(40);
   if(ri.hot){sendReports([r]);showToast(ri.i+" "+ri.t+": uložené. Pošli to hneď správcovi alebo spoluhráčom.")}
-  else showToast(REP_MOVING[k]?ri.i+" "+(k==="pass"?ri.t:MV_T[k])+" pri jamke "+r.hole+" · platí "+(REP_TTL[k]||15)+" min":ri.i+" "+ri.t+": ďakujeme, je to na mape.");return true}
+  else showToast(REP_MOVING[k]?ri.i+" "+(k==="pass"?ri.t:MV_T[k])+" pri jamke "+r.hole+(rh!==round.hole+1?(paceHole(1)===rh?" (pred nami)":" (za nami)"):"")+" · platí "+(REP_TTL[k]||15)+" min":ri.i+" "+ri.t+": ďakujeme, je to na mape.");return true}
 $("rep-grid2").onclick=e=>{const b=e.target.closest("button[data-k]");if(b)saveReport(b.dataset.k)};
 $("rep-grid").onclick=e=>{const g=e.target.closest("button[data-g]");if(g){repLevel=g.dataset.g;renderRepSheet();return}
   const b=e.target.closest("button[data-k]");if(b)saveReport(b.dataset.k)};
