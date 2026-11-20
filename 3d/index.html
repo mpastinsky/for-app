@@ -436,7 +436,7 @@ const inside=(x,y)=>x>X0+2&&x<X1-2&&y>Y0+2&&y<Y1-2;
 const seeM=new THREE.MeshStandardMaterial({color:0x3b7d33,roughness:.95,transparent:true,opacity:.32,depthWrite:false});
 // stromy, ktoré stoja v ploche hrania (medzi odpaliskom a greenom), sú priesvitné, aby bolo vidno cez ne
 // stromy medzi kamerou a tým, na čo sa pozeráme, sa priebežne zprehľadnia
-const FADE=[];let PIN_V=null;
+const FADE=[];let PIN_V=null;const TRUNKS=[];   // kmene stromov pre kolíziu loptičky: [x,y,polomer,výška vrchu]
 function fadeTrees(){const cp=camera.position,goals=[controls.target,...(PIN_V||(PIN_V=[[0,c],[GB.x0+2,(GB.y0+GB.y1)/2],[GB.x1-2,(GB.y0+GB.y1)/2],[0,GB.y0+1],[0,GB.y1-1]].map(([x,y])=>W(x,y,hL(x,y)+.5))))];
   for(const f of FADE){let hit=false;const dc=f.c.distanceTo(cp);if(dc<f.r+4)hit=true;
     else for(const g of goals){const d=g.clone().sub(cp),L=d.length();d.divideScalar(L);
@@ -521,7 +521,7 @@ const NEEDLETEX=HQ?(()=>{const n=256,cv=document.createElement("canvas");cv.widt
 const PINES=HQ?[0,1,2,3].map(i=>cardCrown(i+41,"pine")):null;
 const pineBark=HQ?new THREE.MeshLambertMaterial({map:BARKTEX,color:0xd9a27a}):null;
 function pine(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);
-  const tr=new THREE.Mesh(trunkHQ(h*.86,.28,2,k+7),pineBark);tr.position.copy(W(x,y,z));tr.rotation.y=k;tr.castShadow=true;scene.add(tr);
+  const tr=new THREE.Mesh(trunkHQ(h*.86,.28,2,k+7),pineBark);tr.position.copy(W(x,y,z));TRUNKS.push([x,y,.26,z+h*.86]);tr.rotation.y=k;tr.castShadow=true;scene.add(tr);
   const cr=new THREE.Mesh(PINES[k%4],new THREE.MeshLambertMaterial({map:NEEDLETEX,vertexColors:true,color:[0x9fc08a,0x8fb37e,0xa8c690][k%3],alphaTest:.45,side:THREE.DoubleSide}));
   cr.scale.set(r,h*.28,r);cr.rotation.y=k*1.3;cr.position.copy(W(x,y,z+h*.74));cr.castShadow=true;scene.add(cr);
   FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.3),r:r*1.1,op:1})}
@@ -540,7 +540,7 @@ function bush(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);
 // tvary konkrétnych stromov akadémie podľa fotiek (index v akademia.json → [šírka koruny ×, výška ×]): odpalisko 3 – vľavo široký listnáč, vpravo vysoké stromy
 const TSHAPE=HQ?{25:[1.45,.95],16:[1.15,1.55],10:[1.1,1.5],9:[1.05,1.4],8:[1,1.3]}:{};
 function tree(x,y,r,h,k){if(!inside(x,y))return;const z=hL(x,y);const see=!HQ&&inPlay(x,y,r);const ts=TSHAPE[k];if(ts){r*=ts[0];h*=ts[1]}
-  const tr=HQ?new THREE.Mesh(trunkHQ(h*.62,.42,0,k+1),barkHQ):new THREE.Mesh(trunkGeo(h*.62,.5,3,k+1),barkM);tr.position.copy(W(x,y,z));tr.rotation.y=k;tr.castShadow=true;scene.add(tr);
+  const tr=HQ?new THREE.Mesh(trunkHQ(h*.62,.42,0,k+1),barkHQ):new THREE.Mesh(trunkGeo(h*.62,.5,3,k+1),barkM);tr.position.copy(W(x,y,z));TRUNKS.push([x,y,HQ?.38:.45,z+h*.62]);tr.rotation.y=k;tr.castShadow=true;scene.add(tr);
   const cr=HQ?new THREE.Mesh(CARDS.round[k%6],see?Object.assign(leafHQ(k),{transparent:true,opacity:.35,alphaTest:.12,depthWrite:false}):leafHQ(k)):new THREE.Mesh(CROWNS.round[k%6],see?seeM:leafV.clone());const cy2=ts?h*.72/2.2:r*1.2;cr.scale.set(r*1.05,cy2,r*1.05);cr.rotation.y=k*2.1;cr.position.copy(W(x,y,ts?z+h*.28+cy2*1.1:z+h*.5+r*.8));cr.castShadow=!see;scene.add(cr);
   if(!see)FADE.push({m:[cr],c:cr.position.clone(),b:W(x,y,z+h*.25),r:r*1.15,op:1})}
 // 5. hodnota 1 = strom s korunou až po zem (bez viditeľného kmeňa)
@@ -1272,7 +1272,7 @@ if(PLAY){
       lvE.set(Math.sin(l.t*3+l.ph)*1.2,l.ph+l.t*.7,l.z>g?Math.cos(l.t*2.5+l.ph):Math.PI/2);lvQ.setFromEuler(lvE);lvS.setScalar(l.s*Math.min(1,(8-l.t)/2));lvP.set(l.x,l.z,-l.y);
       lvM.compose(lvP,lvQ,lvS);LV.m.setMatrixAt(i++,lvM)}
     LV.P=LV.P.filter(l=>l.t<8);LV.m.count=i;LV.m.instanceMatrix.needsUpdate=true}
-  function fxTick(dt){leafTick(dt);if(!FX||FX.t<0)return;FX.t+=dt;const t=FX.t,k=t/1.3;if(k>=1){FX.rim.visible=FX.halo.visible=false;FX.t=-1;return}
+  function fxTick(dt){leafTick(dt);splashTick(dt);if(!FX||FX.t<0)return;FX.t+=dt;const t=FX.t,k=t/1.3;if(k>=1){FX.rim.visible=FX.halo.visible=false;FX.t=-1;return}
     const env=Math.min(1,t/.12)*(1-k*k);FX.rim.material.opacity=env;FX.rim.rotation.y=-t*7;FX.rim.scale.setScalar(1+.08*Math.sin(t*20)*(1-k));
     FX.halo.material.opacity=env*.45*(1-k);FX.halo.scale.setScalar(.4+k*1.2)}
   // hole in one: veľká gratulácia + konfety na 2D plátne (len ~4 s, potom sa odstráni)
@@ -1299,7 +1299,7 @@ if(PLAY){
       ${last?`<a class="go" href="?${CQ}h=${READY[0]}&t=${tIdx}&play=1">Hrať znova</a>`:`<a class="go" href="${nx}">Ďalšia jamka ›</a>`}
       <a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}">Ukončiť hru</a>`;
     $("p-res").hidden=false}
-  function penalty(t){S.strokes++;SHOTS.pop();S.x=S.prev[0];S.y=S.prev[1];S.z=gS(S.x,S.y)+R;msg(t);setTimeout(()=>{if(S.mode!=="in")prepare()},900);S.mode="wait"}
+  function penalty(t){S.sink=0;S.strokes++;SHOTS.pop();S.x=S.prev[0];S.y=S.prev[1];S.z=gS(S.x,S.y)+R;msg(t);setTimeout(()=>{if(S.mode!=="in")prepare()},900);S.mode="wait"}
   function stopBall(){if(Math.hypot(S.x-PIN[0],S.y-PIN[1])<CUP+.006){S.mode="drop";S.t=0;S.sink=0;return}S.vx=S.vy=0;S.mode="wait";const sf=surf(S.x,S.y);shotInfo();
     msg(sf===SURF.green?"Na greene":sf===SURF.sand?"V bunkri":sf===SURF.rough?"V roughu":sf===SURF.collar?"Na lemu greenu":"Na "+sf.n);
     // úder z odpaliska, ktorý nedoletel za červené odpalisko
@@ -1320,13 +1320,37 @@ if(PLAY){
       const vx=S.vx*c-S.vy*s2,vy=S.vx*s2+S.vy*c;S.vx=vx*k;S.vy=vy*k;msg("Okraj jamky!")}
     else{S.vx*=.82;S.vy*=.82}
     return false}
+  // kmeň: celý úsek pohybu (aj pri nízkom fps) – loptička sa od kmeňa odrazí a stratí väčšinu rýchlosti, nikdy neprejde
+  function trunkHit(ox,oy){const mx=Math.min(ox,S.x)-1,Mx=Math.max(ox,S.x)+1,my=Math.min(oy,S.y)-1,My=Math.max(oy,S.y)+1;
+    for(const T of TRUNKS){if(T[0]<mx||T[0]>Mx||T[1]<my||T[1]>My||S.z>T[3])continue;const rc=T[2]+R+.04,dx=S.x-ox,dy=S.y-oy,L2=dx*dx+dy*dy;
+      let t=L2>0?((T[0]-ox)*dx+(T[1]-oy)*dy)/L2:1;t=Math.max(0,Math.min(1,t));let nx=ox+dx*t-T[0],ny=oy+dy*t-T[1],d=Math.hypot(nx,ny);if(d>=rc)continue;
+      if(d<1e-4){nx=-dx;ny=-dy;d=Math.hypot(nx,ny)||1}nx/=d;ny/=d;const vn=S.vx*nx+S.vy*ny;if(vn>=0&&t<1)continue;
+      S.x=T[0]+nx*rc;S.y=T[1]+ny*rc;if(vn<0){const tx=S.vx-vn*nx,ty=S.vy-vn*ny;S.vx=-vn*.35*nx+tx*.45;S.vy=-vn*.35*ny+ty*.45}S.vz=Math.min(S.vz||0,0)*.5;
+      if(S.mode==="fly")leafBurst(T[0],T[1],Math.min(S.z+1.5,T[3]),5);
+      msg("Kmeň stromu! 🌳");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1500);return true}
+    return false}
+  // voda: čľupnutie (kruhy na hladine + kvapky), loptička sa potopí, potom trestná rana
+  let SPL=null;
+  function splash(){S.mode="sink";S.t=0;S.sink=0;S.vx=S.vy=S.vz=0;const h=gS(S.x,S.y)+.02;
+    if(!SPL){const rg=[0,1,2].map(()=>{const m=new THREE.Mesh(new THREE.RingGeometry(.8,1,40),new THREE.MeshBasicMaterial({color:0xe6f2ff,transparent:true,depthWrite:false,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.renderOrder=8;m.visible=false;scene.add(m);return m});
+      const N=26,pg=new THREE.BufferGeometry();pg.setAttribute("position",new THREE.BufferAttribute(new Float32Array(N*3),3));
+      const pt=new THREE.Points(pg,new THREE.PointsMaterial({color:0xe8f4ff,size:.09,transparent:true,depthWrite:false}));pt.frustumCulled=false;pt.visible=false;scene.add(pt);SPL={rg,pt,N,v:new Float32Array(N*3),t:-1}}
+    SPL.t=0;SPL.x=S.x;SPL.y=S.y;SPL.h=h;const P=SPL.pt.geometry.attributes.position.array;
+    for(let i=0;i<SPL.N;i++){const a=Math.random()*6.283,s=.6+Math.random()*1.2;P[i*3]=S.x;P[i*3+1]=h;P[i*3+2]=-S.y;SPL.v[i*3]=Math.cos(a)*s;SPL.v[i*3+1]=2.2+Math.random()*2.4;SPL.v[i*3+2]=Math.sin(a)*s}
+    msg("Čľup! Voda · trestná rana 💦");if(navigator.vibrate)navigator.vibrate(30)}
+  function splashTick(dt){if(!SPL||SPL.t<0)return;SPL.t+=dt;const t=SPL.t;if(t>2.2){SPL.t=-1;SPL.pt.visible=false;for(const m of SPL.rg)m.visible=false;return}
+    SPL.rg.forEach((m,i)=>{const k=t-i*.28;m.visible=k>0&&k<1.6;if(!m.visible)return;const r=.15+k*1.1;m.scale.set(r,r,1);m.position.set(SPL.x,SPL.h,-SPL.y);m.material.opacity=.75*(1-k/1.6)});
+    const P=SPL.pt.geometry.attributes.position.array,V=SPL.v;SPL.pt.visible=t<1.3;
+    for(let i=0;i<SPL.N;i++){V[i*3+1]-=G*dt;P[i*3]+=V[i*3]*dt;P[i*3+1]=Math.max(SPL.h,P[i*3+1]+V[i*3+1]*dt);P[i*3+2]+=V[i*3+2]*dt}
+    SPL.pt.geometry.attributes.position.needsUpdate=true;SPL.pt.material.opacity=Math.max(0,1-t/1.3)}
   function step(dt){
+    if(S.mode==="sink"){S.t+=dt;S.sink=Math.min(.6,S.t*S.t*.5);if(S.t>1.7)penalty("Voda · trestná rana");return}
     if(S.mode==="fly"){S.vz-=G*dt;
       // jemný odpor vzduchu
       S.vx+=WIND.x*.12*dt;S.vy+=WIND.y*.12*dt;   // vietor
       if(S.side){const h=Math.hypot(S.vx,S.vy)||1,ux=S.vy/h,uy=-S.vx/h;S.vx+=ux*S.side*dt;S.vy+=uy*S.side*dt}   // zakrivenie (hák/slajs)
       const sp=Math.hypot(S.vx,S.vy,S.vz),kd=.0016*sp;S.vx-=S.vx*kd*dt;S.vy-=S.vy*kd*dt;S.vz-=S.vz*kd*dt;
-      {const ox=S.x,oy=S.y;S.x+=S.vx*dt;S.y+=S.vy*dt;S.z+=S.vz*dt;if(S.z-gS(S.x,S.y)<.25&&cupHit(ox,oy))return}
+      {const ox=S.x,oy=S.y;S.x+=S.vx*dt;S.y+=S.vy*dt;S.z+=S.vz*dt;trunkHit(ox,oy);if(S.z-gS(S.x,S.y)<.25&&cupHit(ox,oy))return}
       // strom: pri vlete do koruny sa raz rozhodne – loptička buď preletí cez lístie (spomalí, mierne sa odchýli), alebo ju strom zastaví a spadne; v oboch prípadoch padá lístie
       {let inT=null;for(const o of OBST){const dx=S.x-o.x,dy=S.y-o.y;if(dx*dx+dy*dy<o.r*o.r&&S.z>o.z0&&S.z<o.z1){inT=o;break}}
        if(inT&&S.tIn!==inT){S.tIn=inT;const sp=Math.hypot(S.vx,S.vy),thru=Math.random()<.5;leafBurst(S.x,S.y,S.z,thru?14:26);
@@ -1335,6 +1359,7 @@ if(PLAY){
          const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1600)}
        else if(!inT)S.tIn=null}
       const g=gS(S.x,S.y)+R;if(S.z<=g){S.z=g;const sf=surf(S.x,S.y);
+        if(waterL.some(P=>inPoly([S.x,S.y],P))){splash();return}
         if(sf===SURF.sand){S.vx=S.vy=S.vz=0;stopBall();return}
         S.vz=-S.vz*sf.r;S.vx*=sf.k;S.vy*=sf.k;if(S.vz<1.2){S.vz=0;S.mode="roll"}}}
     else if(S.mode==="roll"){const sf=surf(S.x,S.y),[gx,gy]=grad(S.x,S.y),sp=Math.hypot(S.vx,S.vy);
@@ -1343,7 +1368,7 @@ if(PLAY){
       const nvx=S.vx+ax*dt,nvy=S.vy+ay*dt;
       if(sp<.06&&Math.hypot(G*gx*.71,G*gy*.71)<sf.f){stopBall();return}
       if(nvx*S.vx+nvy*S.vy<0&&Math.hypot(G*gx*.71,G*gy*.71)<sf.f){stopBall();return}
-      const ox=S.x,oy=S.y;S.vx=nvx;S.vy=nvy;S.x+=S.vx*dt;S.y+=S.vy*dt;S.z=gS(S.x,S.y)+R;
+      const ox=S.x,oy=S.y;S.vx=nvx;S.vy=nvy;S.x+=S.vx*dt;S.y+=S.vy*dt;trunkHit(ox,oy);S.z=gS(S.x,S.y)+R;
       if(cupHit(ox,oy))return}
     else if(S.mode==="drop"){   // pád do jamky: gravitácia až na dno (10 cm), malé odrazenie, loptička ostane v jamke viditeľná
       if(!S.t){S.dv=Math.max(0,-(S.vz||0))*.5;S.sink=0}S.t+=dt;const fl=gS(PIN[0],PIN[1])+R-.097;
@@ -1352,7 +1377,7 @@ if(PLAY){
       if(S.t>.85&&S.z<=fl+1e-3){S.z=fl;holed();return}}
     if(S.mode==="fly"||S.mode==="roll"){S.t+=dt;
       if(S.x<X0+3||S.x>X1-3||S.y<Y0+3||S.y>Y1-3){penalty("Mimo ihriska · trestná rana");return}
-      if(S.mode==="roll"&&waterL.some(P=>inPoly([S.x,S.y],P))){penalty("Voda · trestná rana");return}
+      if(S.mode==="roll"&&waterL.some(P=>inPoly([S.x,S.y],P))){splash();return}
       if(S.t>25)stopBall()}}
   // kamera
   const camP=new THREE.Vector3(),camT=new THREE.Vector3();
@@ -1375,6 +1400,7 @@ if(PLAY){
   // let a kotúľanie po plnom údere: kamera drží stály odstup za loptičkou v smere mierenia (offset sa mení len plynulo, žiadne skoky)
   let CO=null,CT=null;const _cv=new THREE.Vector3();
   function camUpd(dt,snap){
+    if(S.mode==="sink"&&!snap){camera.lookAt(camT);return}   // čľupnutie: kamera ostane, kde bola
     if(!snap&&(S.mode==="fly"||S.mode==="roll"&&CLUBS[S.club].a)){const B=W(S.x,S.y,S.z),dx=Math.sin(S.aim),dy=Math.cos(S.aim);
       if(!CO){CO=camP.clone().sub(B);CT=camT.clone().sub(B)}
       const fl=S.mode==="fly",bk=fl?11:9,up=fl?3.4:2.8;
@@ -1447,7 +1473,7 @@ if(PLAY){
         else{$("pm-nd").setAttribute("transform","rotate("+(needle()*90).toFixed(1)+" 120 120)");$("p-ht").textContent="Ťukni, keď je ručička v strede"}}
       else if(S.mode==="aim")$("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";
       const n=4;for(let i=0;i<n;i++)step(dt/n);
-      if(S.mode==="fly"||S.mode==="roll"||S.mode==="drop"){place();if(S.tr<600){trailP.set([S.x,S.z+.05,-S.y],S.tr*3);S.tr++;trailG.setDrawRange(0,S.tr);trailG.attributes.position.needsUpdate=true}
+      if(S.mode==="fly"||S.mode==="roll"||S.mode==="drop"||S.mode==="sink"){place();if(S.tr<600){trailP.set([S.x,S.z+.05,-S.y],S.tr*3);S.tr++;trailG.setDrawRange(0,S.tr);trailG.attributes.position.needsUpdate=true}
         if(S.mode==="roll"||S.mode==="wait")info()}
       camUpd(dt,false);
       {const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(S.mode==="drop"||S.mode==="in"?.36:2.5,Math.max(nearG?(S.low===2?.3:.24):.35,dd/(nearG?40:14))))}
@@ -1456,7 +1482,7 @@ if(PLAY){
       {const pull=S.mode!=="fly"&&!CLUBS[S.club].a&&toPin()<25;pin.visible=flag.visible=!pull}}};
   document.getElementById("h-t").innerHTML=`<span class="hn">${hNum}</span><span class="hp">PAR ${PAR}${SC.length?" · zatiaľ "+SC.reduce((a,b)=>a+b,0):""}</span>`;
   prepare();{const[p,t]=camGoal();camP.copy(W(...p));camT.copy(W(...t))}camUpd(0,true);
-  if(Q.has("dbg"))window.__g={S,step,ring,setTarget,tgtL,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R,ball,camera,renderer,scene,leafBurst,OBST};
+  if(Q.has("dbg"))window.__g={S,step,ring,setTarget,tgtL,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R,ball,camera,renderer,scene,leafBurst,OBST,TRUNKS,splash};
 }
 
 // iOS Safari ignoruje user-scalable=no: zablokuj priblíženie stránky (pinch a dvojťuk); 3D kamera používa vlastné dotyky na canvase
