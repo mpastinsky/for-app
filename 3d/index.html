@@ -44,6 +44,21 @@ body.allv .lab.hole{display:block!important}.lab.hole.cur{background:#ffd400;col
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
 <body>
+<script>/* prechody bez preblikntia: nová obrazovka (jamka / prehľad) sa načíta v rámci nad tou súčasnou
+   a ukáže sa až keď má vykreslený prvý záber; stará sa potom zahodí. Odkazy mimo 3D (späť do appky) idú normálne. */
+(function(){const EMB=window.parent!==window;window.__EMB=EMB;let frames=[];
+ const abs=u=>new URL(u,location.href).href,in3d=u=>{const p=new URL(u,location.href).pathname;return /\/3d\/(index\.html|ihrisko\.html)?$/.test(p)};
+ window.forNav=function(url){if(!in3d(url)){(EMB?top:window).location.href=abs(url);return}
+   if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
+ function openFrame(u){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");
+   f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f)}
+ addEventListener("message",e=>{const d=e.data||{};if(EMB)return;
+   if(d.forGo)openFrame(d.forGo);
+   if(d.forReady){const f=frames.find(x=>x.contentWindow===e.source);if(!f)return;f.style.opacity="1";try{history.replaceState(null,"",f.__url)}catch(_){}
+     setTimeout(()=>{frames.filter(x=>x!==f).forEach(x=>x.remove());frames=[f];if(window.__hostStop)window.__hostStop()},350)}});
+ document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("a[href]");if(!a||e.defaultPrevented||a.target||e.metaKey||e.ctrlKey)return;
+   const h=a.getAttribute("href");if(!h||h[0]==="#"||/^(javascript|mailto|tel|sms|whatsapp):/i.test(h))return;e.preventDefault();forNav(h)});
+})();</script>
 <script>/* plynulý prechod: posledný záber predchádzajúcej obrazovky ostane viditeľný, kým sa nová scéna nevykreslí */
 try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.src=s;
  i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:1;pointer-events:none;transition:opacity .35s";document.body.appendChild(i)}}catch(e){}</script>
@@ -761,7 +776,7 @@ if(CRS!=="apex"){btns.all=document.getElementById("v-all");
 // ⛳ Hrať: v prehľade zhora celé kolo od jamky 1, inak len práve zobrazená jamka
 function playLbl(){document.getElementById("v-play").textContent=document.body.classList.contains("allv")?"⛳ Hrať kolo":"⛳ Hrať jamku "+hNum}
 playLbl();
-document.getElementById("v-play").onclick=()=>{if(!document.body.classList.contains("allv")){location.href="?"+CQ+"h="+hNum+"&t="+tIdx+"&play=1&one=1";return}
+document.getElementById("v-play").onclick=()=>{if(!document.body.classList.contains("allv")){forNav("?"+CQ+"h="+hNum+"&t="+tIdx+"&play=1&one=1");return}
   const go2=()=>{snapGo("?"+CQ+"h="+READY[0]+"&t="+tIdx+"&play=1")};
   // z prehľadu zhora plynulo preletí dole na odpalisko jamky 1 a potom začne hra
   if(document.body.classList.contains("allv")&&hNum===READY[0]){document.body.classList.remove("allv");fly=null;
@@ -1068,12 +1083,13 @@ document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});
 document.addEventListener("touchmove",e=>{if(e.touches.length>1&&e.target.tagName!=="CANVAS")e.preventDefault()},{passive:false});
 let lastT=0;
 // prechod medzi obrazovkami bez zábleskov: uloží posledný záber, nová stránka ho ukáže, kým sa nevykreslí
-function snapGo(url){try{renderer.render(scene,camera);sessionStorage.setItem("for.snap",renderer.domElement.toDataURL("image/jpeg",.72))}catch(e){}location.href=url}
-window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}};
+function snapGo(url){forNav(url)}
+window.__hostStop=()=>{window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
+window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}};
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
-  if(CRS==="apex")snapGo("ihrisko.html?t="+tIdx);else if(document.body.classList.contains("allv"))location.href="../?start=1";else if(window.flyDown&&!Q.has("play")){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
+  if(CRS==="apex")snapGo("ihrisko.html?t="+tIdx);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!Q.has("play")){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
 document.querySelectorAll("#holes a").forEach(a=>a.addEventListener("click",ev=>{if(ev.metaKey||ev.ctrlKey)return;ev.preventDefault();snapGo(a.href)}));
-function loop(now){const dt=Math.min(.05,lastT?(now-lastT)/1000:0);lastT=now;
+function loop(now){if(window.__stopped)return;const dt=Math.min(.05,lastT?(now-lastT)/1000:0);lastT=now;
   if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
     camera.position.copy(curve.getPoint(e));controls.target.copy(W(0,c,hG));if(k>=1)fly=null}
   waveFlag(now/1000);if(game)game.update(dt);else{controls.update();

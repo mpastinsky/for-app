@@ -26,6 +26,21 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
 <body>
+<script>/* prechody bez preblikntia: nová obrazovka (jamka / prehľad) sa načíta v rámci nad tou súčasnou
+   a ukáže sa až keď má vykreslený prvý záber; stará sa potom zahodí. Odkazy mimo 3D (späť do appky) idú normálne. */
+(function(){const EMB=window.parent!==window;window.__EMB=EMB;let frames=[];
+ const abs=u=>new URL(u,location.href).href,in3d=u=>{const p=new URL(u,location.href).pathname;return /\/3d\/(index\.html|ihrisko\.html)?$/.test(p)};
+ window.forNav=function(url){if(!in3d(url)){(EMB?top:window).location.href=abs(url);return}
+   if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
+ function openFrame(u){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");
+   f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f)}
+ addEventListener("message",e=>{const d=e.data||{};if(EMB)return;
+   if(d.forGo)openFrame(d.forGo);
+   if(d.forReady){const f=frames.find(x=>x.contentWindow===e.source);if(!f)return;f.style.opacity="1";try{history.replaceState(null,"",f.__url)}catch(_){}
+     setTimeout(()=>{frames.filter(x=>x!==f).forEach(x=>x.remove());frames=[f];if(window.__hostStop)window.__hostStop()},350)}});
+ document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("a[href]");if(!a||e.defaultPrevented||a.target||e.metaKey||e.ctrlKey)return;
+   const h=a.getAttribute("href");if(!h||h[0]==="#"||/^(javascript|mailto|tel|sms|whatsapp):/i.test(h))return;e.preventDefault();forNav(h)});
+})();</script>
 <script>/* plynulý prechod: posledný záber predchádzajúcej obrazovky ostane viditeľný, kým sa nová scéna nevykreslí */
 try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.src=s;
  i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:1;pointer-events:none;transition:opacity .35s";document.body.appendChild(i)}}catch(e){}</script>
@@ -120,12 +135,13 @@ const flyTo=(h,url)=>{const t=DATA.pads[h][tIdx],gc=DATA.gc[h-1],u=[gc[0]-t[0],g
   const p1=W(t[0]-u[0]*15,t[1]-u[1]*15,hAt(...t)+6),t1=W(t[0]+u[0]*120,t[1]+u[1]*120,hAt(t[0]+u[0]*120,t[1]+u[1]*120));
   const p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2600;controls.enabled=false;labels.forEach(l=>l.el.style.visibility="hidden");
   const st=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);camera.position.y+=Math.sin(Math.PI*e)*60;
-    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else{try{renderer.render(scene,camera);sessionStorage.setItem("for.snap",renderer.domElement.toDataURL("image/jpeg",.72))}catch(e){}location.href=url}};requestAnimationFrame(st)};
+    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else{controls.enabled=true;labels.forEach(l=>l.el.style.visibility="");forNav(url)}};requestAnimationFrame(st)};
 document.getElementById("b-go").onclick=()=>flyTo(READY[0],"./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1");
 for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();flyTo(+l.el.textContent,l.el.href)};
 const v=new THREE.Vector3();
 let snapDone=false;
-function frame(){if(controls.enabled)controls.update();renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}})}
+window.__hostStop=()=>{window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
+function frame(){if(window.__stopped)return;if(controls.enabled)controls.update();renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{if(window.__EMB)parent.postMessage({forReady:1},"*");const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}})}
   for(const l of labels){v.copy(l.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=(v.x+1)/2*innerWidth+"px";l.el.style.top=(1-v.y)/2*innerHeight+"px"}}
   requestAnimationFrame(frame)}
 frame();
