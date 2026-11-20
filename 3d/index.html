@@ -83,6 +83,8 @@ const hNum=READY.includes(parseInt(Q.get("h")))?parseInt(Q.get("h")):READY[0];
 const TEE_N=DATA.teeNames||["biele","žlté","červené"],TEE_C=DATA.teeColors||["#fff","#ffd400","#e0312b"];
 const tIdx=Math.min(TEE_N.length-1,Math.max(0,parseInt(Q.get("t"))||0));
 const PAR=PARS[hNum-1]||3;
+// názov klubu na loptičke a vlajke (každé ihrisko svoj)
+const CLUBN={apex:"APEX"}[CRS]||"APEX";
 const STYLE=(CRS==="apex"?{}:{1:{},2:{},3:{sunWest:true}}[hNum])||{};
 // navigácia jamiek a odpalísk podľa dát ihriska
 if(CRS==="apex"){document.getElementById("holes").innerHTML=READY.map(h=>`<a data-h="${h}">${h}</a>`).join("");
@@ -151,28 +153,28 @@ document.getElementById("note").textContent="Terén © ÚGKK SR, DMR 5.0 (CC BY 
 const scene=new THREE.Scene();
 const sky=STYLE.sunWest?0xd9e3ea:0xc4dbee,skyTop=STYLE.sunWest?0x6f9bd0:0x4f8fd8;
 scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,Math.max(350,c+120),Math.max(900,c+550));
-// obloha: jemný prechod od obzoru do modra (jedna guľa, lacné aj na telefóne)
-{const sg=new THREE.SphereGeometry(1300,24,12),cA=new THREE.Color(sky),cB=new THREE.Color(skyTop),col=[];const pp=sg.attributes.position;
- for(let i=0;i<pp.count;i++){const t=Math.pow(Math.max(0,pp.getY(i)/1300),.55),cc=cA.clone().lerp(cB,t);col.push(cc.r,cc.g,cc.b)}
- sg.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
- const dome=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));dome.renderOrder=-1;dome.frustumCulled=false;
+// obloha: jedna guľa s textúrou nakreslenou raz pri načítaní – prechod od obzoru do modra + prirodzené biele kopovité oblaky (nehýbu sa).
+// Oblaky sa počítajú ako šum na rovine vo výške nad ihriskom, premietnutej na oblohu, takže pri obzore sú menšie a riedke ako v skutočnosti.
+{const Wd=1024,Hh=256,cv=document.createElement("canvas");cv.width=Wd;cv.height=Hh*2;const x=cv.getContext("2d"),im=x.createImageData(Wd,Hh),o=im.data;
+ const cA=new THREE.Color(sky),cB=new THREE.Color(skyTop);let sd=(CRS==="apex"?77:11)+hNum*131;const rnd=()=>((sd=(sd*16807)%2147483647)/2147483647);
+ const P=new Uint8Array(512),pm=[...Array(256).keys()];for(let i=255;i>0;i--){const j=Math.floor(rnd()*(i+1));[pm[i],pm[j]]=[pm[j],pm[i]]}for(let i=0;i<512;i++)P[i]=pm[i&255];
+ const sm=t=>t*t*(3-2*t),vn=(X,Y)=>{const xi=Math.floor(X),yi=Math.floor(Y),fx=sm(X-xi),fy=sm(Y-yi),a=P[(P[xi&255]+yi)&511],b=P[(P[(xi+1)&255]+yi)&511],c2=P[(P[xi&255]+yi+1)&511],d=P[(P[(xi+1)&255]+yi+1)&511];
+   return((a+(b-a)*fx)+((c2+(d-c2)*fx)-(a+(b-a)*fx))*fy)/255},
+   fbm=(X,Y)=>{let s=0,am=.5,f=1;for(let k=0;k<5;k++){s+=am*vn(X*f+k*17.3,Y*f-k*9.1);f*=2.03;am*=.5}return s/.97};
+ const cov=STYLE.sunWest?.64:.62,ox=rnd()*50,oy=rnd()*50;
+ for(let j=0;j<Hh;j++){const el=Math.PI/2*(1-j/Hh),se=Math.sin(el),t=Math.pow(Math.max(0,se),.55);
+   const br=cA.r+(cB.r-cA.r)*t,bg=cA.g+(cB.g-cA.g)*t,bb=cA.b+(cB.b-cA.b)*t,dist=el>.035?Math.cos(el)/Math.max(se,.035):30,fade=Math.exp(-dist/9)*Math.min(1,(el-.02)/.06);
+   for(let i=0;i<Wd;i++){const az=i/Wd*Math.PI*2,px=Math.cos(az)*dist*1.15+ox,py=Math.sin(az)*dist*1.15+oy;let a=0,sh=0;
+     if(fade>.01){const n=fbm(px,py)*.75+vn(px*.22+31,py*.22-7)*.35,d=(n-cov)/(1-cov);if(d>0){a=Math.min(1,d*2.2)*fade;sh=Math.min(1,d*1.3)}}
+     // biele okraje, mierne sivšie hustejšie jadro
+     const cr=1-.2*sh,cg=1-.18*sh,cb=1-.13*sh,q=(j*Wd+i)*4;
+     o[q]=255*(br+(cr-br)*a);o[q+1]=255*(bg+(cg-bg)*a);o[q+2]=255*(bb+(cb-bb)*a);o[q+3]=255}}
+ x.putImageData(im,0,0);x.fillStyle="#"+cA.getHexString();x.fillRect(0,Hh,Wd,Hh);
+ const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;tx.wrapS=THREE.RepeatWrapping;tx.anisotropy=4;
+ const dome=new THREE.Mesh(new THREE.SphereGeometry(1300,48,24),new THREE.MeshBasicMaterial({map:tx,side:THREE.BackSide,fog:false,depthWrite:false}));dome.renderOrder=-1;dome.frustumCulled=false;
  dome.onBeforeRender=(r,sc,cam)=>dome.position.copy(cam.position);scene.add(dome)}
-// oblaky: ~16 plochých obrázkov (3 varianty nakreslené raz na malé plátno) ďaleko na oblohe, idú s kamerou a pomaly sa posúvajú – takmer žiadna záťaž
-const clouds=new THREE.Group();clouds.renderOrder=-1;scene.add(clouds);
-{const tex=[0,1,2].map(v=>{const cv=document.createElement("canvas");cv.width=256;cv.height=128;const x=cv.getContext("2d");let sd=v*97+13;const r=()=>((sd=(sd*16807)%2147483647)/2147483647);
-   for(let i=0;i<22;i++){const cx=40+r()*176,cy=58+r()*34-(1-Math.abs(cx-128)/100)*18,rr=16+r()*26*(1-Math.abs(cx-128)/180),g=x.createRadialGradient(cx,cy-rr*.25,rr*.1,cx,cy,rr);
-     g.addColorStop(0,"rgba(255,255,255,.95)");g.addColorStop(.55,"rgba(246,248,252,.7)");g.addColorStop(1,"rgba(230,236,245,0)");x.fillStyle=g;x.beginPath();x.arc(cx,cy,rr,0,7);x.fill()}
-   // jemne sivší spodok
-   x.globalCompositeOperation="source-atop";const sh=x.createLinearGradient(0,50,0,118);sh.addColorStop(0,"rgba(180,192,210,0)");sh.addColorStop(1,"rgba(170,184,204,.55)");x.fillStyle=sh;x.fillRect(0,0,256,128);
-   const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;return t});
- let sd=hNum*31+7;const r=()=>((sd=(sd*16807)%2147483647)/2147483647);
- for(let i=0;i<16;i++){const m=new THREE.SpriteMaterial({map:tex[i%3],transparent:true,depthWrite:false,fog:false,opacity:STYLE.sunWest?.8:.92});
-   const sp=new THREE.Sprite(m),a=i/16*Math.PI*2+r()*.3,d=900+r()*250,h=110+r()*260,w=260+r()*320;
-   sp.position.set(Math.cos(a)*d,h,Math.sin(a)*d);sp.scale.set(w,w*(.36+r()*.14),1);sp.userData={a,d};clouds.add(sp)}
- const spin=.0035*(r()>.5?1:-1);
- clouds.userData.tick=(cam,tm)=>{clouds.position.set(cam.position.x,hG,cam.position.z);clouds.rotation.y=tm*spin}}
 const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,1,1500);
-const renderer=new THREE.WebGLRenderer({antialias:true});
+const renderer=new THREE.WebGLRenderer({antialias:true,stencil:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.prepend(renderer.domElement);
 const W=(x,y,h)=>new THREE.Vector3(x,h,-y);
@@ -403,17 +405,38 @@ const hP=hL(...PIN)+.08;
 // jamka ako skutočná diera: tmavé vnútro, biela vložka viditeľná na vzdialenej strane, presne vo výške jemnej siete greenu
 {const gm2=(()=>{const st=.5,M=7,gx0=Math.floor(GB.x0-M),gy0=Math.floor(GB.y0-M),i=Math.floor((PIN[0]-gx0)/st),j=Math.floor((PIN[1]-gy0)/st),u=(PIN[0]-gx0)/st-i,v=(PIN[1]-gy0)/st-j,H=(a,b)=>hL(gx0+a*st,gy0+b*st);
    return (H(i,j)*(1-u)+H(i+1,j)*u)*(1-v)+(H(i,j+1)*(1-u)+H(i+1,j+1)*u)*v})();
- const cc=document.createElement("canvas");cc.width=cc.height=128;const x=cc.getContext("2d");
- x.beginPath();x.arc(64,64,62,0,7);x.fillStyle="#0b0b0b";x.fill();
- x.save();x.beginPath();x.arc(64,64,62,0,7);x.clip();x.beginPath();x.arc(64,80,62,0,7);x.rect(128,0,-128,128);x.fillStyle="#efefe8";x.fill("evenodd");x.restore();   // vložka (horný okraj vnútri jamky)
- const g=x.createRadialGradient(64,70,8,64,64,62);g.addColorStop(0,"rgba(0,0,0,.6)");g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.beginPath();x.arc(64,64,62,0,7);x.fill();
- x.lineWidth=3;x.strokeStyle="rgba(70,110,45,.9)";x.beginPath();x.arc(64,64,62,0,7);x.stroke();
- const ct=new THREE.CanvasTexture(cc);ct.colorSpace=THREE.SRGBColorSpace;
- const cup=new THREE.Mesh(new THREE.CircleGeometry(.054,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:ct,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-12}));
- cup.position.copy(W(PIN[0],PIN[1],gm2+.08+.002));cup.rotation.y=0;cup.renderOrder=3;scene.add(cup);scene.userData.cupPos=cup.position.clone()}
+ // skutočná diera cez stencil: (1) neviditeľný kruh označí otvor, (2) vnútro jamky sa kreslí len v otvore a „cez“ green,
+ // stena: hore hlina s koreňmi trávy, potom biela plastová vložka, tmavé dno; (3) okraj: prevísajúce steblá trávy a tenký lem hliny
+ const R0=.054,DEP=.1,top=gm2+.08+.0015,pos=W(PIN[0],PIN[1],top);
+ const mask=new THREE.Mesh(new THREE.CircleGeometry(R0,48).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-12,
+   stencilWrite:true,stencilRef:1,stencilFunc:THREE.AlwaysStencilFunc,stencilZPass:THREE.ReplaceStencilOp}));mask.position.copy(pos);mask.renderOrder=1;scene.add(mask);
+ const inMat=o=>Object.assign({transparent:true,stencilWrite:true,stencilRef:1,stencilFunc:THREE.EqualStencilFunc,stencilZPass:THREE.KeepStencilOp,depthFunc:THREE.AlwaysDepth},o);
+ const wc=document.createElement("canvas");wc.width=256;wc.height=128;const w=wc.getContext("2d");
+ {const soil=w.createLinearGradient(0,0,0,40);soil.addColorStop(0,"#4a3622");soil.addColorStop(1,"#5b4128");w.fillStyle=soil;w.fillRect(0,0,256,38);
+  for(let i=0;i<900;i++){const yy=Math.random()*38;w.fillStyle=`rgba(${30+Math.random()*60|0},${20+Math.random()*40|0},${10+Math.random()*25|0},.55)`;w.fillRect(Math.random()*256,yy,1+Math.random()*2,1+Math.random()*2)}
+  w.strokeStyle="rgba(200,190,150,.35)";w.lineWidth=.7;for(let i=0;i<70;i++){const x0=Math.random()*256;w.beginPath();w.moveTo(x0,0);w.quadraticCurveTo(x0+(Math.random()-.5)*8,8,x0+(Math.random()-.5)*10,6+Math.random()*24);w.stroke()}   // korienky
+  w.fillStyle="#3b6b2a";for(let i=0;i<256;i+=2){w.fillRect(i,0,2,2+Math.random()*4)}   // tráva na hrane
+  const lin=w.createLinearGradient(0,38,0,128);lin.addColorStop(0,"#f2f2ec");lin.addColorStop(.5,"#d8d8d0");lin.addColorStop(1,"#7a7a74");w.fillStyle=lin;w.fillRect(0,38,256,90);
+  w.fillStyle="rgba(0,0,0,.25)";w.fillRect(0,38,256,3)}
+ const wt=new THREE.CanvasTexture(wc);wt.colorSpace=THREE.SRGBColorSpace;wt.wrapS=THREE.RepeatWrapping;wt.repeat.x=2;
+ const wall=new THREE.Mesh(new THREE.CylinderGeometry(R0,R0,DEP,40,1,true),new THREE.MeshLambertMaterial(inMat({map:wt,side:THREE.BackSide})));
+ wall.position.copy(pos);wall.position.y-=DEP/2;wall.renderOrder=5;scene.add(wall);
+ const bot=new THREE.Mesh(new THREE.CircleGeometry(R0,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial(inMat({color:0x2c2c2a})));bot.position.copy(pos);bot.position.y-=DEP;bot.renderOrder=5;scene.add(bot);
+ // okraj: prevísajúce steblá trávy (priehľadný prstenec nad otvorom)
+ const rc=document.createElement("canvas");rc.width=rc.height=256;const r=rc.getContext("2d"),C=128,rIn=C*R0/.066;
+ r.strokeStyle="rgba(60,40,22,.85)";r.lineWidth=3;r.beginPath();r.arc(C,C,rIn,0,7);r.stroke();
+ for(let i=0;i<520;i++){const a=Math.random()*Math.PI*2,r1=rIn+4+Math.random()*16,r2=rIn-1-Math.random()*7,ca=Math.cos(a),sa=Math.sin(a),bend=(Math.random()-.5)*.08;
+   r.strokeStyle=`rgb(${50+Math.random()*40|0},${100+Math.random()*50|0},${35+Math.random()*25|0})`;r.lineWidth=.8+Math.random()*1.3;r.beginPath();r.moveTo(C+ca*r1,C+sa*r1);r.lineTo(C+Math.cos(a+bend)*r2,C+Math.sin(a+bend)*r2);r.stroke()}
+ const rt=new THREE.CanvasTexture(rc);rt.colorSpace=THREE.SRGBColorSpace;
+ const lip=new THREE.Mesh(new THREE.PlaneGeometry(.132,.132).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({map:rt,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-16}));
+ lip.position.copy(pos);lip.position.y+=.0008;lip.renderOrder=6;scene.add(lip);
+ scene.userData.cupPos=pos.clone()}
 const pin=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,2.1,10),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.35}));pin.position.copy(W(...PIN,hP+1.05-.06));pin.castShadow=true;scene.add(pin);
 const flagG=new THREE.PlaneGeometry(.75,.5,16,5).translate(.375,0,0);const flagB=Float32Array.from(flagG.attributes.position.array);
-const flag=new THREE.Mesh(flagG,new THREE.MeshStandardMaterial({color:0xd8262a,side:THREE.DoubleSide,roughness:.8}));flag.position.copy(W(...PIN,hP+2.1-.06-.25));flag.castShadow=true;scene.add(flag);
+const flagTex=(()=>{const cv=document.createElement("canvas");cv.width=256;cv.height=170;const x=cv.getContext("2d");x.fillStyle="#d8262a";x.fillRect(0,0,256,170);
+  x.fillStyle="#fff";x.font="900 64px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";x.save();x.translate(128,88);x.scale(Math.min(1,200/x.measureText(CLUBN).width),1);x.fillText(CLUBN,0,0);x.restore();
+  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t})();
+const flag=new THREE.Mesh(flagG,new THREE.MeshStandardMaterial({map:flagTex,side:THREE.DoubleSide,roughness:.8}));flag.position.copy(W(...PIN,hP+2.1-.06-.25));flag.castShadow=true;scene.add(flag);
 // vlajka jemne vlaje: vlny po látke + pomalé natáčanie okolo žrde podľa nárazov vetra
 function waveFlag(t){const p=flagG.attributes.position,gust=.75+.25*Math.sin(t*.37)*Math.sin(t*.23+1);
   for(let i=0;i<p.count;i++){const x=flagB[i*3],y=flagB[i*3+1];const k=x/.75;
@@ -844,14 +867,14 @@ if(PLAY){
     for(let j=0;j<Ht;j++)for(let i=0;i<Wd;i++){const sx=(hh(i+1,j)-hh(i-1,j))*k,sy=(hh(i,j+1)-hh(i,j-1))*k,l=Math.hypot(sx,sy,1),p=(j*Wd+i)*4;
       o[p]=(-sx/l*.5+.5)*255;o[p+1]=(sy/l*.5+.5)*255;o[p+2]=(1/l*.5+.5)*255;o[p+3]=255}
     const nc=document.createElement("canvas");nc.width=Wd;nc.height=Ht;nc.getContext("2d").putImageData(nm,0,0);
-    // farba: jemné tieňovanie v jamôčkach, čierna potlač „FÓR“ a čiara
+    // farba: jemné tieňovanie v jamôčkach, potlač s názvom klubu a čiara
     x.globalCompositeOperation="source-over";x.globalAlpha=.82;x.fillStyle="#fff";x.fillRect(0,0,Wd,Ht);x.globalAlpha=1;
     x.fillStyle="#1d2a44";x.fillRect(0,Ht/2-1.5,Wd*.24,3);x.fillRect(Wd*.5,Ht/2-1.5,Wd*.24,3);
-    x.font="bold 26px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";x.fillStyle="#1d2a44";x.save();x.translate(Wd*.375,Ht/2);x.scale(.75,1);x.fillText("FÓR",0,0);x.restore();
+    x.font="bold 26px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";x.fillStyle="#1d2a44";x.save();x.translate(Wd*.375,Ht/2);x.scale(.75*Math.min(1,4/CLUBN.length),1);x.fillText(CLUBN,0,0);x.restore();
     x.fillStyle="#c0392b";x.font="bold 20px system-ui,sans-serif";x.fillText("1",Wd*.875,Ht/2);
     const mt=new THREE.CanvasTexture(cv),nt=new THREE.CanvasTexture(nc);mt.colorSpace=THREE.SRGBColorSpace;mt.anisotropy=nt.anisotropy=4;
-    return new THREE.MeshStandardMaterial({map:mt,normalMap:nt,normalScale:new THREE.Vector2(1.1,1.1),color:0xffffff,roughness:.32,metalness:0,emissive:0x2a2a2a})})();
-  const ball=new THREE.Mesh(new THREE.SphereGeometry(.11,32,20),ballMat);ball.castShadow=true;scene.add(ball);
+    return new THREE.MeshStandardMaterial({transparent:true,map:mt,normalMap:nt,normalScale:new THREE.Vector2(1.1,1.1),color:0xffffff,roughness:.32,metalness:0,emissive:0x2a2a2a})})();
+  const ball=new THREE.Mesh(new THREE.SphereGeometry(.11,32,20),ballMat);ball.castShadow=true;ball.renderOrder=7;scene.add(ball);
   const trailG=new THREE.BufferGeometry();const trailP=new Float32Array(600*3);trailG.setAttribute("position",new THREE.BufferAttribute(trailP,3));trailG.setDrawRange(0,0);
   scene.add(new THREE.Line(trailG,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.75})));
   const aimG=new THREE.BufferGeometry();const aimP=new Float32Array(60*3);aimG.setAttribute("position",new THREE.BufferAttribute(aimP,3));
@@ -1011,12 +1034,12 @@ if(PLAY){
       for(let a=0;a<360;a+=2){const t=a/360,v=Math.pow(Math.max(0,Math.cos(t*Math.PI*2)),6)*.9+.25;x.strokeStyle=`rgba(255,${235+20*v|0},${170+85*v|0},${Math.min(1,v)})`;x.lineWidth=12;x.beginPath();x.arc(64,64,56,a*Math.PI/180,(a+2.6)*Math.PI/180);x.stroke()}
       const rt=new THREE.CanvasTexture(cv),gc=document.createElement("canvas");gc.width=gc.height=64;const y=gc.getContext("2d"),g=y.createRadialGradient(32,32,8,32,32,32);
       g.addColorStop(0,"rgba(255,245,200,0)");g.addColorStop(.42,"rgba(255,245,200,.95)");g.addColorStop(1,"rgba(255,245,200,0)");y.fillStyle=g;y.fillRect(0,0,64,64);
-      const mk=(geo,tx)=>{const m=new THREE.Mesh(geo.rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:tx,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0,fog:false,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-16}));m.renderOrder=4;m.visible=false;scene.add(m);return m};
+      const mk=(geo,tx)=>{const m=new THREE.Mesh(geo.rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:tx,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0,fog:false,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-16}));m.renderOrder=8;m.visible=false;scene.add(m);return m};
       FX={rim:mk(new THREE.PlaneGeometry(.15,.15),rt),halo:mk(new THREE.PlaneGeometry(.5,.5),new THREE.CanvasTexture(gc)),t:-1}}
     FX.rim.position.copy(cp).y+=.004;FX.halo.position.copy(cp).y+=.003;FX.rim.visible=FX.halo.visible=true;FX.t=0}
   function fxTick(dt){if(!FX||FX.t<0)return;FX.t+=dt;const t=FX.t,k=t/1.3;if(k>=1){FX.rim.visible=FX.halo.visible=false;FX.t=-1;return}
     const env=Math.min(1,t/.12)*(1-k*k);FX.rim.material.opacity=env;FX.rim.rotation.y=-t*7;FX.rim.scale.setScalar(1+.08*Math.sin(t*20)*(1-k));
-    FX.halo.material.opacity=env*.8*(1-k);FX.halo.scale.setScalar(.5+k*1.6)}
+    FX.halo.material.opacity=env*.45*(1-k);FX.halo.scale.setScalar(.4+k*1.2)}
   // hole in one: veľká gratulácia + konfety na 2D plátne (len ~4 s, potom sa odstráni)
   function holeInOne(){if(navigator.vibrate)navigator.vibrate([60,60,60,60,200]);
     const o=document.createElement("div");o.id="hio";o.innerHTML=`<div class="hio-c"><div class="hio-e">🏆</div><div class="hio-t">HOLE IN ONE!</div><div class="hio-s">Gratulujeme! Jamka ${hNum} na jeden úder 🎉</div></div>`;
@@ -1087,18 +1110,22 @@ if(PLAY){
       if(S.t>25)stopBall()}}
   // kamera
   const camP=new THREE.Vector3(),camT=new THREE.Vector3();
-  function camGoal(){const dx=Math.sin(S.aim),dy=Math.cos(S.aim);const onG=sdist(S.x,S.y,green)<4;
+  function camGoal(){S.low=0;const dx=Math.sin(S.aim),dy=Math.cos(S.aim);const onG=sdist(S.x,S.y,green)<4;
     // loptička padá do jamky: kamera sa priblíži k jamke (vidno loptičku zblízka aj záblesk obruče)
     if(S.mode==="drop"||S.mode==="in"){if(!S.cd){const cx=camP.x-PIN[0],cy=-camP.z-PIN[1],l=Math.hypot(cx,cy)||1;S.cd=[cx/l,cy/l]}
-      const h=gS(PIN[0],PIN[1]);return[[PIN[0]+S.cd[0]*1.15,PIN[1]+S.cd[1]*1.15,h+.5],[PIN[0],PIN[1],h-.05]]}
+      const h=gS(PIN[0],PIN[1]);return[[PIN[0]+S.cd[0]*.42,PIN[1]+S.cd[1]*.42,h+.24],[PIN[0],PIN[1],h-.04]]}
     if(S.mode==="fly"||S.mode==="roll"){const d=Math.max(1,Math.hypot(S.vx,S.vy));const fx=S.vx/d,fy=S.vy/d;
       if(S.mode==="fly"&&S.vz>0){const bk=12;return[[S.prev[0]-dx*bk,S.prev[1]-dy*bk,gS(S.prev[0],S.prev[1])+4],[S.x,S.y,S.z]]}
+      if(S.mode==="roll"&&!CLUBS[S.club].a){S.low=1;return[[S.x-fx*1.3,S.y-fy*1.3,gS(S.x,S.y)+.42],[S.x+fx*2.5,S.y+fy*2.5,gS(S.x+fx*2.5,S.y+fy*2.5)]]}   // pat: kamera nízko za loptičkou
       return[[S.x-fx*7-1,S.y-fy*7,S.z+3],[S.x,S.y,S.z]]}
     if(S.view===1){return[[S.x-dx*20,S.y-dy*20,S.z+40],[S.x+dx*Math.min(toPin(),120)*.6,S.y+dy*Math.min(toPin(),120)*.6,gS(PIN[0],PIN[1])]]}
+    // pat: detailný pohľad nízko tesne za loptičkou (vidno jamôčky aj líniu k jamke)
+    if(!CLUBS[S.club].a&&S.mode!=="fly"){S.low=1;const L=1.3;return[[S.x-dx*.62,S.y-dy*.62,gS(S.x,S.y)+.3],[S.x+dx*L,S.y+dy*L,gS(S.x+dx*L,S.y+dy*L)-.12]]}
     if(onG){const L=Math.min(Math.max(toPin(),2),12);return[[S.x-dx*4.5,S.y-dy*4.5,S.z+1.7],[S.x+dx*L,S.y+dy*L,gS(S.x+dx*L,S.y+dy*L)]]}
     return[[S.x-dx*9,S.y-dy*9,S.z+3.2],[S.x+dx*40,S.y+dy*40,gS(S.x+dx*40,S.y+dy*40)+1]]}
-  function camUpd(dt,snap){const[p,t]=camGoal();const P=W(p[0],p[1],Math.max(p[2],gS(p[0],p[1])+(S.cd?.35:1.2))),T=W(...t);
-    const k=snap?1:1-Math.exp(-dt*(S.mode==="fly"?2.2:S.cd?2.6:4));camP.lerp(P,k);camT.lerp(T,k);camera.position.copy(camP);camera.lookAt(camT)}
+  function camUpd(dt,snap){const[p,t]=camGoal();const P=W(p[0],p[1],Math.max(p[2],gS(p[0],p[1])+(S.cd||S.low?.25:1.2))),T=W(...t);
+    const k=snap?1:1-Math.exp(-dt*(S.mode==="fly"?2.2:S.cd?2.6:4));camP.lerp(P,k);camT.lerp(T,k);camera.position.copy(camP);camera.lookAt(camT);
+    {const nr=(S.low||S.cd)?.06:1;if(camera.near!==nr){camera.near=nr;camera.updateProjectionMatrix()}}}
   // ovládanie
   // úder: drž = sila (po oblúku), pusti = sila zamknutá a rozkolíše sa ručička, ťukni (kdekoľvek) keď je v strede.
   // Pat: drž a pusti (len sila).
@@ -1168,7 +1195,7 @@ function loop(now){if(window.__stopped)return;const dt=Math.min(.05,lastT?(now-l
   waveFlag(now/1000);if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
-     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}fadeTrees();clouds.userData.tick(camera,now/1000);renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}fadeTrees();renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // nová verzia appky: service worker sa hneď aktualizuje a stránka sa raz obnoví
