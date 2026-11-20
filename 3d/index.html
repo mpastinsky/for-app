@@ -529,11 +529,9 @@ const hP=hL(...PIN)+.08;
  const wall=new THREE.Mesh(new THREE.CylinderGeometry(R0,R0,DEP,40,1,true),new THREE.MeshLambertMaterial(inMat({map:wt,side:THREE.BackSide})));
  wall.position.copy(pos);wall.position.y-=DEP/2;wall.renderOrder=5;scene.add(wall);
  const bot=new THREE.Mesh(new THREE.CircleGeometry(R0,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial(inMat({color:0x2c2c2a})));bot.position.copy(pos);bot.position.y-=DEP;bot.renderOrder=5;scene.add(bot);
- // okraj: prevísajúce steblá trávy (priehľadný prstenec nad otvorom)
+ // okraj: tenký lem hliny (bez stebiel nad otvorom)
  const rc=document.createElement("canvas");rc.width=rc.height=256;const r=rc.getContext("2d"),C=128,rIn=C*R0/.066;
  r.strokeStyle="rgba(60,40,22,.85)";r.lineWidth=3;r.beginPath();r.arc(C,C,rIn,0,7);r.stroke();
- for(let i=0;i<520;i++){const a=Math.random()*Math.PI*2,r1=rIn+4+Math.random()*16,r2=rIn-1-Math.random()*7,ca=Math.cos(a),sa=Math.sin(a),bend=(Math.random()-.5)*.08;
-   r.strokeStyle=`rgb(${50+Math.random()*40|0},${100+Math.random()*50|0},${35+Math.random()*25|0})`;r.lineWidth=.8+Math.random()*1.3;r.beginPath();r.moveTo(C+ca*r1,C+sa*r1);r.lineTo(C+Math.cos(a+bend)*r2,C+Math.sin(a+bend)*r2);r.stroke()}
  const rt=new THREE.CanvasTexture(rc);rt.colorSpace=THREE.SRGBColorSpace;
  const lip=new THREE.Mesh(new THREE.PlaneGeometry(.132,.132).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({map:rt,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-16}));
  lip.position.copy(pos);lip.position.y+=.0008;lip.renderOrder=6;scene.add(lip);
