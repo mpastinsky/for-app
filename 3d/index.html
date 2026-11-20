@@ -579,7 +579,9 @@ const hP=hL(...PIN)+.08;
  const lip=new THREE.Mesh(new THREE.PlaneGeometry(.132,.132).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({map:rt,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-16}));
  lip.position.copy(pos);lip.position.y+=.0008;lip.renderOrder=6;scene.add(lip);
  scene.userData.cupPos=pos.clone()}
-const pin=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,2.1,10),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.35}));pin.position.copy(W(...PIN,hP+1.05-.06));pin.castShadow=true;scene.add(pin);
+const pin=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,2.1,12),new THREE.MeshStandardMaterial({roughness:.35,map:(()=>{   // tyčka s čierno-bielymi pásikmi (7 pásov)
+  const c=document.createElement("canvas");c.width=4;c.height=14;const x=c.getContext("2d");for(let i=0;i<7;i++){x.fillStyle=i%2?"#151515":"#ffffff";x.fillRect(0,i*2,4,2)}
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;return t})()}));pin.position.copy(W(...PIN,hP+1.05-.06));pin.castShadow=true;scene.add(pin);
 const flagG=new THREE.PlaneGeometry(.75,.5,16,5).translate(.375,0,0);const flagB=Float32Array.from(flagG.attributes.position.array);
 const flagTex=(()=>{const cv=document.createElement("canvas");cv.width=256;cv.height=170;const x=cv.getContext("2d");x.fillStyle="#d8262a";x.fillRect(0,0,256,170);
   x.fillStyle="#fff";x.font="900 64px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";x.save();x.translate(128,88);x.scale(Math.min(1,200/x.measureText(CLUBN).width),1);x.fillText(CLUBN,0,0);x.restore();
@@ -1133,8 +1135,8 @@ if(PLAY){
    .wd svg{width:13px;height:13px;fill:#ffe14d;vertical-align:-1px;margin-right:3px;transition:transform .2s}
    #p-map{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 140px);width:68px;height:190px;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.35);pointer-events:none;z-index:5}
    body.done #p-map{display:none}
-   #p-tgt{position:fixed;transform:translate(-50%,calc(-100% - 14px));background:rgba(15,61,43,.88);color:#fff;border-radius:10px;padding:3px 9px;text-align:center;pointer-events:none;font-family:var(--font);line-height:1.15;white-space:nowrap;z-index:4}
-   #p-tgt::after{content:"";position:absolute;left:50%;bottom:-12px;width:2px;height:12px;background:#fff;transform:translateX(-50%)}
+   #p-tgt{position:fixed;transform:translate(14px,-50%);background:rgba(15,61,43,.88);color:#fff;border-radius:10px;padding:3px 9px;text-align:center;pointer-events:none;font-family:var(--font);line-height:1.15;white-space:nowrap;z-index:4}
+   #p-tgt::after{content:"";position:absolute;left:-12px;top:50%;width:12px;height:2px;background:#fff;transform:translateY(-50%)}
    #p-tgt b{display:block;font-size:1.1rem}#p-tgt small{display:block;font-size:.78rem;font-weight:600}#p-tgt small:empty{display:none}
    #p-tgt[hidden],#p-shot[hidden]{display:none}
    #p-shot{position:fixed;left:0;bottom:calc(env(safe-area-inset-bottom,0px) + 178px);background:linear-gradient(90deg,rgba(0,0,0,.7),rgba(0,0,0,0));color:#fff;padding:7px 40px 7px 14px;font:600 .85rem var(--font);text-transform:uppercase;letter-spacing:.03em;pointer-events:none}
@@ -1166,8 +1168,8 @@ if(PLAY){
   function hudTick(){mapF++;if(arcM.visible)arcW();if(ring.visible)rollD.scale.setScalar(Math.min(4,Math.max(1,camera.position.distanceTo(rollD.position)/30)));if(ring.visible)ring.scale.setScalar(Math.min(5,Math.max(1,camera.position.distanceTo(ring.position)/22)));if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
     const T=$("p-tgt");if(S.mode!=="aim"){T.hidden=true;return}
     const putt=!CLUBS[S.club].a,X=putt?PIN[0]:TG.x,Y=putt?PIN[1]:TG.y,el=gS(X,Y)-gS(S.x,S.y);
-    tv.set(X,gS(X,Y)+(putt?1.6:.3),-Y).project(camera);if(tv.z>1||Math.abs(tv.x)>1.05||Math.abs(tv.y)>1.05){T.hidden=true;return}
-    T.hidden=false;T.style.left=((tv.x+1)/2*innerWidth)+"px";T.style.top=((1-tv.y)/2*innerHeight)+"px";
+    {const rr=putt?.6:2*ring.scale.x+.3,px=Math.cos(S.aim)*rr,py=-Math.sin(S.aim)*rr;tv.set(X+px,gS(X+px,Y+py)+(putt?.3:.1),-(Y+py)).project(camera)}if(tv.z>1||Math.abs(tv.x)>1.05||Math.abs(tv.y)>1.05){T.hidden=true;return}
+    T.hidden=false;T.style.left=Math.min((tv.x+1)/2*innerWidth,innerWidth-T.offsetWidth-20)+"px";T.style.top=((1-tv.y)/2*innerHeight)+"px";
     const d=putt?toPin():TG.L,ae=Math.abs(el);
     T.firstChild.textContent=fm(d)+" m";T.lastChild.textContent=ae<(putt?.05:.5)?"":(el>0?"▲ ":"▼ ")+(ae<10?ae.toFixed(1).replace(".",","):Math.round(ae))+" m"}
   function pickClub(dd){const d=dd??(bendAim()?Math.min(toPin(),Math.hypot(BL[0]-S.x,BL[1]-S.y)+15):toPin());const sd=sdist(S.x,S.y,green);
