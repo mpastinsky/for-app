@@ -179,7 +179,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.prepend(renderer.domElement);
 const W=(x,y,h)=>new THREE.Vector3(x,h,-y);
 // jemné detaily povrchu zblízka (jedna 512 px textúra, opakovaná): R = steblá trávy (krátke ťahy), G = väčšie trsy/fľaky, B = zrnká piesku
-const HQ=CRS!=="apex";   // vylepšená grafika (zatiaľ akadémia)
+const HQ=CRS!=="apex";const OTHL=[];   // vylepšená grafika (zatiaľ akadémia)
 const DN=(()=>{const n=512,cv=document.createElement("canvas");cv.width=cv.height=n;const x=cv.getContext("2d");let sd=12345;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
   // R: steblá – tisíce krátkych svetlých/tmavých ťahov (pri pohľade zhora vyzerá tráva ako hustá spleť stebiel)
   const R=document.createElement("canvas");R.width=R.height=n;const rx=R.getContext("2d");rx.fillStyle="#808080";rx.fillRect(0,0,n,n);rx.lineCap="round";
@@ -560,7 +560,10 @@ const flagG=new THREE.PlaneGeometry(.75,.5,16,5).translate(.375,0,0);const flagB
 const flagTex=(()=>{const cv=document.createElement("canvas");cv.width=256;cv.height=170;const x=cv.getContext("2d");x.fillStyle="#d8262a";x.fillRect(0,0,256,170);
   x.fillStyle="#fff";x.font="900 64px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";x.save();x.translate(128,88);x.scale(Math.min(1,200/x.measureText(CLUBN).width),1);x.fillText(CLUBN,0,0);x.restore();
   const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t})();
-const flag=new THREE.Mesh(flagG,new THREE.MeshStandardMaterial({map:flagTex,side:THREE.DoubleSide,roughness:.8}));flag.position.copy(W(...PIN,hP+2.1-.06-.25));flag.castShadow=true;scene.add(flag);
+const flagMat=new THREE.MeshStandardMaterial({map:flagTex,side:THREE.DoubleSide,roughness:.8});
+// nápis čitateľný z oboch strán: zozadu sa textúra zrkadlovo otočí
+flagMat.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace("#include <map_fragment>","diffuseColor*=texture2D(map,gl_FrontFacing?vMapUv:vec2(1.-vMapUv.x,vMapUv.y));")};
+const flag=new THREE.Mesh(flagG,flagMat);flag.position.copy(W(...PIN,hP+2.1-.06-.25));flag.castShadow=true;scene.add(flag);
 // vlajka jemne vlaje: vlny po látke + pomalé natáčanie okolo žrde podľa nárazov vetra
 function waveFlag(t){const p=flagG.attributes.position,gust=.75+.25*Math.sin(t*.37)*Math.sin(t*.23+1);
   for(let i=0;i<p.count;i++){const x=flagB[i*3],y=flagB[i*3+1];const k=x/.75;
@@ -927,10 +930,10 @@ if(CRS!=="apex"){btns.all=document.getElementById("v-all");
     const st=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);camera.position.y+=Math.sin(Math.PI*e)*20;
       controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);
       if(k<1)requestAnimationFrame(st);else if(url&&h!==hNum)snapGo(url);else{controls.enabled=true;controls.update();setOn("tee");flyDown.busy=0;if(url)snapGo(url)}};requestAnimationFrame(st)};
-  // čísla jamiek a čiary od odpaliska ku greenu
+  // čísla jamiek a čiary od odpaliska ku greenu (čiary iných jamiek len v pohľade zhora, pri zemi by presvitali cez terén)
   READY.forEach(h=>{const t=loc(DATA.pads[h][Math.min(tIdx,DATA.pads[h].length-1)]),g=loc(DATA.gc[h-1]);
     if(h!==hNum){const n=24,a=new Float32Array(n*3);for(let i=0;i<n;i++){const k=i/(n-1),x=t[0]+(g[0]-t[0])*k,y=t[1]+(g[1]-t[1])*k;a.set([x,hL(x,y)+.3,-y],i*3)}
-      const lg=new THREE.BufferGeometry();lg.setAttribute("position",new THREE.BufferAttribute(a,3));const ln=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0xffffff,dashSize:3,gapSize:2,transparent:true,opacity:.85}));ln.computeLineDistances();scene.add(ln)}
+      const lg=new THREE.BufferGeometry();lg.setAttribute("position",new THREE.BufferAttribute(a,3));const ln=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0xffffff,dashSize:3,gapSize:2,transparent:true,opacity:.85}));ln.computeLineDistances();scene.add(ln);OTHL.push(ln)}
     const el=document.createElement("a");el.className="lab hole"+(h===hNum?" cur":"");el.textContent=h;el.href="?"+CQ+"h="+h+"&t="+tIdx;document.body.appendChild(el);el.onclick=ev=>{ev.preventDefault();flyDown(h,el.href)};
     labels.push({el,v:W(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5,hL(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5)+4),all:1})});
   if(Q.get("v")==="all"){go(views.all);setOn("all")}}
@@ -1341,7 +1344,7 @@ function loop(now){if(window.__stopped)return;const dt=Math.min(.05,lastT?(now-l
   waveFlag(now/1000);if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
-     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // nová verzia appky: service worker sa hneď aktualizuje a stránka sa raz obnoví
