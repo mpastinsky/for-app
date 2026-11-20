@@ -111,11 +111,14 @@ camera.position.copy(home.pos);
 const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(home.target);controls.enableDamping=true;controls.maxPolarAngle=1.35;controls.minDistance=60;controls.maxDistance=dist*1.6;controls.screenSpacePanning=false;controls.update();
 document.getElementById("load").remove();
 // ⛳ Hrať kolo: prelet nadol na odpalisko jamky 1, potom hra
-document.getElementById("b-go").onclick=()=>{const t=DATA.pads[READY[0]][tIdx],gc=DATA.gc[READY[0]-1],u=[gc[0]-t[0],gc[1]-t[1]],L=Math.hypot(...u);u[0]/=L;u[1]/=L;
+// ťuk na číslo jamky: ten istý prelet k odpalisku vybranej jamky
+const flyTo=(h,url)=>{const t=DATA.pads[h][tIdx],gc=DATA.gc[h-1],u=[gc[0]-t[0],gc[1]-t[1]],L=Math.hypot(...u);u[0]/=L;u[1]/=L;
   const p1=W(t[0]-u[0]*15,t[1]-u[1]*15,hAt(...t)+6),t1=W(t[0]+u[0]*120,t[1]+u[1]*120,hAt(t[0]+u[0]*120,t[1]+u[1]*120));
-  const p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2600;controls.enabled=false;labels.forEach(l=>l.el.style.display="none");
+  const p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2600;controls.enabled=false;labels.forEach(l=>l.el.style.visibility="hidden");
   const st=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);camera.position.y+=Math.sin(Math.PI*e)*60;
-    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else location.href="./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1"};requestAnimationFrame(st)};
+    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else location.href=url};requestAnimationFrame(st)};
+document.getElementById("b-go").onclick=()=>flyTo(READY[0],"./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1");
+for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();flyTo(+l.el.textContent,l.el.href)};
 const v=new THREE.Vector3();
 function frame(){if(controls.enabled)controls.update();renderer.render(scene,camera);
   for(const l of labels){v.copy(l.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=(v.x+1)/2*innerWidth+"px";l.el.style.top=(1-v.y)/2*innerHeight+"px"}}

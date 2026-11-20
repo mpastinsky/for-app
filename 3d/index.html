@@ -729,11 +729,20 @@ if(CRS!=="apex"){btns.all=document.getElementById("v-all");
     hh=Math.max((x1-x0+70)/2/(tv*asp),(y1-y0+60)/2/tv)*1.05;
   views.all={pos:W(cx,cy-hh*.12,hL(cx,cy)+hh),target:W(cx,cy,hL(cx,cy))};
   btns.all.onclick=()=>{fly=null;go(views.all);setOn("all")};
+  // ťuk na jamku v prehľade: kamera sa plynulo znesie z výšky k odpalisku vybranej jamky, až potom sa otvorí
+  window.flyDown=(h,url)=>{if(flyDown.busy)return;flyDown.busy=1;fly=null;let p1,t1;
+    if(h===hNum){p1=views.tee.pos.clone();t1=views.tee.target.clone()}
+    else{const t=loc(DATA.pads[h][Math.min(tIdx,DATA.pads[h].length-1)]),g=loc(DATA.gc[h-1]),L=Math.hypot(g[0]-t[0],g[1]-t[1])||1,ux=(g[0]-t[0])/L,uy=(g[1]-t[1])/L,ax=t[0]+ux*120,ay=t[1]+uy*120;
+      p1=W(t[0]-ux*15,t[1]-uy*15,hL(...t)+eye+2.6);t1=W(ax,ay,hL(ax,ay))}
+    document.body.classList.remove("allv");playLbl();const p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2200;controls.enabled=false;
+    const st=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);camera.position.y+=Math.sin(Math.PI*e)*20;
+      controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);
+      if(k<1)requestAnimationFrame(st);else if(url&&h!==hNum)location.href=url;else{controls.enabled=true;controls.update();setOn("tee");flyDown.busy=0;if(url)location.href=url}};requestAnimationFrame(st)};
   // čísla jamiek a čiary od odpaliska ku greenu
   READY.forEach(h=>{const t=loc(DATA.pads[h][Math.min(tIdx,DATA.pads[h].length-1)]),g=loc(DATA.gc[h-1]);
     if(h!==hNum){const n=24,a=new Float32Array(n*3);for(let i=0;i<n;i++){const k=i/(n-1),x=t[0]+(g[0]-t[0])*k,y=t[1]+(g[1]-t[1])*k;a.set([x,hL(x,y)+.3,-y],i*3)}
       const lg=new THREE.BufferGeometry();lg.setAttribute("position",new THREE.BufferAttribute(a,3));const ln=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0xffffff,dashSize:3,gapSize:2,transparent:true,opacity:.85}));ln.computeLineDistances();scene.add(ln)}
-    const el=document.createElement("a");el.className="lab hole"+(h===hNum?" cur":"");el.textContent=h;el.href="?"+CQ+"h="+h+"&t="+tIdx;document.body.appendChild(el);
+    const el=document.createElement("a");el.className="lab hole"+(h===hNum?" cur":"");el.textContent=h;el.href="?"+CQ+"h="+h+"&t="+tIdx;document.body.appendChild(el);el.onclick=ev=>{ev.preventDefault();flyDown(h,el.href)};
     labels.push({el,v:W(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5,hL(t[0]+(g[0]-t[0])*.5,t[1]+(g[1]-t[1])*.5)+4),all:1})});
   if(Q.get("v")==="all"){go(views.all);setOn("all")}}
 // ⛳ Hrať: v prehľade zhora celé kolo od jamky 1, inak len práve zobrazená jamka
@@ -748,6 +757,7 @@ document.getElementById("v-play").onclick=()=>{if(!document.body.classList.conta
       // kamera ide najprv po oblúku (vysoko), potom klesá k odpalisku
       p1.lerpVectors(p0,views.tee.pos,e);p1.y+=Math.sin(Math.PI*e)*20;t1.lerpVectors(t0,views.tee.target,e);camera.position.copy(p1);controls.target.copy(t1);camera.lookAt(t1);
       if(k<1)requestAnimationFrame(st);else go2()};requestAnimationFrame(st);return}
+  if(document.body.classList.contains("allv")&&window.flyDown){flyDown(READY[0],"?"+CQ+"h="+READY[0]+"&t="+tIdx+"&play=1");return}
   go2()};
 btns.fly.onclick=()=>{fly={t0:performance.now()};setOn("fly")};
 const curve=new THREE.CatmullRomCurve3(BL?[views.tee.pos.clone(),W(BL[0]*.5,BL[1]*.5,hL(BL[0]*.5,BL[1]*.5)+22),W(BL[0],BL[1],hL(...BL)+18),W(BL[0]*.4,BL[1]*.4+(c-BL[1]*.4)*.6,hL(0,c*.7)+14),W(0,c-38,hG+9)]:[views.tee.pos.clone(),W(0,c*.3,hL(0,c*.3)+22),W(0,c*.65,hL(0,c*.65)+16),W(0,c-38,hG+9)]);
