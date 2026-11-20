@@ -562,16 +562,16 @@ const hP=hL(...PIN)+.08;
    stencilWrite:true,stencilRef:1,stencilFunc:THREE.AlwaysStencilFunc,stencilZPass:THREE.ReplaceStencilOp}));mask.position.copy(pos);mask.renderOrder=1;scene.add(mask);
  const inMat=o=>Object.assign({transparent:true,stencilWrite:true,stencilRef:1,stencilFunc:THREE.EqualStencilFunc,stencilZPass:THREE.KeepStencilOp,depthFunc:THREE.AlwaysDepth},o);
  const wc=document.createElement("canvas");wc.width=256;wc.height=128;const w=wc.getContext("2d");
- {const soil=w.createLinearGradient(0,0,0,40);soil.addColorStop(0,"#3a2a1a");soil.addColorStop(1,"#2a1e12");w.fillStyle=soil;w.fillRect(0,0,256,38);
+ {const soil=w.createLinearGradient(0,0,0,40);soil.addColorStop(0,"#6b4a2b");soil.addColorStop(1,"#4e3520");w.fillStyle=soil;w.fillRect(0,0,256,38);
   for(let i=0;i<900;i++){const yy=Math.random()*38;w.fillStyle=`rgba(${30+Math.random()*60|0},${20+Math.random()*40|0},${10+Math.random()*25|0},.55)`;w.fillRect(Math.random()*256,yy,1+Math.random()*2,1+Math.random()*2)}
   w.strokeStyle="rgba(200,190,150,.35)";w.lineWidth=.7;for(let i=0;i<70;i++){const x0=Math.random()*256;w.beginPath();w.moveTo(x0,0);w.quadraticCurveTo(x0+(Math.random()-.5)*8,8,x0+(Math.random()-.5)*10,6+Math.random()*24);w.stroke()}   // korienky
-  w.fillStyle="#3b6b2a";for(let i=0;i<256;i+=2){w.fillRect(i,0,2,2+Math.random()*4)}   // tráva na hrane
-  const lin=w.createLinearGradient(0,38,0,128);lin.addColorStop(0,"#b8b8b0");lin.addColorStop(.35,"#6e6e68");lin.addColorStop(1,"#1e1e1c");   // vložka v tieni – jamka pôsobí čisto tmavá ako na vzorew.fillStyle=lin;w.fillRect(0,38,256,90);
+  const lin=w.createLinearGradient(0,38,0,128);lin.addColorStop(0,"#f4f4f0");lin.addColorStop(.6,"#e2e2dc");lin.addColorStop(1,"#c9c9c2");   // hore hlina, pod ňou biela vložka až po dno
+  w.fillStyle=lin;w.fillRect(0,38,256,90);
   w.fillStyle="rgba(0,0,0,.25)";w.fillRect(0,38,256,3)}
  const wt=new THREE.CanvasTexture(wc);wt.colorSpace=THREE.SRGBColorSpace;wt.wrapS=THREE.RepeatWrapping;wt.repeat.x=2;
  const wall=new THREE.Mesh(new THREE.CylinderGeometry(R0,R0,DEP,40,1,true),new THREE.MeshLambertMaterial(inMat({map:wt,side:THREE.BackSide})));
  wall.position.copy(pos);wall.position.y-=DEP/2;wall.renderOrder=5;scene.add(wall);
- const bot=new THREE.Mesh(new THREE.CircleGeometry(R0,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial(inMat({color:0x121210})));bot.position.copy(pos);bot.position.y-=DEP;bot.renderOrder=5;scene.add(bot);
+ const bot=new THREE.Mesh(new THREE.CircleGeometry(R0,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial(inMat({color:0xbdbdb6})));bot.position.copy(pos);bot.position.y-=DEP;bot.renderOrder=5;scene.add(bot);
  // okraj: tenký lem hliny (bez stebiel nad otvorom)
  const rc=document.createElement("canvas");rc.width=rc.height=256;const r=rc.getContext("2d"),C=128,rIn=C*R0/.066;
  r.strokeStyle="rgba(60,40,22,.85)";r.lineWidth=3;r.beginPath();r.arc(C,C,rIn,0,7);r.stroke();
@@ -1364,7 +1364,7 @@ if(PLAY){
   // úder: drž = sila (po oblúku), pusti = sila zamknutá a rozkolíše sa ručička, ťukni (kdekoľvek) keď je v strede.
   // Pat: drž a pusti (len sila).
   let SW=null,turn=0;const H=$("p-hit"),M=$("p-meter");
-  const powOf=t=>{const ph=(t/2300)%2,p=ph<1?ph:2-ph;if(!CLUBS[S.club].a||p<.75)return p;   // nad 75 % sa ukazovateľ rozkolíše (čím silnejšie, tým viac)
+  const powOf=t=>{const ph=(t/1500)%2,p=ph<1?ph:2-ph;if(!CLUBS[S.club].a||p<.75)return p;   // nad 75 % sa ukazovateľ rozkolíše (čím silnejšie, tým viac)
     const a=.07*Math.pow((p-.75)/.25,1.4);return Math.max(0,Math.min(1,p+a*(Math.sin(t*.019)+.6*Math.sin(t*.043+1.3))/1.6))};
   const perT=()=>(4.4-3.0*Math.pow(SW.p,1.3))/(S.lie===SURF.sand?1.15:S.lie===SURF.rough?1.07:1);   // perióda kyvadla (s): silnejší úder = rýchlejšie
   const needle=()=>-Math.cos(2*Math.PI*(performance.now()-SW.t0)/1000/perT());
