@@ -345,8 +345,9 @@ const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),
 // Steblá sa neprepočítavajú v JS – vertex shader ich „pretáča“ s kamerou (mod), výšku berie z mapy terénu a dĺžku z mapy povrchu
 // (rough vysoký, prvý kos nižší, fairway nízky, green/bunker/voda bez stebiel). Farba z tej istej textúry ako zem, takže sedí.
 let BLADES=null;
-if(HQ){const Wg=X1-X0+1,Hg=Y1-Y0+1,hd=new Float32Array(Wg*Hg);
- for(let j=0;j<Hg;j++)for(let i=0;i<Wg;i++)hd[j*Wg+i]=hL(X0+i,Y0+j);
+if(HQ){// výšky priamo z vrcholov siete terénu (rovnaké trojuholníky ako zem), aby steblá nestáli nad ani pod zemou
+ const gx=geo.parameters.widthSegments,gy=geo.parameters.heightSegments,Wg=gx+1,Hg=gy+1,hd=new Float32Array(Wg*Hg),gp=geo.attributes.position;
+ for(let iy=0;iy<=gy;iy++)for(let ix=0;ix<=gx;ix++)hd[(gy-iy)*Wg+ix]=gp.getY(iy*Wg+ix);
  const hT=new THREE.DataTexture(hd,Wg,Hg,THREE.RedFormat,THREE.FloatType);hT.needsUpdate=true;
  // mapa dĺžky stebiel (0,5 m/px): R = výška/0,13 m
  const KW=(X1-X0)*2,KH=(Y1-Y0)*2,kc=document.createElement("canvas");kc.width=KW;kc.height=KH;const k=kc.getContext("2d");
@@ -372,8 +373,9 @@ if(HQ){const Wg=X1-X0+1,Hg=Y1-Y0+1,hd=new Float32Array(Wg*Hg);
  bm.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
   sh.vertexShader=sh.vertexShader.replace("#include <common>",`#include <common>
 uniform vec2 uC,uWH;uniform float uS,uT;uniform sampler2D hT,kT;uniform vec4 uG;attribute vec2 aOff;attribute vec4 aRnd;varying float vB,vR;
-float hAt(vec2 p){vec2 g=clamp(p-uG.xy,vec2(0.),uWH-1.001);ivec2 i=ivec2(floor(g));vec2 f=fract(g);
- float a=texelFetch(hT,i,0).r,b=texelFetch(hT,i+ivec2(1,0),0).r,c=texelFetch(hT,i+ivec2(0,1),0).r,d=texelFetch(hT,i+ivec2(1,1),0).r;return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}`)
+float hAt(vec2 p){vec2 g=clamp((p-uG.xy)/(uG.zw-uG.xy)*(uWH-1.),vec2(0.),uWH-1.001);ivec2 i=ivec2(floor(g));vec2 f=fract(g);
+ float hb=texelFetch(hT,i,0).r,hc=texelFetch(hT,i+ivec2(1,0),0).r,ha=texelFetch(hT,i+ivec2(0,1),0).r,hd=texelFetch(hT,i+ivec2(1,1),0).r;
+ return f.y>f.x?hb+(ha-hb)*f.y+(hd-ha)*f.x:hb+(hc-hb)*f.x+(hd-hc)*f.y;}`)
   .replace("#include <uv_vertex>",`vec2 bo=uC-uS*.5,bxy=bo+mod(aOff-bo,uS);vec2 buv=(bxy-uG.xy)/(uG.zw-uG.xy);
  float bk=texture2D(kT,buv).r,bd=length(bxy-uC),bf=1.-smoothstep(uS*.3,uS*.5,bd);float bh=.11*bk*aRnd.y*bf;
 #ifdef USE_MAP
@@ -381,8 +383,8 @@ float hAt(vec2 p){vec2 g=clamp(p-uG.xy,vec2(0.),uWH-1.001);ivec2 i=ivec2(floor(g
 #endif
 vB=position.y;vR=aRnd.z;`)
   .replace("#include <begin_vertex>",`float ca=cos(aRnd.x),sa=sin(aRnd.x),wv=position.x*(.007+.006*aRnd.z)*step(.001,bh);
- float yy=position.y,bend=(.25+.5*aRnd.w)*yy*yy*bh+sin(uT*1.7+bxy.x*.8+bxy.y*.6)*.012*yy*bh*8.;
- vec3 transformed=vec3(bxy.x+ca*wv+sa*bend,hAt(bxy)-.015+yy*bh,-(bxy.y+sa*wv-ca*bend));if(bh<.004)transformed=vec3(0.,-1e4,0.);`);
+ float yy=position.y,bend=(.25+.5*aRnd.w)*yy*yy*bh;
+ vec3 transformed=vec3(bxy.x+ca*wv+sa*bend,hAt(bxy)-.004+yy*bh,-(bxy.y+sa*wv-ca*bend));if(bh<.004)transformed=vec3(0.,-1e4,0.);`);
   sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nvarying float vB,vR;").replace("#include <normal_fragment_begin>","#include <normal_fragment_begin>\nnormal=normalize(vNormal);").replace("#include <map_fragment>","#include <map_fragment>\ndiffuseColor.rgb*=mix(.8,1.4,vB)*mix(vec3(.9,.95,.85),vec3(1.12,1.08,.9),vR);")};
  const mesh=new THREE.Mesh(bg,bm);mesh.frustumCulled=false;mesh.receiveShadow=true;scene.add(mesh);
  BLADES={U,mesh,tick(t,cx,cy,camH){U.uT.value=t;U.uC.value.set(cx,cy);mesh.visible=camH<28}}}
