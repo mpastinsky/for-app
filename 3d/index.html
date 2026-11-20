@@ -200,7 +200,7 @@ function grassDetail(mat,amt){mat.onBeforeCompile=sh=>{sh.uniforms.dTex={value:D
   sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying vec2 vWp;varying float vDd;").replace("#include <begin_vertex>","#include <begin_vertex>\nvec4 wp4=modelMatrix*vec4(transformed,1.);vWp=wp4.xz;vDd=distance(wp4.xyz,cameraPosition);");
   sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nuniform sampler2D dTex;uniform float dA;varying vec2 vWp;varying float vDd;")
    .replace("#include <map_fragment>",HQ?`#include <map_fragment>
-{float n1=1.-smoothstep(3.,22.,vDd),n2=1.-smoothstep(12.,70.,vDd);
+{float n1=1.-smoothstep(4.,40.,vDd),n2=1.-smoothstep(15.,110.,vDd);
  float f1=texture2D(dTex,vWp*2.6).r,f2=texture2D(dTex,vWp*.9+.37).r,cl=texture2D(dTex,vWp*.05).g,cm=texture2D(dTex,vWp*.27).g;
  float gm=((f1-.5)*1.1*n1+(f2-.5)*.7*n2)*(.35+dA*3.)+((cl-.5)*.8+(cm-.5)*.45)*dA*1.6;
  float sm=smoothstep(.015,.07,diffuseColor.r-diffuseColor.g);
@@ -361,33 +361,35 @@ if(HQ){// výšky priamo z vrcholov siete terénu (rovnaké trojuholníky ako ze
  for(const P of waterL){kp(P);k.lineWidth=1.5;k.strokeStyle="#000";k.stroke();k.fillStyle="#000";k.fill()}
  const kT=new THREE.CanvasTexture(kc);
  // jedno steblo: 7 vrcholov, 3 články, zúžené ku špičke
- const N=34000,S=12,bg=new THREE.InstancedBufferGeometry();
+ const mk=(N,S,seed)=>{const bg=new THREE.InstancedBufferGeometry();
  const bp=[-.5,0,.5,0,-.4,.35,.4,.35,-.25,.7,.25,.7,0,1],pos=[];for(let i=0;i<7;i++)pos.push(bp[i*2],bp[i*2+1],0);
  bg.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));bg.setAttribute("normal",new THREE.Float32BufferAttribute(Array(7).fill([0,1,0]).flat(),3));
  bg.setAttribute("uv",new THREE.Float32BufferAttribute(Array(14).fill(0),2));bg.setIndex([0,1,2,2,1,3,2,3,4,4,3,5,4,5,6]);
- let sd=4242;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;const off=new Float32Array(N*2),rnd=new Float32Array(N*4);
+ let sd=seed;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;const off=new Float32Array(N*2),rnd=new Float32Array(N*4);
  for(let i=0;i<N;i++){off[i*2]=r()*S;off[i*2+1]=r()*S;rnd[i*4]=r()*6.283;rnd[i*4+1]=.55+r()*.45;rnd[i*4+2]=r();rnd[i*4+3]=r()}
  bg.setAttribute("aOff",new THREE.InstancedBufferAttribute(off,2));bg.setAttribute("aRnd",new THREE.InstancedBufferAttribute(rnd,4));bg.instanceCount=N;
  const U={uC:{value:new THREE.Vector2()},uS:{value:S},uT:{value:0},hT:{value:hT},kT:{value:kT},uG:{value:new THREE.Vector4(X0,Y0,X1,Y1)},uWH:{value:new THREE.Vector2(Wg,Hg)}};
  const bm=new THREE.MeshLambertMaterial({map:tex,side:THREE.DoubleSide});
  bm.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
   sh.vertexShader=sh.vertexShader.replace("#include <common>",`#include <common>
-uniform vec2 uC,uWH;uniform float uS,uT;uniform sampler2D hT,kT;uniform vec4 uG;attribute vec2 aOff;attribute vec4 aRnd;varying float vB,vR;
+uniform vec2 uC,uWH;uniform float uS,uT;uniform sampler2D hT,kT;uniform vec4 uG;attribute vec2 aOff;attribute vec4 aRnd;varying float vB,vR,vF;
 float hAt(vec2 p){vec2 g=clamp((p-uG.xy)/(uG.zw-uG.xy)*(uWH-1.),vec2(0.),uWH-1.001);ivec2 i=ivec2(floor(g));vec2 f=fract(g);
  float hb=texelFetch(hT,i,0).r,hc=texelFetch(hT,i+ivec2(1,0),0).r,ha=texelFetch(hT,i+ivec2(0,1),0).r,hd=texelFetch(hT,i+ivec2(1,1),0).r;
  return f.y>f.x?hb+(ha-hb)*f.y+(hd-ha)*f.x:hb+(hc-hb)*f.x+(hd-hc)*f.y;}`)
   .replace("#include <uv_vertex>",`vec2 bo=uC-uS*.5,bxy=bo+mod(aOff-bo,uS);vec2 buv=(bxy-uG.xy)/(uG.zw-uG.xy);
- float bk=texture2D(kT,buv).r,bd=length(bxy-uC),bf=1.-smoothstep(uS*.3,uS*.5,bd);float bh=.11*bk*aRnd.y*bf;
+ float bk=texture2D(kT,buv).r,bd=length(bxy-uC),bf=pow(1.-smoothstep(uS*.08,uS*.5,bd),1.4);float bh=.11*bk*aRnd.y*bf;
 #ifdef USE_MAP
  vMapUv=buv;
 #endif
-vB=position.y;vR=aRnd.z;`)
+vB=position.y;vR=aRnd.z;vF=bf*bf;`)
   .replace("#include <begin_vertex>",`float ca=cos(aRnd.x),sa=sin(aRnd.x),wv=position.x*(.007+.006*aRnd.z)*step(.001,bh);
  float yy=position.y,bend=(.25+.5*aRnd.w)*yy*yy*bh;
  vec3 transformed=vec3(bxy.x+ca*wv+sa*bend,hAt(bxy)-.004+yy*bh,-(bxy.y+sa*wv-ca*bend));if(bh<.004)transformed=vec3(0.,-1e4,0.);`);
-  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nvarying float vB,vR;").replace("#include <normal_fragment_begin>","#include <normal_fragment_begin>\nnormal=normalize(vNormal);").replace("#include <map_fragment>","#include <map_fragment>\ndiffuseColor.rgb*=mix(.8,1.4,vB)*mix(vec3(.9,.95,.85),vec3(1.12,1.08,.9),vR);")};
- const mesh=new THREE.Mesh(bg,bm);mesh.frustumCulled=false;mesh.receiveShadow=true;scene.add(mesh);
- BLADES={U,mesh,tick(t,cx,cy,camH){U.uT.value=t;U.uC.value.set(cx,cy);mesh.visible=camH<28}}}
+  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nvarying float vB,vR,vF;").replace("#include <normal_fragment_begin>","#include <normal_fragment_begin>\nnormal=normalize(vNormal);").replace("#include <map_fragment>","#include <map_fragment>\ndiffuseColor.rgb*=mix(vec3(1.),mix(.74,1.22,vB)*mix(vec3(.9,.95,.85),vec3(1.12,1.08,.9),vR),vF);")};
+ const mesh=new THREE.Mesh(bg,bm);mesh.frustumCulled=false;mesh.receiveShadow=true;scene.add(mesh);return{U,mesh}};
+ // dve vrstvy: hustá tesne pred kamerou (9 m) a redšia ďalej (22 m) – hustota plynulo klesá, bez ostrej hranice
+ const LAY=[[mk(36000,9,4242),4],[mk(30000,22,777),9.5]];
+ BLADES={tick(t,px,py,fx,fy,camH){for(const[L,o]of LAY){L.U.uT.value=t;L.U.uC.value.set(px+fx*o,py+fy*o);L.mesh.visible=camH<28}}}}
 if(Q.has("dbg"))Object.assign(window,{__B:BLADES,__hL:hL,__sc:scene,__cam:camera,__r:renderer});
 
 // --- stromy
@@ -1339,7 +1341,7 @@ function loop(now){if(window.__stopped)return;const dt=Math.min(.05,lastT?(now-l
   waveFlag(now/1000);if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
-     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position,cx=cp.x+_bv.x*4.5,cy=-(cp.z+_bv.z*4.5);BLADES.tick(now/1000,cx,cy,cp.y-hL(cp.x,-cp.z))}renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // nová verzia appky: service worker sa hneď aktualizuje a stránka sa raz obnoví
