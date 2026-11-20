@@ -21,10 +21,14 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
 .hole{position:fixed;transform:translate(-50%,-50%);width:30px;height:30px;line-height:30px;border-radius:50%;background:#0f6b4a;color:#fff;border:2px solid #fff;text-align:center;font:800 15px var(--font);text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:3}
 #note{position:fixed;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 66px);color:#fff;font-size:11px;text-shadow:0 1px 2px #000;opacity:.9;z-index:4}
 #load{position:fixed;inset:0;display:grid;place-items:center;color:#fff;font:600 1rem var(--font);text-shadow:0 1px 3px #000}
+#top,#bar,#tees,#note{z-index:3}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
 <body>
+<script>/* plynulý prechod: posledný záber predchádzajúcej obrazovky ostane viditeľný, kým sa nová scéna nevykreslí */
+try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.src=s;
+ i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:1;pointer-events:none;transition:opacity .35s";document.body.appendChild(i)}}catch(e){}</script>
 <div id="top"><a href="../?start=1" aria-label="Späť">‹</a><div style="flex:1;min-width:0"><b>Apex Golf · 18 jamiek</b><small>Ťukni na číslo jamky</small></div></div>
 <div id="tees"></div>
 <div id="load">Načítavam ihrisko…</div>
@@ -116,11 +120,12 @@ const flyTo=(h,url)=>{const t=DATA.pads[h][tIdx],gc=DATA.gc[h-1],u=[gc[0]-t[0],g
   const p1=W(t[0]-u[0]*15,t[1]-u[1]*15,hAt(...t)+6),t1=W(t[0]+u[0]*120,t[1]+u[1]*120,hAt(t[0]+u[0]*120,t[1]+u[1]*120));
   const p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2600;controls.enabled=false;labels.forEach(l=>l.el.style.visibility="hidden");
   const st=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);camera.position.y+=Math.sin(Math.PI*e)*60;
-    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else location.href=url};requestAnimationFrame(st)};
+    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else{try{renderer.render(scene,camera);sessionStorage.setItem("for.snap",renderer.domElement.toDataURL("image/jpeg",.72))}catch(e){}location.href=url}};requestAnimationFrame(st)};
 document.getElementById("b-go").onclick=()=>flyTo(READY[0],"./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1");
 for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();flyTo(+l.el.textContent,l.el.href)};
 const v=new THREE.Vector3();
-function frame(){if(controls.enabled)controls.update();renderer.render(scene,camera);
+let snapDone=false;
+function frame(){if(controls.enabled)controls.update();renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}})}
   for(const l of labels){v.copy(l.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=(v.x+1)/2*innerWidth+"px";l.el.style.top=(1-v.y)/2*innerHeight+"px"}}
   requestAnimationFrame(frame)}
 frame();
