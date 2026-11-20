@@ -511,11 +511,6 @@ DATA.woods.forEach((wd,wi)=>{const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0
   for(let k=0;k<3000&&n<(park?34:90);k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;const[x,y]=loc([e,nn]);if(y<-3&&y>-30&&Math.abs(x)<10)continue;   // za odpaliskom nechaj miesto pre kameru
     n++;if(park){if(k%5<2)pine(x,y,2.6+rnd()*1.6,15+rnd()*6,k);else tree(x,y,2.6+rnd()*1.8,13+rnd()*6,k)}else bush(x,y,3+rnd()*2.5,10+rnd()*7,k)}});
-// pás stromov na okraji modelu (akadémia je v parku – v pozadí za greenmi sú súvislé stromy, viď video z odpaliska 2)
-if(HQ){const gL=DATA.greens.map(g=>g.map(loc)),pL=Object.values(DATA.pads).flat().map(loc),mL=Object.values(DATA.mow||{}).flat().map(P=>P.map(loc));
- const free=(x,y)=>gL.every(g=>sdist(x,y,g)>15)&&pL.every(([px,py])=>Math.hypot(x-px,y-py)>22)&&!mL.some(P=>sdist(x,y,P)<10)&&!(y<5&&Math.abs(x)<30);
- let k=500;const edge=(x0,y0,x1,y1)=>{const L=Math.hypot(x1-x0,y1-y0),n=Math.floor(L/8);for(let i=0;i<=n;i++){const t=i/n,x=x0+(x1-x0)*t+(rnd()-.5)*5,y=y0+(y1-y0)*t+(rnd()-.5)*5;if(free(x,y))bush(x,y,3.2+rnd()*2.2,11+rnd()*8,k++)}};
- const m=9;edge(X0+m,Y1-m,X1-m,Y1-m);edge(X0+m,Y0+m,X0+m,Y1-m);edge(X1-m,Y0+m,X1-m,Y1-m);edge(X0+m,Y0+m,X1-m,Y0+m)}
 
 // --- nízke kríky (len na určených miestach)
 {const SHR=[0,1,2,3,4].map(i=>crownGeo(i+31,"bush"));const shrM=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.95});
