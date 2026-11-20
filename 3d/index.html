@@ -1317,7 +1317,9 @@ if(PLAY){
   function swEnd(){SW=null;document.body.classList.remove("swing");M.className="";H.classList.remove("ph2")}
   function swDown(){if(S.mode!=="aim")return;if(!SW){SW={ph:1,t0:performance.now()};document.body.classList.add("swing");M.className=CLUBS[S.club].a?"":"putt";
     if(CLUBS[S.club].a){const q=Math.min(1,tgtL()/carry()),[x,y]=arcPt(-1+2*q,113),[x2,y2]=arcPt(-1+2*q,87),k=$("pm-tg");k.setAttribute("x1",x);k.setAttribute("y1",y);k.setAttribute("x2",x2);k.setAttribute("y2",y2)}}}
-  function swUp(){if(!SW||SW.ph!==1)return;const p=Math.max(.04,powOf(performance.now()-SW.t0));
+  // krátke ťuknutie (<250 ms) = sila beží ďalej, ďalšie ťuknutie (kdekoľvek) ju zamkne; podržanie a pustenie funguje ako doteraz
+  function swUp(){if(!SW||SW.ph!==1||SW.tap)return;if(performance.now()-SW.t0<250){SW.tap=1;return}lock()}
+  function lock(){if(!SW||SW.ph!==1)return;const p=Math.max(.04,powOf(performance.now()-SW.t0));
     if(!CLUBS[S.club].a){swEnd();shoot(p);return}
     SW={ph:2,t0:performance.now(),p};M.className="ph2";zLast=-1;zones(p);$("pm-pow").style.strokeDasharray=(p*314.16).toFixed(1)+" 999";H.classList.add("ph2");
     const[x,y]=arcPt(-1+2*p,111),[x2,y2]=arcPt(-1+2*p,89);const k=$("pm-mk");k.setAttribute("x1",x);k.setAttribute("y1",y);k.setAttribute("x2",x2);k.setAttribute("y2",y2)}
@@ -1332,9 +1334,9 @@ if(PLAY){
     for(const u of[-zp,zp]){const[x,y]=arcPt(u,91),[x2,y2]=arcPt(u,73);h+=`<line class="edge" x1="${x}" y1="${y}" x2="${x2}" y2="${y2}"/>`}
     $("pm-acc").innerHTML=h}
   H.addEventListener("pointerdown",e=>{if(SW&&SW.ph===2)return;e.preventDefault();if(S.mode!=="aim")return;zLast=-1;zones(0);swDown();try{H.setPointerCapture(e.pointerId)}catch(_){}});
-  H.addEventListener("pointerup",swUp);H.addEventListener("pointercancel",()=>{if(SW&&SW.ph===1)swEnd()});
-  addEventListener("pointerdown",e=>{if(SW&&SW.ph===2){e.preventDefault();e.stopPropagation();swHit()}},true);
-  addEventListener("keydown",e=>{if(e.code!=="Space"||e.repeat||$("p-res").hidden===false)return;e.preventDefault();if(SW&&SW.ph===2)swHit();else{zLast=-1;zones(0);swDown()}});
+  H.addEventListener("pointerup",swUp);H.addEventListener("pointercancel",()=>{if(SW&&SW.ph===1&&!SW.tap)swEnd()});
+  addEventListener("pointerdown",e=>{if(SW&&SW.ph===2){e.preventDefault();e.stopPropagation();swHit()}else if(SW&&SW.ph===1&&SW.tap){e.preventDefault();e.stopPropagation();lock()}},true);
+  addEventListener("keydown",e=>{if(e.code!=="Space"||e.repeat||$("p-res").hidden===false)return;e.preventDefault();if(SW&&SW.ph===2)swHit();else if(SW&&SW.ph===1&&SW.tap)lock();else{zLast=-1;zones(0);swDown()}});
   addEventListener("keyup",e=>{if(e.code==="Space"){e.preventDefault();swUp()}});
   for(const[id,dv]of[["p-l",-1],["p-r",1]]){const b=$(id);b.addEventListener("pointerdown",e=>{e.preventDefault();turn=dv});for(const ev of["pointerup","pointerleave","pointercancel"])b.addEventListener(ev,()=>{turn=0})}
   const clubTo=i=>{if(S.mode!=="aim")return;S.club=i;if(S.tl&&S.tl>=carry()-.5)S.tl=0;info();drawAim()};
@@ -1361,7 +1363,7 @@ if(PLAY){
       if(SW){const cl=CLUBS[S.club];
         if(SW.ph===1){const p=powOf(performance.now()-SW.t0);if(cl.a)zones(p);$("pm-pow").style.strokeDasharray=(p*314.16).toFixed(1)+" 999";
           $("pm-v").textContent=Math.round(p*100)+" %";$("pm-d").textContent=cl.a?"≈ "+Math.round(cl.c*S.lie.m*p)+" m · cieľ "+Math.round(tgtL())+" m":"pat ≈ "+(cl.c*p).toFixed(1).replace(".",",")+" m";
-          $("p-ht").textContent=cl.a?"Pusti pri modrej značke":"Pusti – pat ≈ "+(cl.c*p).toFixed(1).replace(".",",")+" m"}
+          $("p-ht").textContent=cl.a?(SW.tap?"Ťukni na modrej značke":"Pusti na modrej značke"):(SW.tap?"Ťukni – pat ≈ ":"Pusti – pat ≈ ")+(cl.c*p).toFixed(1).replace(".",",")+" m"}
         else{$("pm-nd").setAttribute("transform","rotate("+(needle()*90).toFixed(1)+" 120 120)");$("p-ht").textContent="Ťukni, keď je ručička v strede"}}
       else if(S.mode==="aim")$("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";
       const n=4;for(let i=0;i<n;i++)step(dt/n);
