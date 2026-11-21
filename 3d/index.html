@@ -445,8 +445,9 @@ const seeM=new THREE.MeshStandardMaterial({color:0x3b7d33,roughness:.95,transpar
 // stromy medzi kamerou a tým, na čo sa pozeráme, sa priebežne zprehľadnia
 const FADE=[];let PIN_V=null;const TRUNKS=[];   // kmene stromov pre kolíziu loptičky: [x,y,polomer,výška vrchu]
 const _fd=new THREE.Vector3(),_fq=new THREE.Vector3();   // bez nových objektov v každom snímku (menej upratovania pamäte na telefóne)
-function fadeTrees(){const cp=camera.position,goals=[controls.target,...(PIN_V||(PIN_V=[[0,c],[GB.x0+2,(GB.y0+GB.y1)/2],[GB.x1-2,(GB.y0+GB.y1)/2],[0,GB.y0+1],[0,GB.y1-1]].map(([x,y])=>W(x,y,hL(x,y)+.5))))];
-  for(const f of FADE){let hit=false;const dc=f.c.distanceTo(cp);if(dc<f.r+4)hit=true;
+// stromy sa zprehľadnia len počas hry a len tie, ktoré zakrývajú záber na loptičku (v prehľade ihriska sú všetky plné)
+function fadeTrees(){const cp=camera.position,bp=game&&game.ballPos,goals=bp?[bp]:[];
+  for(const f of FADE){let hit=false;const dc=f.c.distanceTo(cp);if(bp&&dc<f.r+1)hit=true;
     else for(const g of goals){const d=_fd.copy(g).sub(cp),L=d.length();d.divideScalar(L);
       for(let j=0;j<2;j++){const pt=j?f.b:f.c,rr=j?1.6:f.r+1.2,s=_fq.copy(pt).sub(cp).dot(d);if(s>0&&s<L-1){_fq.copy(cp).addScaledVector(d,s);if(_fq.distanceTo(pt)<rr){hit=true;break}}}if(hit)break}
     const to=hit?.28:1;if(Math.abs(f.op-to)<.01)continue;f.op+=(to-f.op)*.18;if(Math.abs(f.op-to)<.02)f.op=to;
@@ -745,8 +746,8 @@ function oakTex(){const c=cnv(128,128),g=c.getContext("2d"),r=rng(5);
   return tex(c)}
 const TX={bark:barkTex(),locust:locustTex(),oak:oakTex()};
 const LEAF={
-  t1:{tex:"locust",leafW:0.30,leafH:0.45,leafSpread:0.25,followDir:0.8,randDir:0.7,hang:0.35,faceUp:1.0,hue:0.23,hueVar:0.05,sat:0.55,lum:0.46,lumVar:0.16},
-  t2:{tex:"oak",leafW:0.34,leafH:0.34,leafSpread:0.3,followDir:0.2,randDir:1.4,hang:0.0,faceUp:0.35,hue:0.27,hueVar:0.05,sat:0.5,lum:0.34,lumVar:0.14}};
+  t1:{tex:"locust",leafW:0.30,leafH:0.45,leafSpread:0.25,followDir:0.8,randDir:0.7,hang:0.35,faceUp:1.0,hue:0.27,hueVar:0.04,sat:0.92,lum:0.23,lumVar:0.08},
+  t2:{tex:"oak",leafW:0.34,leafH:0.34,leafSpread:0.3,followDir:0.2,randDir:1.4,hang:0.0,faceUp:0.35,hue:0.275,hueVar:0.04,sat:0.92,lum:0.21,lumVar:0.08}};
 function makeLeaves(kind,sites,seed,maxL){const L=LEAF[kind],R=rng(seed+101);
   const nSites=sites.length/6,order=[];for(let i=0;i<nSites;i++)order.push(i);
   for(let i=nSites-1;i>0;i--){const j=Math.floor(R()*(i+1)),tmp=order[i];order[i]=order[j];order[j]=tmp}
@@ -760,7 +761,8 @@ function makeLeaves(kind,sites,seed,maxL){const L=LEAF[kind],R=rng(seed+101);
     Z.set((R()-.5)*1.2,L.faceUp+R()*0.4,(R()-.5)*1.2);Z.addScaledVector(Y,-Z.dot(Y));if(Z.lengthSq()<1e-4)Z.set(1,0,0);Z.normalize();
     X.crossVectors(Y,Z);m.makeBasis(X,Y,Z);q.setFromRotationMatrix(m);
     const sc=(0.8+0.45*R())*up;s.set(L.leafW*sc,L.leafH*sc,1);m.compose(pp,q,s);mesh.setMatrixAt(k,m);
-    col.setHSL(L.hue+(R()-.5)*L.hueVar,L.sat+(R()-.5)*0.15,L.lum+(R()-.5)*L.lumVar);mesh.setColorAt(k,col)}
+    const Pk=PARAMS[kind],ex=(pp.x-Pk.cx)/Pk.rx,ey=(pp.y-Pk.cy)/Pk.ry,ez=(pp.z-Pk.cz)/Pk.rz,ed=Math.min(1,Math.sqrt(ex*ex+ey*ey+ez*ez)),upk=Math.max(0,Math.min(1,(ey+1)/2));
+    col.setHSL(L.hue+(R()-.5)*L.hueVar,L.sat+(R()-.5)*0.1,(L.lum+(R()-.5)*L.lumVar)*(.62+.3*ed+.28*upk));mesh.setColorAt(k,col)}
   mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
   mesh.castShadow=true;mesh.receiveShadow=true;mesh.computeBoundingSphere&&mesh.computeBoundingSphere();return mesh}
 function build(kind){const P=Object.assign({},PARAMS[kind],PMOB?{lowPoly:1,skipTube:5}:{lowPoly:1}),seed=1234+(kind==="t2"?77:0),g=generate(P,seed);
@@ -1983,7 +1985,7 @@ function startPlay(){
     if(h){S.aim=t[3];setTarget(h.point.x,-h.point.z)}});
   addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim"||SW)return;S.aim+=(e.clientX-drag)*.0006;drag=e.clientX;drawAim()});
   addEventListener("pointerup",()=>{drag=null});
-  game={update(dt){hudTick();fxTick(dt);
+  game={ballPos:ball.position,update(dt){hudTick();fxTick(dt);
       if(turn&&S.mode==="aim"){S.aim+=turn*dt*.16;drawAim()}
       if(SW){const cl=CLUBS[S.club];
         if(SW.ph===1){const p=powOf(performance.now()-SW.t0);if(cl.a)zones(p);$("pm-pow").style.strokeDasharray=(p*314.16).toFixed(1)+" 999";
