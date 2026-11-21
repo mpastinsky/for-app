@@ -728,8 +728,51 @@ let meLL=null,meAcc=null;const meDot=new THREE.Mesh(new THREE.SphereGeometry(.9,
 const meRing=new THREE.Mesh(new THREE.RingGeometry(1.3,1.8,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthWrite:false}));meRing.visible=false;scene.add(meRing);
 // GPS: o povolenie sa pýtame najviac raz a len keď treba (hlásenie). V hre ⛳ Hrať sa GPS nepoužíva.
 let gpsOn=false;const gpsLS=v=>{try{if(v!=null)localStorage.setItem("for.gps",v);return localStorage.getItem("for.gps")}catch(e){return null}};
-function startGPS(ask){if(gpsOn||!navigator.geolocation||Q.get("play")==="1")return;if(!ask&&gpsLS()!=="1")return;if(gpsLS()==="0"&&!ask)return;gpsOn=true;navigator.geolocation.watchPosition(p=>{gpsLS("1");meLL=[p.coords.latitude,p.coords.longitude];meAcc=p.coords.accuracy;
-  const[x,y]=loc(toEN(...meLL));const ins=x>X0&&x<X1&&y>Y0&&y<Y1;meDot.visible=meRing.visible=ins;if(ins){meDot.position.copy(W(x,y,hL(x,y)+1.2));meRing.position.copy(W(x,y,hL(x,y)+.15))}},e=>{if(e.code===1){gpsLS("0")}},{enableHighAccuracy:true,maximumAge:3000})}
+let gpsW=null;
+function startGPS(ask){if(gpsOn||!navigator.geolocation||Q.get("play")==="1")return;if(!ask&&gpsLS()!=="1")return;if(gpsLS()==="0"&&!ask)return;gpsOn=true;
+  gpsW=navigator.geolocation.watchPosition(p=>{gpsLS("1");meLL=[p.coords.latitude,p.coords.longitude];meAcc=p.coords.accuracy;onMe()},
+    e=>{if(e.code===1){gpsLS("0");gpsOn=false;if(ME.want){ME.want=false;ME.ui();ME.msg("Poloha nie je povolená – zapni ju v Nastavenia › Súkromie › Polohové služby › Safari (Pri používaní) a skús znova.",6000)}}},{enableHighAccuracy:true,maximumAge:3000})}
+// ================= MOJA POLOHA NA IHRISKU (Martin 21.11.) =================
+// Tlačidlo 📍 Ja: zapne GPS (iPhone sa opýta na povolenie), ukáže modrú značku, ktorá je vidieť aj z výšky (stála veľkosť na obrazovke),
+// krúžok presnosti a kamera k nej preletí. Pás dole ukazuje jamku a vzdialenosť do stredu greenu. Prepočet len pri novej GPS polohe (nič za snímku).
+const ME=(()=>{const cv=document.createElement("canvas");cv.width=cv.height=96;const x=cv.getContext("2d");
+  x.fillStyle="rgba(26,124,255,.28)";x.beginPath();x.arc(48,48,46,0,7);x.fill();x.fillStyle="#fff";x.beginPath();x.arc(48,48,25,0,7);x.fill();x.fillStyle="#1a7cff";x.beginPath();x.arc(48,48,18,0,7);x.fill();
+  const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;
+  const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,depthTest:false,depthWrite:false,transparent:true,sizeAttenuation:false}));spr.scale.set(.06,.06,1);spr.renderOrder=14;spr.visible=false;scene.add(spr);
+  const acc=new THREE.Mesh(new THREE.CircleGeometry(1,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x1a7cff,transparent:true,opacity:.16,depthTest:false,depthWrite:false}));acc.renderOrder=13;acc.visible=false;scene.add(acc);
+  const st=document.createElement("style");st.textContent=`
+#me3b{position:fixed;right:16px;top:calc(env(safe-area-inset-top,0px) + 222px);z-index:20;width:48px;height:48px;border-radius:50%;border:0;background:rgba(15,61,43,.85);color:#fff;font-size:1.25rem;box-shadow:0 3px 10px rgba(0,0,0,.35);padding:0}
+#me3b small{position:absolute;top:50px;left:50%;transform:translateX(-50%);font:700 .68rem var(--font);color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+#me3b.on{background:#1a7cff}body.playing #me3b,body.playing #me3p{display:none}
+#me3p{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 108px);z-index:21;display:flex;align-items:center;gap:8px;background:rgba(10,40,90,.9);color:#fff;font:600 .9rem var(--font);padding:7px 8px 7px 14px;border-radius:999px;max-width:calc(100vw - 90px);box-shadow:0 3px 10px rgba(0,0,0,.35)}
+#me3p[hidden]{display:none}#me3p b{font-size:1.05rem}#me3p button{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:999px;min-width:34px;height:34px;font:700 .9rem var(--font)}`;document.head.appendChild(st);
+  const btn=document.createElement("button");btn.id="me3b";btn.setAttribute("aria-label","Moja poloha");btn.innerHTML="📍<small>Ja</small>";document.body.appendChild(btn);
+  const pill=document.createElement("div");pill.id="me3p";pill.hidden=true;pill.innerHTML='<span></span><button aria-label="Vypnúť polohu">✕</button>';document.body.appendChild(pill);
+  let tm=0;const M={want:false,first:false,spr,acc,pill,
+    msg(t,ms=3500){pill.hidden=false;pill.firstChild.textContent=t;clearTimeout(tm);if(!meLL||!M.want)tm=setTimeout(()=>{if(!M.want)pill.hidden=true},ms)},
+    ui(){btn.classList.toggle("on",M.want&&!!meLL);if(!M.want){pill.hidden=true;if(!gpsOn)spr.visible=acc.visible=meDot.visible=meRing.visible=false}}};
+  btn.onclick=()=>{if(typeof game!=="undefined"&&game)return;if(!navigator.geolocation){M.msg("Tento prehliadač nevie zistiť polohu.");return}
+    if(!M.want){M.want=true;M.first=true;if(!gpsOn)startGPS(true);if(meLL)onMe();else M.msg("Hľadám GPS polohu… (pod holým nebom pár sekúnd)",9000)}
+    else if(meLL){M.first=true;onMe()}};
+  pill.lastChild.onclick=()=>{M.want=false;if(gpsW!=null){navigator.geolocation.clearWatch(gpsW);gpsW=null;gpsOn=false}M.ui()};
+  return M})();
+// najbližšia jamka k bodu (lokálne x,y): podľa vzdialenosti od úsečky odpalisko → green
+function meHole(x,y){let best=hNum,bd=1e9;READY.forEach(h=>{const P=DATA.pads[h];if(!P||!DATA.gc[h-1])return;const t=loc(P[Math.min(tIdx,P.length-1)]),g=loc(DATA.gc[h-1]),vx=g[0]-t[0],vy=g[1]-t[1],L2=vx*vx+vy*vy||1;
+  const k=Math.max(0,Math.min(1,((x-t[0])*vx+(y-t[1])*vy)/L2)),d=Math.hypot(x-t[0]-vx*k,y-t[1]-vy*k);if(d<bd){bd=d;best=h}});return best}
+function onMe(){if(!meLL)return;const[x,y]=loc(toEN(...meLL));const ins=x>X0&&x<X1&&y>Y0&&y<Y1,show=ins&&(ME.want||gpsLS()==="1");
+  meDot.visible=meRing.visible=false;ME.spr.visible=ME.acc.visible=show;
+  if(ins){const h0=hL(x,y);meDot.position.copy(W(x,y,h0+1.2));meRing.position.copy(W(x,y,h0+.15));ME.spr.position.copy(W(x,y,h0+1));
+    const r=Math.max(2,Math.min(60,meAcc||5));ME.acc.scale.set(r,1,r);ME.acc.position.copy(W(x,y,h0+.2))}
+  if(!ME.want)return;ME.ui();
+  const h=meHole(x,y),g=loc(DATA.gc[h-1]),dg=Math.round(Math.hypot(g[0]-x,g[1]-y)),ac=Math.round(meAcc||0);
+  if(!ins){const t=loc(DATA.pads[h][0]);ME.msg(`Si mimo ihriska · ${dg>1500?(dg/1000).toFixed(1)+" km":dg+" m"} od greenu jamky ${h}`,9e9);ME.first=false;return}
+  ME.pill.hidden=false;ME.pill.firstChild.innerHTML=`📍 Jamka ${h} · do stredu greenu <b>${dg} m</b>`+(ac>15?` <small>(±${ac} m)</small>`:"");
+  if(ME.first&&typeof controls!=="undefined"&&!(typeof game!=="undefined"&&game)){ME.first=false;
+    // kamera: za mnou (v smere ku greenu najbližšej jamky), vo výške ~45 m, pohľad na mňa
+    const L=Math.hypot(g[0]-x,g[1]-y)||1,ux=(g[0]-x)/L,uy=(g[1]-y)/L,tx=x+ux*Math.min(40,L*.4),ty=y+uy*Math.min(40,L*.4),p1=W(x-ux*45,y-uy*45,hL(x,y)+48),t1=W(tx,ty,hL(tx,ty));
+    fly=null;if(typeof setOn==="function")setOn("me");const p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=1300;controls.enabled=false;
+    const stp=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);
+      if(k<1)requestAnimationFrame(stp);else{controls.enabled=true;controls.update()}};requestAnimationFrame(stp)}}
 // automaticky len ak je poloha už povolená
 if(navigator.permissions&&navigator.permissions.query)navigator.permissions.query({name:"geolocation"}).then(r=>{if(r.state==="granted"){gpsLS("1");startGPS(false)}else if(r.state==="denied")gpsLS("0")}).catch(()=>startGPS(false));else startGPS(false);
 // ================= ZÁZNAM KOLA (export na počítač): údery z hry + skutočné údery „📍 Úder tu“ + GPS trasa =================
@@ -804,6 +847,31 @@ function REC0(){const LSK="for.round",LSA="for.rounds",NEWAFTER=8*3600e3;
     const F=[new File([gpx(r)],base+".gpx",{type:"application/gpx+xml"}),new File([csv(r)],base+".csv",{type:"text/csv"}),new File([JSON.stringify(js,null,1)],base+".json",{type:"application/json"})];
     try{if(navigator.canShare&&navigator.canShare({files:F})){await navigator.share({files:F,title:"Záznam kola "+lt(r.start)});return}}catch(e){if(e&&e.name==="AbortError")return}
     F.forEach((f,i)=>setTimeout(()=>{const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},60000)},i*600))}
+  // ---- zobrazenie kola na ihrisku (Martin 21.11.): trasa chôdze + očíslované údery so vzdialenosťami, pohľad zhora.
+  //      Zlé GPS body (presnosť > 30 m alebo skok rýchlejší ako beh) sa vynechajú. Kreslí sa raz, potom to nič nestojí.
+  let SHOWN=null;
+  function hideRound(){if(!SHOWN)return;for(const o of SHOWN.obj){scene.remove(o);o.geometry&&o.geometry.dispose();if(o.material){o.material.map&&o.material.map.dispose();o.material.dispose()}}SHOWN.pill.remove();SHOWN=null}
+  function numTex(t,col){const cv=document.createElement("canvas");cv.width=cv.height=64;const x=cv.getContext("2d");x.fillStyle="#fff";x.beginPath();x.arc(32,32,30,0,7);x.fill();x.fillStyle=col;x.beginPath();x.arc(32,32,25,0,7);x.fill();
+    x.fillStyle="#fff";x.font="bold "+(t.length>2?22:28)+"px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";x.fillText(t,32,34);const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;return tx}
+  function cleanTrk(trk){const out=[];for(const p of trk){if(!Array.isArray(p)||p.length<2)continue;if(p[4]!=null&&p[4]>30)continue;
+      if(out.length){const q=out[out.length-1],d=dLL([q[0],q[1]],[p[0],p[1]]),dt=Math.max(1,(p[3]-q[3])/1000);if(d>25&&d/dt>4)continue}out.push(p)}return out}
+  function showRound(r){hideRound();const obj=[],X=ll=>loc(toEN(ll[0],ll[1])),inb=([x,y])=>x>X0&&x<X1&&y>Y0&&y<Y1;
+    const T=cleanTrk(r.trk||[]),drop=(r.trk||[]).length-T.length;let pts=[];
+    for(const p of T){const q=X(p);if(inb(q))pts.push(q)}
+    if(pts.length>1){const a=[];for(let i=0;i<pts.length;i++){const[x,y]=pts[i];if(i){const[px,py]=pts[i-1],n=Math.ceil(Math.hypot(x-px,y-py)/4);for(let k=1;k<n;k++){const ix=px+(x-px)*k/n,iy=py+(y-py)*k/n;a.push(ix,hL(ix,iy)+.5,-iy)}}a.push(x,hL(x,y)+.5,-y)}
+      const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(a,3));const ln=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffd400,depthTest:false,transparent:true,opacity:.95}));ln.renderOrder=11;scene.add(ln);obj.push(ln)}
+    const S=(r.shots||[]).filter(s=>s.src==="gps"&&Array.isArray(s.from));let nS=0,all=[...pts];
+    for(const s of S){const q=X(s.from);if(!inb(q))continue;nS++;all.push(q);const bad=s.acc!=null&&s.acc>30;
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:numTex(s.h+"·"+s.n,bad?"#8a8f8c":"#d32f2f"),depthTest:false,transparent:true,sizeAttenuation:false}));sp.scale.set(.05,.05,1);sp.renderOrder=13;sp.position.copy(W(q[0],q[1],hL(...q)+1));scene.add(sp);obj.push(sp);
+      if(s.to){const q2=X(s.to);if(inb(q2)){const a=[],n=Math.max(2,Math.ceil(Math.hypot(q2[0]-q[0],q2[1]-q[1])/4));for(let k=0;k<=n;k++){const ix=q[0]+(q2[0]-q[0])*k/n,iy=q[1]+(q2[1]-q[1])*k/n;a.push(ix,hL(ix,iy)+.8+Math.sin(Math.PI*k/n)*Math.min(25,Math.hypot(q2[0]-q[0],q2[1]-q[1])*.12),-iy)}
+        const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(a,3));const ln=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffffff,depthTest:false,transparent:true,opacity:.95}));ln.renderOrder=12;scene.add(ln);obj.push(ln)}}}
+    const pill=document.createElement("div");pill.id="rnd3p";pill.innerHTML=`<span>📼 Kolo ${esc(new Date(r.start).toLocaleString("sk-SK",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"}))} · údery: ${nS}${drop?` · vynechané zlé GPS body: ${drop}`:""}</span><button>✕ Skryť</button>`;document.body.appendChild(pill);
+    pill.querySelector("button").onclick=hideRound;SHOWN={obj,pill};sheet.hidden=true;
+    if(!all.length){pill.firstChild.textContent="📼 Kolo nemá body v tejto časti ihriska";return}
+    // kamera zhora na celé kolo
+    let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of all){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+    const cx=(x0+x1)/2,cy=(y0+y1)/2,tv=Math.tan(55*Math.PI/360),asp=innerWidth/innerHeight,hh=Math.max(60,Math.max((x1-x0+50)/2/(tv*asp),(y1-y0+50)/2/tv)*1.1);
+    try{fly=null;setOn("rnd");camera.position.copy(W(cx,cy-hh*.15,hL(cx,cy)+hh));controls.target.copy(W(cx,cy,hL(cx,cy)));camera.lookAt(controls.target);controls.update()}catch(e){}}
   // ---- UI: malé tlačidlo 📼 Kolo + spodný panel
   const css=document.createElement("style");css.textContent=`
 #rec3b{position:fixed;right:16px;top:calc(env(safe-area-inset-top,0px) + 150px);z-index:20;width:48px;height:48px;border-radius:50%;border:0;background:rgba(15,61,43,.85);color:#fff;font-size:1.25rem;box-shadow:0 3px 10px rgba(0,0,0,.35);padding:0}
@@ -818,6 +886,7 @@ body.playing #rec3b{top:calc(env(safe-area-inset-top,0px) + 70px);width:40px;hei
 #rec3s .cl{display:flex;gap:5px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}#rec3s .cl button{flex:0 0 auto;border:0;border-radius:999px;background:#eef3f0;padding:7px 11px;font:600 .8rem var(--font)}#rec3s .cl button.on{background:#0f6b4a;color:#fff}
 #rec3s ol{margin:6px 0;padding-left:20px;max-height:160px;overflow:auto;font-size:.82rem;color:#334}#rec3s small{color:#667;display:block;line-height:1.3}
 #rec3s .old button{display:block;width:100%;text-align:left;border:0;border-radius:10px;background:#f4f7f3;margin-top:5px;padding:8px 10px;font:600 .82rem var(--font)}
+#rnd3p{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 156px);z-index:22;display:flex;align-items:center;gap:8px;background:rgba(15,40,28,.92);color:#fff;font:600 .82rem var(--font);padding:6px 6px 6px 12px;border-radius:14px;max-width:calc(100vw - 90px)}#rnd3p button{border:0;border-radius:10px;background:#ffd400;color:#14211a;font:700 .82rem var(--font);min-height:34px;padding:0 10px;white-space:nowrap}body.playing #rnd3p{display:none}
 #rec3t{position:fixed;left:50%;top:38%;transform:translateX(-50%);z-index:80;background:rgba(15,40,28,.92);color:#fff;font:600 .92rem var(--font);padding:10px 16px;border-radius:14px;max-width:84vw;text-align:center;pointer-events:none}#rec3t[hidden]{display:none}`;
   document.head.appendChild(css);
   const b=document.createElement("button");b.id="rec3b";b.setAttribute("aria-label","Záznam kola");b.innerHTML="📼<small>Kolo</small>";document.body.appendChild(b);
@@ -828,7 +897,7 @@ body.playing #rec3b{top:calc(env(safe-area-inset-top,0px) + 70px);width:40px;hei
     const hra=R.shots.filter(s=>s.src==="hra"),gps=R.shots.filter(s=>s.src==="gps"),A=(Array.isArray(ld(LSA))?ld(LSA):[]).filter(okR),on=recOn();
     sheet.innerHTML=`<div class="sh"><h2><span>📼 Záznam kola</span><button data-a="x">Zavrieť</button></h2>
       <div class="st">Od ${lt(R.start)} · ${R.course}<br>Údery v hre: <b>${hra.length}</b> · skutočné údery: <b>${gps.length}</b> · GPS bodov: <b>${R.trk.length}</b>${on?' · <b style="color:#c62828">● nahráva sa</b>':""}</div>
-      <div class="bb"><button data-a="gps" class="${on?"rd":"pr"}">${on?"■ Zastaviť GPS trasu":"● Nahrávať GPS trasu"}</button><button data-a="exp" class="pr">📤 Exportovať kolo</button></div>
+      <div class="bb"><button data-a="gps" class="${on?"rd":"pr"}">${on?"■ Zastaviť GPS trasu":"● Nahrávať GPS trasu"}</button><button data-a="exp" class="pr">📤 Exportovať kolo</button><button data-a="show" class="pr">🗺️ Ukázať kolo na ihrisku</button></div>
       <b>📍 Skutočný úder na ihrisku</b><small>Postav sa k loptičke a ťukni – uloží sa poloha, jamka a palica (palica je nepovinná).</small>
       <div class="cl">${CL.map(c=>`<button data-c="${c}" class="${c===club?"on":""}">${c}</button>`).join("")}</div>
       <div class="bb"><button data-a="real" class="pr">📍 Úder tu${club?" · "+club:""}</button></div>
@@ -836,14 +905,16 @@ body.playing #rec3b{top:calc(env(safe-area-inset-top,0px) + 70px);width:40px;hei
       ${gps.length?`<div class="bb"><button data-a="undo">↶ Zmazať posledný skutočný úder</button></div>`:""}
       <div class="bb"><button data-a="new" class="rd">Začať nové kolo</button></div>
       <small>Telefón nechaj odomknutý s otvorenou appkou – pri zamknutej obrazovke iPhone polohu nezaznamenáva. Export pošle GPX (trasa + údery), CSV (tabuľka pre Numbers/Excel) a JSON cez Zdieľať (AirDrop, WhatsApp, e-mail).</small>
-      ${A.length?`<div class="old"><b>Predchádzajúce kolá</b>${A.map((a,i)=>`<button data-o="${i}">📤 ${lt(a.start)} · ${a.shots.length} úderov · ${a.trk.length} GPS bodov</button>`).join("")}</div>`:""}</div>`}
+      ${A.length?`<div class="old"><b>Predchádzajúce kolá</b>${A.map((a,i)=>`<div style="display:flex;gap:5px"><button data-o="${i}" style="flex:1">📤 ${lt(a.start)} · ${a.shots.length} úderov · ${a.trk.length} GPS bodov</button><button data-so="${i}" style="width:auto;flex:none" aria-label="Ukázať na ihrisku">🗺️</button></div>`).join("")}</div>`:""}</div>`}
   b.onclick=()=>{sheet.hidden=false;ui()};
   sheet.onclick=e=>{const t=e.target.closest("button");if(e.target===sheet){sheet.hidden=true;return}if(!t)return;
     if(t.dataset.c){club=club===t.dataset.c?null:t.dataset.c;try{club?localStorage.setItem("for.recClub",club):localStorage.removeItem("for.recClub")}catch(_){}ui();return}
+    if(t.dataset.so!=null){const A=(Array.isArray(ld(LSA))?ld(LSA):[]).filter(okR);if(A[+t.dataset.so])showRound(A[+t.dataset.so]);return}
     if(t.dataset.o!=null){const A=(Array.isArray(ld(LSA))?ld(LSA):[]).filter(okR);if(A[+t.dataset.o])exportR(A[+t.dataset.o]);return}
     const a=t.dataset.a;if(a==="x")sheet.hidden=true;
     else if(a==="gps"){if(recOn()){try{localStorage.removeItem("for.rec")}catch(_){}gpsStop();alert3("GPS trasa zastavená")}else{try{localStorage.setItem("for.rec","1")}catch(_){}gpsStart();alert3("GPS trasa sa nahráva")}ui()}
     else if(a==="exp")exportR();
+    else if(a==="show"){save();showRound(R)}
     else if(a==="real")realShot();
     else if(a==="undo"){const i=R.shots.map(s=>s.src).lastIndexOf("gps");if(i>=0){const s=R.shots.splice(i,1)[0],p=[...R.shots].reverse().find(q=>q.src==="gps"&&q.h===s.h);if(p){delete p.to;delete p.d}save();ui()}}
     else if(a==="new"){if(confirmNew){confirmNew=false;newRound();alert3("Nové kolo začaté (staré je v zozname)")}else{confirmNew=true;t.textContent="Naozaj? Ťukni ešte raz";setTimeout(()=>{confirmNew=false},3000)}}};
