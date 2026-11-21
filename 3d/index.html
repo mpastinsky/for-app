@@ -572,7 +572,7 @@ DATA.woods.forEach((wd,wi)=>{const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0
    const m=HQ?new THREE.Mesh(CARDS.bush[n%4],leafHQ(n+2)):new THREE.Mesh(SHR[n%5],shrM);m.scale.set(S,h*.85,S);m.rotation.y=r()*6.28;m.position.copy(W(x,y,z+h*.6));m.castShadow=true;scene.add(m)})}
 
 // --- vlajka, značky odpaliska
-// jamka (10,8 cm), tyčka 2,1 m, červená viajúca vlajka
+// jamka (10,8 cm), tyčka 2,1 m, viajúca vlajka (akadémia: tmavomodrá Golden Golf Tour, biela tyčka; 18-ka: červená)
 const hP=hL(...PIN)+.08;
 // jamka ako skutočná diera: tmavé vnútro, biela vložka viditeľná na vzdialenej strane, presne vo výške jemnej siete greenu
 {const gm2=(()=>{const st=.5,M=7,gx0=Math.floor(GB.x0-M),gy0=Math.floor(GB.y0-M),i=Math.floor((PIN[0]-gx0)/st),j=Math.floor((PIN[1]-gy0)/st),u=(PIN[0]-gx0)/st-i,v=(PIN[1]-gy0)/st-j,H=(a,b)=>hL(gx0+a*st,gy0+b*st);
@@ -601,16 +601,43 @@ const hP=hL(...PIN)+.08;
  const lip=new THREE.Mesh(new THREE.PlaneGeometry(.132,.132).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({map:rt,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-16}));
  lip.position.copy(pos);lip.position.y+=.0008;lip.renderOrder=6;scene.add(lip);
  scene.userData.cupPos=pos.clone()}
-const pin=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,2.1,12),new THREE.MeshStandardMaterial({roughness:.35,map:(()=>{   // tyčka s čierno-bielymi pásikmi (7 pásov)
+const pin=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,2.1,12),new THREE.MeshStandardMaterial({roughness:.35,map:HQ?null:(()=>{   // tyčka s čierno-bielymi pásikmi (7 pásov); akadémia: biela tyčka ako v skutočnosti
   const c=document.createElement("canvas");c.width=4;c.height=14;const x=c.getContext("2d");for(let i=0;i<7;i++){x.fillStyle=i%2?"#151515":"#ffffff";x.fillRect(0,i*2,4,2)}
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;return t})()}));pin.position.copy(W(...PIN,hP+1.05-.06));pin.castShadow=true;scene.add(pin);
+if(HQ){const knob=new THREE.Mesh(new THREE.SphereGeometry(.032,16,10),new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:.4}));knob.position.y=1.06;pin.add(knob)}
 const flagG=new THREE.PlaneGeometry(.75,.5,16,5).translate(.375,0,0);const flagB=Float32Array.from(flagG.attributes.position.array);
-const flagTex=(()=>{const cv=document.createElement("canvas");cv.width=256;cv.height=170;const x=cv.getContext("2d");x.fillStyle="#d8262a";x.fillRect(0,0,256,170);
+// Golden Golf Tour vlajka (akadémia): predná strana logo, zadná zlatý monogram
+function ggMark(x,cx,cy,s,col){   // dva prepletené krúžky „GG“ (s = výška znaku)
+  const r=s*.36,lw=s*.17,o=s*.3;x.save();x.translate(cx,cy);x.strokeStyle=col;x.lineWidth=lw;x.lineCap="butt";
+  x.beginPath();x.arc(-o,0,r,.05,Math.PI*2-1.25);x.stroke();                 // ľavý krúžok (G), otvor vpravo hore
+  x.beginPath();x.arc(o,0,r,Math.PI+.05,Math.PI*3-1.25);x.stroke();          // pravý krúžok, otvor vľavo dole
+  x.beginPath();x.moveTo(-o+r*.15,0);x.lineTo(-o+r+lw*.5,0);x.stroke();      // priečka G
+  x.beginPath();x.moveTo(o-r*.15,0);x.lineTo(o-r-lw*.5,0);x.stroke();
+  x.restore()}
+function ggFlag(back){const W=640,H=420,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+  const navy="#3b3866";x.fillStyle=navy;x.fillRect(0,0,W,H);
+  // jemný lesk a väzba látky
+  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(255,255,255,.05)");g.addColorStop(1,"rgba(0,0,0,.08)");x.fillStyle=g;x.fillRect(0,0,W,H);
+  const sl=W*.1;   // rukáv okolo tyčky (svetlejší, šev)
+  if(!back){const cx=W*.6,cy=H*.5,fw=H*.62,fh=H*.82,rr=H*.12;
+    x.strokeStyle="#dbe9ec";x.lineWidth=H*.022;x.beginPath();x.roundRect(cx-fw/2,cy-fh/2,fw,fh,rr);x.stroke();
+    ggMark(x,cx,cy-fh*.2,fh*.36,"#dbe9ec");
+    x.fillStyle="#dbe9ec";x.textBaseline="alphabetic";x.textAlign="left";const f=fh*.135;x.font=`600 ${f}px "Avenir Next","Montserrat","Poppins",system-ui,sans-serif`;
+    const tx=cx-fw*.37;x.fillText("Golden",tx,cy+fh*.15);x.fillText("Golf",tx,cy+fh*.32);
+    const gw=x.measureText("Golf ").width;x.font=`600 ${f*.72}px "Avenir Next","Montserrat","Poppins",system-ui,sans-serif`;x.fillText("Tour",tx+gw,cy+fh*.32)}
+  else{const s=H*.09,dx=W*.2,dy=H*.155;
+    for(let j=0;j*dy<H+dy;j++)for(let i=0;i*dx<W+dx;i++){const px=sl+dx*.5+i*dx+(j&1?dx*.5:0),py=dy*.5+j*dy;if(px>W-s*.4)continue;ggMark(x,px,py,s,"#c99a3a")}}
+  x.fillStyle="rgba(255,255,255,.1)";x.fillRect(0,0,sl,H);x.fillStyle="rgba(0,0,0,.25)";x.fillRect(sl-2,0,2,H);
+  x.strokeStyle="rgba(200,200,220,.35)";x.lineWidth=1.5;x.setLineDash([5,4]);x.beginPath();x.moveTo(sl+5,H-7);x.lineTo(W,H-7);x.moveTo(sl+5,7);x.lineTo(W,7);x.stroke();x.setLineDash([]);
+  return cv}
+const mkTex=cv=>{const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
+const flagTex=HQ?mkTex(ggFlag(0)):(()=>{const cv=document.createElement("canvas");cv.width=256;cv.height=170;const x=cv.getContext("2d");x.fillStyle="#d8262a";x.fillRect(0,0,256,170);
   x.fillStyle="#fff";x.font="900 64px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";x.save();x.translate(128,88);x.scale(Math.min(1,200/x.measureText(CLUBN).width),1);x.fillText(CLUBN,0,0);x.restore();
-  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t})();
-const flagMat=new THREE.MeshStandardMaterial({map:flagTex,side:THREE.DoubleSide,roughness:.8});
-// nápis čitateľný z oboch strán: zozadu sa textúra zrkadlovo otočí
-flagMat.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace("#include <map_fragment>","diffuseColor*=texture2D(map,gl_FrontFacing?vMapUv:vec2(1.-vMapUv.x,vMapUv.y));")};
+  return mkTex(cv)})();
+const flagTexB=HQ?mkTex(ggFlag(1)):flagTex;   // akadémia: skutočná vlajka Golden Golf Tour, zozadu zlatý monogram
+const flagMat=new THREE.MeshStandardMaterial({map:flagTex,side:THREE.DoubleSide,roughness:.7});
+// každá strana má vlastnú potlač (zozadu sa textúra zrkadlovo otočí, aby sa čítala správne)
+flagMat.onBeforeCompile=sh=>{sh.uniforms.mapB={value:flagTexB};sh.fragmentShader="uniform sampler2D mapB;\n"+sh.fragmentShader.replace("#include <map_fragment>","diffuseColor*=gl_FrontFacing?texture2D(map,vMapUv):texture2D(mapB,vec2(1.-vMapUv.x,vMapUv.y));")};
 const flag=new THREE.Mesh(flagG,flagMat);flag.position.copy(W(...PIN,hP+2.1-.06-.25));flag.castShadow=true;scene.add(flag);
 // vlajka jemne vlaje: vlny po látke + pomalé natáčanie okolo žrde podľa nárazov vetra
 function waveFlag(t){const p=flagG.attributes.position,gust=.75+.25*Math.sin(t*.37)*Math.sin(t*.23+1);
