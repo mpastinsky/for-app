@@ -139,6 +139,30 @@ const flyTo=(h,url)=>{const t=DATA.pads[h][tIdx],gc=DATA.gc[h-1],u=[gc[0]-t[0],g
     controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else{controls.enabled=true;labels.forEach(l=>l.el.style.visibility="");forNav(url)}};requestAnimationFrame(st)};
 document.getElementById("b-go").onclick=()=>flyTo(READY[0],"./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1");
 for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();flyTo(+l.el.textContent,l.el.href)};
+// ================= MOJA POLOHA (Martin 21.11.): 📍 Ja – modrá značka na celom ihrisku + jamka a vzdialenosť do greenu =================
+{const LA0=DATA.origin[0],LO0=DATA.origin[1],MLON=111320*Math.cos(LA0*Math.PI/180),toEN=(la,lo)=>[(lo-LO0)*MLON,(la-LA0)*111200];
+ const cv=document.createElement("canvas");cv.width=cv.height=96;const x=cv.getContext("2d");x.fillStyle="rgba(26,124,255,.28)";x.beginPath();x.arc(48,48,46,0,7);x.fill();x.fillStyle="#fff";x.beginPath();x.arc(48,48,25,0,7);x.fill();x.fillStyle="#1a7cff";x.beginPath();x.arc(48,48,18,0,7);x.fill();
+ const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true,sizeAttenuation:false}));spr.scale.set(.06,.06,1);spr.renderOrder=14;spr.visible=false;scene.add(spr);
+ const st=document.createElement("style");st.textContent=`#me3b{position:fixed;right:16px;top:calc(env(safe-area-inset-top,0px) + 70px);z-index:20;width:48px;height:48px;border-radius:50%;border:0;background:rgba(15,61,43,.85);color:#fff;font-size:1.25rem;box-shadow:0 3px 10px rgba(0,0,0,.35);padding:0}#me3b.on{background:#1a7cff}
+#me3b small{position:absolute;top:50px;left:50%;transform:translateX(-50%);font:700 .68rem system-ui,sans-serif;color:#fff;text-shadow:0 1px 3px #000}
+#me3p{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 116px);z-index:21;display:flex;align-items:center;gap:8px;background:rgba(10,40,90,.92);color:#fff;font:600 .9rem system-ui,sans-serif;padding:7px 8px 7px 14px;border-radius:16px;max-width:calc(100vw - 90px)}#me3p[hidden]{display:none}#me3p button{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:999px;min-width:34px;height:34px}`;document.head.appendChild(st);
+ const b=document.createElement("button");b.id="me3b";b.innerHTML="📍<small>Ja</small>";document.body.appendChild(b);
+ const pill=document.createElement("div");pill.id="me3p";pill.hidden=true;pill.innerHTML="<span></span><button>✕</button>";document.body.appendChild(pill);
+ let wid=null,first=false,fix=0,wd=0;const msg=h=>{pill.hidden=false;pill.firstChild.innerHTML=h};
+ const ok=p=>{fix=Date.now();try{localStorage.setItem("for.gps","1")}catch(e){}const[e,n]=toEN(p.coords.latitude,p.coords.longitude),ac=Math.round(p.coords.accuracy);b.classList.add("on");
+   const ins=e>e0&&e<e1&&n>n0&&n<n1;let bh=READY[0],bd=1e9;for(const h of READY){const T=DATA.pads[h][tIdx]||DATA.pads[h][0],G=DATA.gc[h-1],vx=G[0]-T[0],vy=G[1]-T[1],L2=vx*vx+vy*vy||1,k=Math.max(0,Math.min(1,((e-T[0])*vx+(n-T[1])*vy)/L2)),d=Math.hypot(e-T[0]-vx*k,n-T[1]-vy*k);if(d<bd){bd=d;bh=h}}
+   const G=DATA.gc[bh-1],dg=Math.round(Math.hypot(G[0]-e,G[1]-n));spr.visible=ins;
+   if(!ins){msg(`Si mimo ihriska · ${dg>1500?(dg/1000).toFixed(1)+" km":dg+" m"} od greenu jamky ${bh}`);return}
+   spr.position.copy(W(e,n,hAt(e,n)+2));msg(`📍 Jamka ${bh} · do stredu greenu <b>${dg} m</b>`+(ac>15?` <small>(±${ac} m)</small>`:""));
+   if(first){first=false;const p1=W(e,n-200,hAt(e,n)+330),t1=W(e,n,hAt(e,n)),p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now();controls.enabled=false;
+     const stp=()=>{const k=Math.min(1,(performance.now()-s0)/1300),q=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,q);controls.target.lerpVectors(t0,t1,q);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(stp);else{controls.enabled=true;controls.update()}};requestAnimationFrame(stp)}};
+ const bad=e=>{const c=e&&e.code;if(c===1){try{localStorage.setItem("for.gps","0")}catch(_){}if(wid!=null){navigator.geolocation.clearWatch(wid);wid=null}msg("❌ Poloha zamietnutá. iPhone: Nastavenia › Súkromie a bezpečnosť › Polohové služby › Safari webové stránky → „Pri používaní“. V Safari: aA › Nastavenia webovej stránky › Poloha → Povoliť. Potom ťukni 📍 znova.")}
+   else if(c===2)msg("⚠️ GPS poloha nie je dostupná, skúšam ďalej…");else if(!fix)msg("⏳ GPS zatiaľ neodpovedá, skúšam ďalej… (ťukni 📍 znova)")};
+ b.onclick=()=>{if(!navigator.geolocation){msg("Tento prehliadač nevie zistiť polohu.");return}first=true;
+   try{navigator.geolocation.getCurrentPosition(ok,bad,{enableHighAccuracy:true,maximumAge:10000,timeout:15000})}catch(e){}
+   if(wid==null)wid=navigator.geolocation.watchPosition(ok,bad,{enableHighAccuracy:true,maximumAge:3000,timeout:20000});
+   if(!fix||Date.now()-fix>60000)msg("📡 Hľadám GPS polohu… (pod holým nebom pár sekúnd)");clearTimeout(wd);wd=setTimeout(()=>{if(!fix||Date.now()-fix>20000)bad({code:3})},16000)};
+ pill.lastChild.onclick=()=>{if(wid!=null){navigator.geolocation.clearWatch(wid);wid=null}pill.hidden=true;spr.visible=false;b.classList.remove("on");fix=0}}
 const v=new THREE.Vector3();
 let snapDone=false;
 window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};

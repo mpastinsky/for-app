@@ -721,19 +721,30 @@ const repInfo=k=>REPORTS.find(r=>r.k===k)||REPORTS[REPORTS.length-1];
 function voiceMatch(txt){const n=" "+norm(txt)+" ";for(const k of VOICE_ORDER){const r=repInfo(k);if(r.w.some(w=>n.includes(w)))return k}return null}
 const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"práve teraz":m<60?"pred "+m+" min":"pred "+Math.round(m/60)+" h"};
 const escH=x=>String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
-const MLON=111320*Math.cos(48.0007*Math.PI/180),toLL=(E,N)=>[48.0007065+N/111200,17.368905+E/MLON],toEN=(la,lo)=>[(lo-17.368905)*MLON,(la-48.0007065)*111200];
+// pôvod ENU súradníc podľa dát ihriska: akadémia = green 1 (48.0007065,17.368905), 18-ka = apex.json origin (48.008,17.37). (Do v149 mala 18-ka chybne pôvod akadémie → poloha ~800 m vedľa.)
+const LA0=DATA.origin?DATA.origin[0]:48.0007065,LO0=DATA.origin?DATA.origin[1]:17.368905;
+const MLON=111320*Math.cos(LA0*Math.PI/180),toLL=(E,N)=>[LA0+N/111200,LO0+E/MLON],toEN=(la,lo)=>[(lo-LO0)*MLON,(la-LA0)*111200];
 let reports=[];const loadR=()=>{try{reports=JSON.parse(localStorage.getItem("for.reports")||"[]")}catch(e){reports=[]}};const saveR=()=>{try{localStorage.setItem("for.reports",JSON.stringify(reports))}catch(e){}};loadR();
 // GPS hráča
 let meLL=null,meAcc=null;const meDot=new THREE.Mesh(new THREE.SphereGeometry(.9,16,12),new THREE.MeshBasicMaterial({color:0x1a7cff}));meDot.visible=false;scene.add(meDot);
 const meRing=new THREE.Mesh(new THREE.RingGeometry(1.3,1.8,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthWrite:false}));meRing.visible=false;scene.add(meRing);
 // GPS: o povolenie sa pýtame najviac raz a len keď treba (hlásenie). V hre ⛳ Hrať sa GPS nepoužíva.
 let gpsOn=false;const gpsLS=v=>{try{if(v!=null)localStorage.setItem("for.gps",v);return localStorage.getItem("for.gps")}catch(e){return null}};
-let gpsW=null;
-let gpsErr=null,gpsFix=0;
-const gpsOk=p=>{gpsLS("1");gpsErr=null;gpsFix=Date.now();meLL=[p.coords.latitude,p.coords.longitude];meAcc=p.coords.accuracy;onMe()};
-const gpsBad=e=>{gpsErr=e&&e.code;if(e&&e.code===1){gpsLS("0");if(gpsW!=null){try{navigator.geolocation.clearWatch(gpsW)}catch(_){}gpsW=null}gpsOn=false}if(ME.want)ME.err()};
-function startGPS(ask){if(gpsOn||!navigator.geolocation)return;if(!ask&&(Q.get("play")==="1"||gpsLS()!=="1"))return;gpsOn=true;
-  gpsW=navigator.geolocation.watchPosition(gpsOk,gpsBad,{enableHighAccuracy:true,maximumAge:3000,timeout:20000})}
+// JEDEN spoločný zdroj GPS pre celú stránku (📍 Ja, 📼 záznam kola, hlásenia). Dve súbežné žiadosti o polohu
+// iPhone niekedy jednu rovno zamietne (kód 1) – preto len jedno watchPosition a odberatelia.
+const GEO=(()=>{let id=null,last=0;const S=new Set(),E=new Set();
+  const ok=p=>{last=Date.now();for(const f of S)try{f(p)}catch(e){console.error(e)}},bad=e=>{for(const f of E)try{f(e)}catch(_){}};
+  return{on(f,e){S.add(f);if(e)E.add(e)},fresh:ms=>Date.now()-last<ms,running:()=>id!=null,
+    start(){if(id==null&&navigator.geolocation)id=navigator.geolocation.watchPosition(ok,bad,{enableHighAccuracy:true,maximumAge:2000,timeout:30000})},
+    stop(){if(id!=null){try{navigator.geolocation.clearWatch(id)}catch(e){}id=null}},restart(){this.stop();this.start()}}})();
+let gpsErr=null,gpsFix=0,deny=0;
+const gpsOk=p=>{gpsLS("1");gpsErr=null;deny=0;gpsFix=Date.now();meLL=[p.coords.latitude,p.coords.longitude];meAcc=p.coords.accuracy;onMe()};
+// kód 1 (zamietnuté): ak poloha pred chvíľou chodila, alebo je to prvé zamietnutie, skúsime to ešte raz – hlášku ukážeme až pri opakovanom
+const gpsBad=e=>{const c=e&&e.code;if(c===1&&GEO.fresh(120000))return;
+  if(c===1&&ME.want&&deny++<1){setTimeout(()=>GEO.restart(),1200);return}
+  gpsErr=c;if(c===1){gpsOn=false;GEO.stop()}if(ME.want)ME.err()};
+GEO.on(gpsOk,gpsBad);
+function startGPS(ask){if(!navigator.geolocation)return;if(!ask&&(Q.get("play")==="1"||gpsLS()!=="1"))return;gpsOn=true;if(ask&&!GEO.fresh(30000))GEO.restart();else GEO.start()}
 // ================= MOJA POLOHA NA IHRISKU (Martin 21.11.) =================
 // Tlačidlo 📍 Ja: zapne GPS (iPhone sa opýta na povolenie), ukáže modrú značku, ktorá je vidieť aj z výšky (stála veľkosť na obrazovke),
 // krúžok presnosti a kamera k nej preletí. Pás dole ukazuje jamku a vzdialenosť do stredu greenu. Prepočet len pri novej GPS polohe (nič za snímku).
@@ -761,12 +772,10 @@ const ME=(()=>{const cv=document.createElement("canvas");cv.width=cv.height=96;c
   btn.onclick=()=>{if(typeof game!=="undefined"&&game)return;if(!navigator.geolocation){M.msg("Tento prehliadač nevie zistiť polohu.");return}
     if(!window.isSecureContext){M.msg("Poloha funguje len cez https:// adresu appky.");return}
     M.want=true;M.first=true;
-    // ťuk = priama žiadosť o polohu (iPhone ukáže otázku); zároveň sledovanie
-    try{navigator.geolocation.getCurrentPosition(gpsOk,gpsBad,{enableHighAccuracy:true,maximumAge:10000,timeout:15000})}catch(e){}
-    if(!gpsOn)startGPS(true);
+    deny=0;gpsErr=null;startGPS(true);
     if(meLL&&Date.now()-gpsFix<60000)onMe();else M.msg("📡 Hľadám GPS polohu… (pod holým nebom pár sekúnd)",9e9);
     clearTimeout(wd);wd=setTimeout(()=>{if(M.want&&(!meLL||Date.now()-gpsFix>20000)){if(gpsErr==null)gpsErr=3;M.err()}},16000)};
-  pill.lastChild.onclick=()=>{M.want=false;if(gpsW!=null){navigator.geolocation.clearWatch(gpsW);gpsW=null;gpsOn=false}M.ui()};
+  pill.lastChild.onclick=()=>{M.want=false;gpsOn=false;let rc=false;try{rc=localStorage.getItem("for.rec")==="1"}catch(e){}if(!rc)GEO.stop();M.ui()};
   return M})();
 // najbližšia jamka k bodu (lokálne x,y): podľa vzdialenosti od úsečky odpalisko → green
 function meHole(x,y){let best=hNum,bd=1e9;READY.forEach(h=>{const P=DATA.pads[h];if(!P||!DATA.gc[h-1])return;const t=loc(P[Math.min(tIdx,P.length-1)]),g=loc(DATA.gc[h-1]),vx=g[0]-t[0],vy=g[1]-t[1],L2=vx*vx+vy*vy||1;
@@ -817,14 +826,15 @@ function REC0(){const LSK="for.round",LSA="for.rounds",NEWAFTER=8*3600e3;
   const recOn=()=>{try{return localStorage.getItem("for.rec")==="1"}catch(e){return false}};
   let wid=null,last=null,WL=null,meNow=null;
   async function wake(){try{if(navigator.wakeLock&&!WL&&!document.hidden){WL=await navigator.wakeLock.request("screen");WL.addEventListener("release",()=>{WL=null})}}catch(e){}}
-  function gpsStart(){if(wid!=null||!navigator.geolocation)return;
-    wid=navigator.geolocation.watchPosition(p=>{const c=p.coords,ll=[r6(c.latitude),r6(c.longitude)];meNow={ll,acc:c.accuracy,ts:Date.now()};if(gpsLS()!=="1")gpsLS("1");
+  let geoOn=false;
+  function gpsStart(){if(wid!=null||!navigator.geolocation)return;wid=1;
+    if(!geoOn){geoOn=true;GEO.on(p=>{if(wid==null)return;const c=p.coords,ll=[r6(c.latitude),r6(c.longitude)];meNow={ll,acc:c.accuracy,ts:Date.now()};if(gpsLS()!=="1")gpsLS("1");
       if(!recOn()||c.accuracy>60)return;const ts=p.timestamp||Date.now();
       if(last&&ts-last.ts<4000)return;if(last&&dLL(last.ll,ll)<3&&ts-last.ts<30000)return;
       last={ll,ts};R.trk.push([ll[0],ll[1],c.altitude!=null?r1(c.altitude):null,ts,Math.round(c.accuracy)]);saveSoon();if(!sheet.hidden)ui()},
-      e=>{if(e.code===1){gpsLS("0");try{localStorage.removeItem("for.rec")}catch(_){}gpsStop();ui();alert3("Poloha nie je povolená – povoľ ju v nastaveniach Safari (Poloha) a skús znova.")}},
-      {enableHighAccuracy:true,maximumAge:2000,timeout:30000});wake()}
-  function gpsStop(){if(wid!=null){navigator.geolocation.clearWatch(wid);wid=null}if(WL){WL.release().catch(()=>{});WL=null}save()}
+      e=>{if(wid==null||e.code!==1||GEO.fresh(120000))return;try{localStorage.removeItem("for.rec")}catch(_){}gpsStop();ui();alert3("Poloha nie je povolená – povoľ ju v nastaveniach Safari (Poloha) a skús znova.")})}
+    GEO.start();wake()}
+  function gpsStop(){if(wid!=null){wid=null;if(!ME.want&&!gpsOn)GEO.stop()}if(WL){WL.release().catch(()=>{});WL=null}save()}
   // ---- skutočný úder na ihrisku (poloha z GPS), jamka podľa najbližšej dráhy
   function nearHole(ll){const[e,n]=toEN(...ll);let best=hNum,bd=1e9;
     READY.forEach(h=>{const g=DATA.gc[h-1],t=DATA.pads[h]&&(DATA.pads[h][tIdx]||DATA.pads[h][0]);if(!g||!t)return;const vx=g[0]-t[0],vy=g[1]-t[1],L2=vx*vx+vy*vy||1;
