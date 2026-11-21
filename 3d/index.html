@@ -842,7 +842,7 @@ function REC0(){const LSK="for.round",LSA="for.rounds",NEWAFTER=8*3600e3;
   const CL=["Driver","3 drevo","Hybrid","5 železo","6 železo","7 železo","8 železo","9 železo","PW","GW","SW","LW","Patovačka"];
   let club=null;try{club=localStorage.getItem("for.recClub")}catch(e){}
   function realShot(){const m=meNow;if(!m||Date.now()-m.ts>30000){if(!recOn()){try{localStorage.setItem("for.rec","1")}catch(e){}}gpsStart();ui();alert3("Čakám na GPS polohu… skús o pár sekúnd znova (pod holým nebom).");return}
-    const h=nearHole(m.ll),prev=[...R.shots].reverse().find(s=>s.src==="gps"&&s.h===h),g=DATA.gc[h-1];
+    const h=R.only||nearHole(m.ll),prev=[...R.shots].reverse().find(s=>s.src==="gps"&&s.h===h),g=DATA.gc[h-1];
     if(prev){prev.to=m.ll;prev.d=r1(dLL(prev.from,m.ll))}
     R.shots.push({src:"gps",h,n:R.shots.filter(s=>s.src==="gps"&&s.h===h).length+1,t:new Date(m.ts).toISOString(),club:club||"",from:m.ll,acc:Math.round(m.acc),pin:g?r1(dLL(m.ll,toLL(...g))):null});
     save();ui();alert3(`Uložené: jamka ${h}, úder ${R.shots[R.shots.length-1].n}`+(prev?` (predchádzajúci ${Math.round(prev.d)} m)`:"")+` · presnosť ±${Math.round(m.acc)} m`)}
@@ -920,6 +920,8 @@ body.playing #rec3b{top:calc(env(safe-area-inset-top,0px) + 70px);width:40px;hei
     sheet.innerHTML=`<div class="sh"><h2><span>📼 Záznam kola</span><button data-a="x">Zavrieť</button></h2>
       <div class="st">Od ${lt(R.start)} · ${R.course}<br>Údery v hre: <b>${hra.length}</b> · skutočné údery: <b>${gps.length}</b> · GPS bodov: <b>${R.trk.length}</b>${on?' · <b style="color:#c62828">● nahráva sa</b>':""}</div>
       <div class="bb"><button data-a="gps" class="${on?"rd":"pr"}">${on?"■ Zastaviť GPS trasu":"● Nahrávať GPS trasu"}</button><button data-a="exp" class="pr">📤 Exportovať kolo</button><button data-a="show" class="pr">🗺️ Ukázať kolo na ihrisku</button></div>
+      <b>⛳ Zapisovať jamku</b><small>Auto = podľa polohy. Ťuk na číslo = nové kolo len s touto jamkou (staré sa uloží do zoznamu).</small>
+      <div class="cl">${[0,...READY].map(h=>`<button data-oh="${h}" class="${(R.only||0)===h?"on":""}">${h?"Jamka "+h:"Auto"}</button>`).join("")}</div>
       <b>📍 Skutočný úder na ihrisku</b><small>Postav sa k loptičke a ťukni – uloží sa poloha, jamka a palica (palica je nepovinná).</small>
       <div class="cl">${CL.map(c=>`<button data-c="${c}" class="${c===club?"on":""}">${c}</button>`).join("")}</div>
       <div class="bb"><button data-a="real" class="pr">📍 Úder tu${club?" · "+club:""}</button></div>
@@ -930,6 +932,9 @@ body.playing #rec3b{top:calc(env(safe-area-inset-top,0px) + 70px);width:40px;hei
       ${A.length?`<div class="old"><b>Predchádzajúce kolá</b>${A.map((a,i)=>`<div style="display:flex;gap:5px"><button data-o="${i}" style="flex:1">📤 ${lt(a.start)} · ${a.shots.length} úderov · ${a.trk.length} GPS bodov</button><button data-so="${i}" style="width:auto;flex:none" aria-label="Ukázať na ihrisku">🗺️</button></div>`).join("")}</div>`:""}</div>`}
   b.onclick=()=>{sheet.hidden=false;ui()};
   sheet.onclick=e=>{const t=e.target.closest("button");if(e.target===sheet){sheet.hidden=true;return}if(!t)return;
+    if(t.dataset.oh!=null){const h=+t.dataset.oh;if((R.only||0)===h)return;
+      if(h&&(R.shots.length||R.trk.length)&&R.only!==h){archive(R);R=fresh()}R.only=h||undefined;if(h)R.course=R.course.replace(/ · jamka \d+$/,"")+" · jamka "+h;else R.course=R.course.replace(/ · jamka \d+$/,"");save();ui();
+      alert3(h?`Zapisuje sa len jamka ${h}`+(recOn()?"":" – zapni aj ● GPS trasu"):"Zapisujú sa všetky jamky");return}
     if(t.dataset.c){club=club===t.dataset.c?null:t.dataset.c;try{club?localStorage.setItem("for.recClub",club):localStorage.removeItem("for.recClub")}catch(_){}ui();return}
     if(t.dataset.so!=null){const A=(Array.isArray(ld(LSA))?ld(LSA):[]).filter(okR);if(A[+t.dataset.so])showRound(A[+t.dataset.so]);return}
     if(t.dataset.o!=null){const A=(Array.isArray(ld(LSA))?ld(LSA):[]).filter(okR);if(A[+t.dataset.o])exportR(A[+t.dataset.o]);return}
