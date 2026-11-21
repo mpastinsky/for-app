@@ -729,9 +729,11 @@ const meRing=new THREE.Mesh(new THREE.RingGeometry(1.3,1.8,32).rotateX(-Math.PI/
 // GPS: o povolenie sa pýtame najviac raz a len keď treba (hlásenie). V hre ⛳ Hrať sa GPS nepoužíva.
 let gpsOn=false;const gpsLS=v=>{try{if(v!=null)localStorage.setItem("for.gps",v);return localStorage.getItem("for.gps")}catch(e){return null}};
 let gpsW=null;
-function startGPS(ask){if(gpsOn||!navigator.geolocation||Q.get("play")==="1")return;if(!ask&&gpsLS()!=="1")return;if(gpsLS()==="0"&&!ask)return;gpsOn=true;
-  gpsW=navigator.geolocation.watchPosition(p=>{gpsLS("1");meLL=[p.coords.latitude,p.coords.longitude];meAcc=p.coords.accuracy;onMe()},
-    e=>{if(e.code===1){gpsLS("0");gpsOn=false;if(ME.want){ME.want=false;ME.ui();ME.msg("Poloha nie je povolená – zapni ju v Nastavenia › Súkromie › Polohové služby › Safari (Pri používaní) a skús znova.",6000)}}},{enableHighAccuracy:true,maximumAge:3000})}
+let gpsErr=null,gpsFix=0;
+const gpsOk=p=>{gpsLS("1");gpsErr=null;gpsFix=Date.now();meLL=[p.coords.latitude,p.coords.longitude];meAcc=p.coords.accuracy;onMe()};
+const gpsBad=e=>{gpsErr=e&&e.code;if(e&&e.code===1){gpsLS("0");if(gpsW!=null){try{navigator.geolocation.clearWatch(gpsW)}catch(_){}gpsW=null}gpsOn=false}if(ME.want)ME.err()};
+function startGPS(ask){if(gpsOn||!navigator.geolocation)return;if(!ask&&(Q.get("play")==="1"||gpsLS()!=="1"))return;gpsOn=true;
+  gpsW=navigator.geolocation.watchPosition(gpsOk,gpsBad,{enableHighAccuracy:true,maximumAge:3000,timeout:20000})}
 // ================= MOJA POLOHA NA IHRISKU (Martin 21.11.) =================
 // Tlačidlo 📍 Ja: zapne GPS (iPhone sa opýta na povolenie), ukáže modrú značku, ktorá je vidieť aj z výšky (stála veľkosť na obrazovke),
 // krúžok presnosti a kamera k nej preletí. Pás dole ukazuje jamku a vzdialenosť do stredu greenu. Prepočet len pri novej GPS polohe (nič za snímku).
@@ -751,9 +753,19 @@ const ME=(()=>{const cv=document.createElement("canvas");cv.width=cv.height=96;c
   let tm=0;const M={want:false,first:false,spr,acc,pill,
     msg(t,ms=3500){pill.hidden=false;pill.firstChild.textContent=t;clearTimeout(tm);if(!meLL||!M.want)tm=setTimeout(()=>{if(!M.want)pill.hidden=true},ms)},
     ui(){btn.classList.toggle("on",M.want&&!!meLL);if(!M.want){pill.hidden=true;if(!gpsOn)spr.visible=acc.visible=meDot.visible=meRing.visible=false}}};
+  // chybové stavy GPS – vždy viditeľné, aby bolo jasné, čo sa deje
+  M.err=()=>{const c=gpsErr;if(c===1)M.msg("❌ Poloha zamietnutá. iPhone: Nastavenia › Súkromie a bezpečnosť › Polohové služby › Safari webové stránky → „Pri používaní“ + Presná poloha. V Safari: aA › Nastavenia webovej stránky › Poloha → Povoliť. Potom ťukni 📍 znova.",9e9);
+    else if(c===2)M.msg("⚠️ GPS poloha nie je dostupná (zapnuté Polohové služby? pod holým nebom?). Skúšam ďalej…",9e9);
+    else if(c===3&&!meLL)M.msg("⏳ GPS zatiaľ neodpovedá, skúšam ďalej… (ťukni 📍 znova)",9e9)};
+  let wd=0;
   btn.onclick=()=>{if(typeof game!=="undefined"&&game)return;if(!navigator.geolocation){M.msg("Tento prehliadač nevie zistiť polohu.");return}
-    if(!M.want){M.want=true;M.first=true;if(!gpsOn)startGPS(true);if(meLL)onMe();else M.msg("Hľadám GPS polohu… (pod holým nebom pár sekúnd)",9000)}
-    else if(meLL){M.first=true;onMe()}};
+    if(!window.isSecureContext){M.msg("Poloha funguje len cez https:// adresu appky.");return}
+    M.want=true;M.first=true;
+    // ťuk = priama žiadosť o polohu (iPhone ukáže otázku); zároveň sledovanie
+    try{navigator.geolocation.getCurrentPosition(gpsOk,gpsBad,{enableHighAccuracy:true,maximumAge:10000,timeout:15000})}catch(e){}
+    if(!gpsOn)startGPS(true);
+    if(meLL&&Date.now()-gpsFix<60000)onMe();else M.msg("📡 Hľadám GPS polohu… (pod holým nebom pár sekúnd)",9e9);
+    clearTimeout(wd);wd=setTimeout(()=>{if(M.want&&(!meLL||Date.now()-gpsFix>20000)){if(gpsErr==null)gpsErr=3;M.err()}},16000)};
   pill.lastChild.onclick=()=>{M.want=false;if(gpsW!=null){navigator.geolocation.clearWatch(gpsW);gpsW=null;gpsOn=false}M.ui()};
   return M})();
 // najbližšia jamka k bodu (lokálne x,y): podľa vzdialenosti od úsečky odpalisko → green
