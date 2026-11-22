@@ -1073,12 +1073,12 @@ function makeLeaves(kind,sites,seed,maxL){const L=LEAF[kind],R=rng(seed+101);
     col.setHSL(L.hue+(R()-.5)*L.hueVar,L.sat+(R()-.5)*0.1,(L.lum+(R()-.5)*L.lumVar)*(.62+.3*ed+.28*upk));mesh.setColorAt(k,col)}
   mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
   mesh.castShadow=true;mesh.receiveShadow=true;mesh.computeBoundingSphere&&mesh.computeBoundingSphere();return mesh}
-function build(kind,lite){const P=Object.assign({},PARAMS[kind],PMOB?{lowPoly:1,skipTube:lite?4:5}:{lowPoly:1,skipTube:lite?5:0}),seed=1234+({t1:0,t2:77,t3:31,t4:58,t5:12,t6:91,t7:44,t8:63,t9:19,t10:7,t10b:83,t11:26,t12:52,h1:5,h2:39,h3:71,n1:17,n2:48,n3:66,n4:9,n5:35,n6:88}[kind]||0),g=generate(P,seed);
+function build(kind,lite){const P=Object.assign({},PARAMS[kind],PMOB?{lowPoly:1,skipTube:lite===2?2:lite===3?3:lite?4:5}:{lowPoly:1,skipTube:lite===2?3:lite===3?4:lite?5:0}),seed=1234+({t1:0,t2:77,t3:31,t4:58,t5:12,t6:91,t7:44,t8:63,t9:19,t10:7,t10b:83,t11:26,t12:52,h1:5,h2:39,h3:71,n1:17,n2:48,n3:66,n4:9,n5:35,n6:88}[kind]||0),g=generate(P,seed);
   const geo=new THREE.BufferGeometry();
   geo.setAttribute("position",new THREE.Float32BufferAttribute(g.pos,3));geo.setAttribute("normal",new THREE.Float32BufferAttribute(g.nor,3));
   geo.setAttribute("uv",new THREE.Float32BufferAttribute(g.uv,2));geo.setAttribute("color",new THREE.Float32BufferAttribute(g.col,3));geo.setIndex(g.idx);
   const wood=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({map:TX.bark,vertexColors:true}));wood.castShadow=true;wood.receiveShadow=true;
-  const leaves=makeLeaves(kind,g.sites,seed,PMOB?Math.min(lite?2000:3200,P.maxLeaves):lite?Math.min(4000,P.maxLeaves):P.maxLeaves);
+  const leaves=makeLeaves(kind,g.sites,seed,lite===2?Math.min(PMOB?200:520,P.maxLeaves):lite===3?Math.min(PMOB?900:2000,P.maxLeaves):PMOB?Math.min(lite?2000:3200,P.maxLeaves):lite?Math.min(4000,P.maxLeaves):P.maxLeaves);
   const grp=new THREE.Group();grp.add(wood,leaves);return{grp,wood,leaves,P}}
 return{PARAMS,build}})():null;
 // natočenie: stromy sú modelované tak, ako ich vidno z odpaliska 3 (x = vpravo); na iných jamkách sa otočia, aby stáli rovnako v skutočnosti
@@ -1093,8 +1093,8 @@ function procTree(x,y,kind){if(!inside(x,y))return;const z=hL(x,y),t=PT.build(ki
 // Každý typ sa vygeneruje raz (ľahšia verzia: bez najjemnejších vetvičiek, menej väčších listov) a ďalšie stromy sú jeho kópie (zdieľaná geometria – šetrí telefón).
 const NKINDS=["n1","n2","n3","n4","n5","n6"],NROW=["n1","n4","n6","n2"],NP={},NCACHE={};
 function nPick(k,list){let a=(k+1)*2654435761>>>0;a^=a>>>13;a=Math.imul(a,1274126177)>>>0;return list[a%list.length]}
-function procClone(x,y,kind,h,rot){if(!inside(x,y))return null;const P=PT.PARAMS[kind],s=Math.max(.72,Math.min(1.3,h/(P.cy+P.ry))),z=hL(x,y);
-  const v=NCACHE[kind]||(NCACHE[kind]=PT.build(kind,1)),first=!v.used;v.used=1;
+function procClone(x,y,kind,h,rot,lv){if(!inside(x,y))return null;const P=PT.PARAMS[kind],s=Math.max(.72,Math.min(1.3,h/(P.cy+P.ry))),z=hL(x,y);
+  const ck=kind+(lv||1),v=NCACHE[ck]||(NCACHE[ck]=PT.build(kind,lv||1)),first=!v.used;v.used=1;
   const g=first?v.grp:v.grp.clone();if(!first)g.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.userData=Object.assign({},o.material.userData)}});
   g.scale.setScalar(s);g.rotation.y=rot;g.position.copy(W(x,y,z));scene.add(g);g.updateMatrixWorld(true);
   TRUNKS.push([x,y,P.rad0*1.2*s,z+P.len[0]*s]);
@@ -1116,10 +1116,33 @@ const HEDGE_PTS=[];   // body pozdĺž plotu (miestne x,y) – pre kolíziu lopt
      else{const m=new THREE.Mesh(CROWNS.tall[k%3]||CROWNS.round[k%6],hm);m.scale.set(.6,h*.5,.5);m.rotation.y=ang;m.position.copy(W(x,y,z+h*.55));m.castShadow=true;scene.add(m)}}}})}
 // rad stromov pozdĺž okraja (vpravo od jednotky): obyčajné listnaté stromy
 DATA.row.forEach((p,k)=>{const[x,y]=loc(p),h=6.2+((k*53)%15)/10;if(HQ&&PT)procClone(x,y,nPick(k+100,NROW),h,k*1.7+.4);else tree(x,y,1.9+((k*37)%10)/12,h,k+100)});   // rad pri plote: menšie stromy (podľa satelitu)
+// --- hájiky (DATA.groves, Martin 22.11.): husto stromy n1–n6 + nízke kríky pod nimi, napr. za odpaliskom 2 vpravo a vpravo od greenu 1.
+// Blízko hry → plné kópie (kolízia, stmievanie pred loptičkou). Pevné náhodné rozmiestnenie (rovnaké na každej jamke).
+if(HQ&&PT)(DATA.groves||[]).forEach((G,gi)=>{let sd=4242+gi*977;const R=()=>((sd=(sd*16807)%2147483647)/2147483647);
+  const xs=G.p.map(p=>p[0]),ys=G.p.map(p=>p[1]),X0=Math.min(...xs),X1=Math.max(...xs),Y0=Math.min(...ys),Y1=Math.max(...ys);
+  const padsE=Object.values(DATA.pads).flat(),gD=G.green||7,pD=G.pad||8,placed=[];
+  const ok=(e,n,d)=>inPoly([e,n],G.p)&&padsE.every(q=>Math.hypot(e-q[0],n-q[1])>pD)&&DATA.greens.every(g=>sdist(e,n,g)>gD)&&!(DATA.fairways||[]).some(F=>sdist(e,n,F)<2)&&placed.every(q=>Math.hypot(e-q[0],n-q[1])>d)&&!(G.camClear||[]).some(C=>inPoly([e,n],C));
+  for(let t=0,n=0;t<4000&&n<G.n;t++){const e=X0+R()*(X1-X0),nn=Y0+R()*(Y1-Y0);if(!ok(e,nn,G.gap||3.2))continue;n++;placed.push([e,nn]);
+    const[x,y]=loc([e,nn]);procClone(x,y,NKINDS[Math.floor(R()*NKINDS.length)],(G.h||[7,12])[0]+R()*((G.h||[7,12])[1]-(G.h||[7,12])[0]),R()*6.28,3)}
+  for(let t=0,n=0;t<4000&&n<(G.shrubs||0);t++){const e=X0+R()*(X1-X0),nn=Y0+R()*(Y1-Y0);if(!inPoly([e,nn],G.p)||padsE.some(q=>Math.hypot(e-q[0],nn-q[1])<pD-2)||DATA.greens.some(g=>sdist(e,nn,g)<gD-2)||(DATA.fairways||[]).some(F=>sdist(e,nn,F)<1))continue;n++;(DATA.shrubs=DATA.shrubs||[]).push([e,nn,.9+R()*1.1])}});
+// --- pás stromov po okraji (woods): typy n1–n6 vo „vzdialenej“ verzii (bez jemných vetvičiek, málo veľkých listov), každý typ = 2 inštancované objekty pre všetky stromy
+const WOODI=HQ&&PT?{}:null;
+function woodsAdd(x,y,h,k,wi){if(!inside(x,y))return;const kd=NKINDS[k%NKINDS.length],P=PT.PARAMS[kd],s=Math.max(.75,Math.min(1.5,h/(P.cy+P.ry)));(WOODI[kd+'|'+wi]=WOODI[kd+'|'+wi]||[]).push([x,y,hL(x,y),s,k*2.17]);TRUNKS.push([x,y,P.rad0*1.2*s,hL(x,y)+P.len[0]*s])}
+function woodsBuild(){const WC={};Object.entries(WOODI).forEach(([key,L])=>{const kd=key.split('|')[0],t=WC[kd]||(WC[kd]=PT.build(kd,2)),Lv=t.leaves,n=Lv.count,bg=Lv.geometry,bp=bg.attributes.position,bn=bg.attributes.normal,bu=bg.attributes.uv,bi=bg.index.array;
+  const m=new THREE.Matrix4();if(!t.lg){const pos=[],nor=[],uv=[],col=[],idx=[],nm=new THREE.Matrix3(),v=new THREE.Vector3(),c=new THREE.Color();
+  for(let i=0;i<n;i++){Lv.getMatrixAt(i,m);nm.getNormalMatrix(m);Lv.instanceColor?Lv.getColorAt(i,c):c.set(1,1,1);const b=pos.length/3;
+    for(let j=0;j<bp.count;j++){v.fromBufferAttribute(bp,j).applyMatrix4(m);pos.push(v.x,v.y,v.z);v.fromBufferAttribute(bn,j).applyMatrix3(nm).normalize();nor.push(v.x,v.y,v.z);uv.push(bu.getX(j),bu.getY(j));col.push(c.r,c.g,c.b)}
+    for(let j=0;j<bi.length;j++)idx.push(b+bi[j])}
+  const lg=new THREE.BufferGeometry();lg.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));lg.setAttribute("normal",new THREE.Float32BufferAttribute(nor,3));lg.setAttribute("uv",new THREE.Float32BufferAttribute(uv,2));lg.setAttribute("color",new THREE.Float32BufferAttribute(col,3));lg.setIndex(idx);
+  t.lg=lg;t.lm=new THREE.MeshLambertMaterial({map:Lv.material.map,alphaTest:.5,side:THREE.DoubleSide,vertexColors:true})}const lg=t.lg,lm=t.lm;
+  const W1=new THREE.InstancedMesh(t.wood.geometry,t.wood.material,L.length),L1=new THREE.InstancedMesh(lg,lm,L.length),q=new THREE.Quaternion(),Y=new THREE.Vector3(0,1,0),S=new THREE.Vector3();
+  L.forEach(([x,y,z,s,r],i)=>{q.setFromAxisAngle(Y,r);S.setScalar(s);m.compose(W(x,y,z),q,S);W1.setMatrixAt(i,m);L1.setMatrixAt(i,m)});
+  [W1,L1].forEach(o=>{o.instanceMatrix.needsUpdate=true;if(o.computeBoundingSphere)o.computeBoundingSphere();else o.frustumCulled=false;o.castShadow=false;o.receiveShadow=!PMOB;scene.add(o)})})}
 DATA.woods.forEach((wd,wi)=>{const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;const park=false;   // za odpaliskom 3: park s vysokými borovicami a listnáčmi (podľa fotky)
-  for(let k=0;k<3000&&n<(park?34:90);k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
+  for(let k=0;k<3000&&n<(park?34:WOODI?(PMOB?85:130):90);k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;const[x,y]=loc([e,nn]);if(y<-3&&y>-30&&Math.abs(x)<10)continue;   // za odpaliskom nechaj miesto pre kameru
-    n++;if(park){if(k%5<2)pine(x,y,2.6+rnd()*1.6,15+rnd()*6,k);else tree(x,y,2.6+rnd()*1.8,13+rnd()*6,k)}else{const br=3+rnd()*2.5,bh=10+rnd()*7;if(!nearHedge(e,nn,br+3)&&!(DATA.woods_clear||[]).some(P=>inPoly([e,nn],P)))bush(x,y,br,bh,k)}}});   // pri živom plote nič veľké; woods_clear = miesta, kde podľa satelitu stromy nie sú (pri odpalisku 3 za plotom)
+    n++;if(park){if(k%5<2)pine(x,y,2.6+rnd()*1.6,15+rnd()*6,k);else tree(x,y,2.6+rnd()*1.8,13+rnd()*6,k)}else{const br=3+rnd()*2.5,bh=10+rnd()*7;if(!nearHedge(e,nn,br+3)&&!(DATA.woods_clear||[]).some(P=>inPoly([e,nn],P))){if(WOODI)woodsAdd(x,y,bh,k,wi);else bush(x,y,br,bh,k)}}}});
+if(WOODI)woodsBuild();   // pri živom plote nič veľké; woods_clear = miesta, kde podľa satelitu stromy nie sú (pri odpalisku 3 za plotom)
 
 // --- nízke kríky (len na určených miestach)
 {const SHR=[0,1,2,3,4].map(i=>crownGeo(i+31,"bush"));const shrM=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.95});
@@ -2368,7 +2391,7 @@ function loop(now){if(window.__stopped)return;const rdt=lastT?(now-lastT)/1000:0
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
      const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold)renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
-if(Q.has("dbg"))window.__v={camera,renderer,scene,FADE};
+if(Q.has("dbg"))window.__v={camera,renderer,scene,FADE,PT};
 requestAnimationFrame(loop);
 // shadery pre všetko, čo sa ukáže až neskôr (steblá trávy pri zemi, efekty), sa pripravia hneď po načítaní –
 // inak sa kompilovali uprostred preletu ku jamke a obraz sa na chvíľu zasekol
