@@ -764,8 +764,28 @@ var PARAMS={
     tipShrink:0.4,leaderAng:6,leaderLen:0.9,leaderRad:0.75,
     barkColor:0x625a50,twigColor:0x4c3e32,
     leafLevel:4,leafProb:0.5,maxLeaves:2200
+  },
+  /* kríky živého plotu pri odpalisku 3: úzky vysoký stĺp, ~6 tenkých kmeňov od zeme (viditeľné dole), riedke lístie */
+  h1:{
+    cx:0,cy:2.1,cz:0,rx:0.72,ry:1.45,rz:0.55,
+    maxLevel:4,maxSeg:8000,minR:0.005,pull:2.4,
+    rad0:0.05,lean:[0,0],
+    len:[0.08,3.1,0.75,0.42,0.26,0.2],
+    seg:[1,8,4,3,3,3],
+    taper:[0.9,0.4,0.3,0.3,0.35,0.4],
+    wobble:[0.02,0.12,0.22,0.3,0.32,0.32],
+    tropism:[0,0.08,0.03,0.0,-0.02,-0.02],
+    spread:[0,0.03,0,0,0,0],
+    kids:[6,9,5,3,0,0],
+    kidStart:[0.5,0.12,0.3,0.3,0,0],
+    angle:[0,30,48,52,55,60],
+    radRatio:[0,0.6,0.45,0.6,0.65,0.7],
+    tipShrink:0.3,leaderAng:4,leaderLen:1.0,leaderRad:0.75,
+    barkColor:0x6a5a4c,twigColor:0x55463a,
+    leafLevel:2,leafProb:0.33,maxLeaves:1500
   }
 };
+PARAMS.h2=PARAMS.h1;PARAMS.h3=PARAMS.h1;
 function generate(P,seed){
   var R=rng(seed);
   var pos=[],nor=[],uv=[],col=[],idx=[],sites=[];
@@ -915,7 +935,10 @@ const LEAF={
   t10:{tex:"oak",leafW:0.24,leafH:0.26,leafSpread:0.24,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.5,hue:0.26,hueVar:0.05,sat:0.88,lum:0.24,lumVar:0.08},
   t10b:{tex:"oak",leafW:0.24,leafH:0.26,leafSpread:0.24,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.5,hue:0.26,hueVar:0.05,sat:0.88,lum:0.24,lumVar:0.08},
   t11:{tex:"oak",leafW:0.28,leafH:0.3,leafSpread:0.28,followDir:0.2,randDir:1.4,hang:0.0,faceUp:0.4,hue:0.275,hueVar:0.04,sat:0.92,lum:0.215,lumVar:0.08},
-  t12:{tex:"oak",leafW:0.25,leafH:0.27,leafSpread:0.25,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.5,hue:0.255,hueVar:0.05,sat:0.88,lum:0.24,lumVar:0.08}};
+  t12:{tex:"oak",leafW:0.25,leafH:0.27,leafSpread:0.25,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.5,hue:0.255,hueVar:0.05,sat:0.88,lum:0.24,lumVar:0.08},
+  h1:{tex:"oak",leafW:0.3,leafH:0.34,leafSpread:0.22,followDir:0.5,randDir:1.1,hang:0.0,faceUp:0.3,hue:0.26,hueVar:0.05,sat:0.85,lum:0.22,lumVar:0.09},
+  h2:{tex:"oak",leafW:0.3,leafH:0.34,leafSpread:0.22,followDir:0.5,randDir:1.1,hang:0.0,faceUp:0.3,hue:0.24,hueVar:0.05,sat:0.8,lum:0.23,lumVar:0.09},
+  h3:{tex:"oak",leafW:0.3,leafH:0.34,leafSpread:0.22,followDir:0.5,randDir:1.1,hang:0.0,faceUp:0.3,hue:0.275,hueVar:0.05,sat:0.85,lum:0.21,lumVar:0.09}};
 function makeLeaves(kind,sites,seed,maxL){const L=LEAF[kind],R=rng(seed+101);
   const nSites=sites.length/6,order=[];for(let i=0;i<nSites;i++)order.push(i);
   for(let i=nSites-1;i>0;i--){const j=Math.floor(R()*(i+1)),tmp=order[i];order[i]=order[j];order[j]=tmp}
@@ -933,12 +956,12 @@ function makeLeaves(kind,sites,seed,maxL){const L=LEAF[kind],R=rng(seed+101);
     col.setHSL(L.hue+(R()-.5)*L.hueVar,L.sat+(R()-.5)*0.1,(L.lum+(R()-.5)*L.lumVar)*(.62+.3*ed+.28*upk));mesh.setColorAt(k,col)}
   mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
   mesh.castShadow=true;mesh.receiveShadow=true;mesh.computeBoundingSphere&&mesh.computeBoundingSphere();return mesh}
-function build(kind){const P=Object.assign({},PARAMS[kind],PMOB?{lowPoly:1,skipTube:5}:{lowPoly:1}),seed=1234+({t1:0,t2:77,t3:31,t4:58,t5:12,t6:91,t7:44,t8:63,t9:19,t10:7,t10b:83,t11:26,t12:52}[kind]||0),g=generate(P,seed);
+function build(kind){const P=Object.assign({},PARAMS[kind],PMOB?{lowPoly:1,skipTube:5}:{lowPoly:1}),seed=1234+({t1:0,t2:77,t3:31,t4:58,t5:12,t6:91,t7:44,t8:63,t9:19,t10:7,t10b:83,t11:26,t12:52,h1:5,h2:39,h3:71}[kind]||0),g=generate(P,seed);
   const geo=new THREE.BufferGeometry();
   geo.setAttribute("position",new THREE.Float32BufferAttribute(g.pos,3));geo.setAttribute("normal",new THREE.Float32BufferAttribute(g.nor,3));
   geo.setAttribute("uv",new THREE.Float32BufferAttribute(g.uv,2));geo.setAttribute("color",new THREE.Float32BufferAttribute(g.col,3));geo.setIndex(g.idx);
   const wood=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({map:TX.bark,vertexColors:true}));wood.castShadow=true;wood.receiveShadow=true;
-  const leaves=makeLeaves(kind,g.sites,seed,PMOB?3200:P.maxLeaves);
+  const leaves=makeLeaves(kind,g.sites,seed,PMOB?Math.min(3200,P.maxLeaves):P.maxLeaves);
   const grp=new THREE.Group();grp.add(wood,leaves);return{grp,wood,leaves,P}}
 return{PARAMS,build}})():null;
 // natočenie: stromy sú modelované tak, ako ich vidno z odpaliska 3 (x = vpravo); na iných jamkách sa otočia, aby stáli rovnako v skutočnosti
@@ -955,12 +978,15 @@ const HEDGES=(DATA.hedges||[]);
 function hSegD(e,n,a,b){const vx=b[0]-a[0],vy=b[1]-a[1],l=vx*vx+vy*vy,t=Math.max(0,Math.min(1,((e-a[0])*vx+(n-a[1])*vy)/l));return Math.hypot(e-a[0]-t*vx,n-a[1]-t*vy)}
 function nearHedge(e,n,d){return HEDGES.some(H=>H.p.some((q,i)=>i>0&&hSegD(e,n,H.p[i-1],q)<d))}
 const HEDGE_PTS=[];   // body pozdĺž plotu (miestne x,y) – pre kolíziu loptičky
-{const hm=HQ?new THREE.MeshLambertMaterial({map:LEAFTEX,vertexColors:true,color:0xb3ba70,alphaTest:.45,side:THREE.DoubleSide}):null;   // tuje: tmavšia olivová zelená
- let k=0;HEDGES.forEach(H=>{const h=H.h||2,w=H.w||1.2;for(let i=1;i<H.p.length;i++){const a=H.p[i-1],b=H.p[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.round(L/.55));
-   for(let j=0;j<=n;j++){if(j===0&&i>1)continue;const t=j/n,e=a[0]+(b[0]-a[0])*t,nn=a[1]+(b[1]-a[1])*t,[x,y]=loc([e,nn]);if(!inside(x,y))continue;
-     const[x2,y2]=loc(b),[x1,y1]=loc(a),ang=Math.atan2(-(y2-y1),x2-x1),z=hL(x,y);k++;HEDGE_PTS.push([x,y,w*.6,z,z+h]);
-     const m=HQ?new THREE.Mesh(CARDS.bush[k%4],hm):new THREE.Mesh(CROWNS.round[k%6],leafV.clone());
-     const hh=h*(.94+((k*37)%7)/60);m.scale.set(.75,hh/2.1,w*.55);m.rotation.y=ang;m.position.copy(W(x,y,z+hh*.5));m.castShadow=true;m.receiveShadow=true;scene.add(m)}}})}
+// plot = rad samostatných vysokých úzkych kríkov s medzerami (Martinov vzor): viac tenkých kmeňov od zeme, riedke lístie; 3 varianty z generátora, ďalšie sú kópie
+{const VAR=HQ&&PT?["h1","h2","h3"].map(kd=>PT.build(kd)):null;
+ const hm=HQ?null:leafV.clone();
+ let k=0;HEDGES.forEach(H=>{const h=H.h||3,w=H.w||1.2,gap=H.gap||1.6;for(let i=1;i<H.p.length;i++){const a=H.p[i-1],b=H.p[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.round(L/gap));
+   for(let j=0;j<=n;j++){if(j===0&&i>1)continue;k++;const sh=((k*53)%11)/11-.5,t=Math.max(0,Math.min(1,(j+(j>0&&j<n?sh*.25:0))/n)),e=a[0]+(b[0]-a[0])*t,nn=a[1]+(b[1]-a[1])*t,[x,y]=loc([e,nn]);if(!inside(x,y))continue;
+     const[x2,y2]=loc(b),[x1,y1]=loc(a),ang=Math.atan2(y2-y1,x2-x1),z=hL(x,y),hs=(.9+((k*37)%9)/40)*h/3.3;HEDGE_PTS.push([x,y,w*.45,z+.5,z+h*hs]);
+     if(VAR){const v=VAR[k%3],g=v.grp.clone();g.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.userData=Object.assign({},o.material.userData)}});g.scale.setScalar(hs);g.rotation.y=ang+(k%2?Math.PI:0)+sh*.3;g.position.copy(W(x,y,z));scene.add(g);g.updateMatrixWorld(true);
+       FADE.push({m:[g.children[1],g.children[0]],c:W(x,y,z+h*.6),b:W(x,y,z+.8),r:1,op:1})}
+     else{const m=new THREE.Mesh(CROWNS.tall[k%3]||CROWNS.round[k%6],hm);m.scale.set(.6,h*.5,.5);m.rotation.y=ang;m.position.copy(W(x,y,z+h*.55));m.castShadow=true;scene.add(m)}}}})}
 // rad stromov pozdĺž okraja (vpravo od jednotky): obyčajné listnaté stromy
 DATA.row.forEach((p,k)=>{const[x,y]=loc(p);tree(x,y,1.9+((k*37)%10)/12,6.2+((k*53)%15)/10,k+100)});   // rad pri plote: menšie stromy (podľa satelitu)
 DATA.woods.forEach((wd,wi)=>{const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;const park=false;   // za odpaliskom 3: park s vysokými borovicami a listnáčmi (podľa fotky)
@@ -1699,7 +1725,7 @@ function startPlay(){
   const R=.06,G=9.81;
   // stromy ako prekážky (koruny)
   const OBST=DATA.trees.map(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(PROC[k]){const P=PT.PARAMS[PROC[k]],z=hL(x,y);return{x,y,r:Math.max(P.rx,P.rz)*.9,z0:z+P.cy-P.ry*.85,z1:z+P.cy+P.ry}}return{x,y,r:r*1.05,z0:g?hL(x,y):hL(x,y)+h*.5-r*.2,z1:hL(x,y)+h*.5+r*2}});
-  HEDGE_PTS.forEach(([x,y,r,z0,z1])=>OBST.push({x,y,r,z0,z1,hedge:1}));   // živý plot: loptička cez tuje neprejde
+  HEDGE_PTS.forEach(([x,y,r,z0,z1])=>OBST.push({x,y,r,z0,z1}));   // kríky plotu: ako koruna stromu (cez riedke lístie môže prejsť)
   // loptička, stopa, mierenie
   // loptička: jamôčky (dimples) ako normálová mapa z jedného malého plátna (vypočíta sa raz, na iPhone lacné), plus potlač a čiara na mierenie
   const ballMat=(()=>{const Wd=512,Ht=256,cv=document.createElement("canvas");cv.width=Wd;cv.height=Ht;const x=cv.getContext("2d");
