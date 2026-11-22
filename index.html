@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Fór">
-<title>Fór</title>
+<meta name="apple-mobile-web-app-title" content="Fairway Live">
+<title>Fairway Live</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -58,7 +58,8 @@ button:disabled{opacity:.45}
 #start .back{align-self:flex-start;background:transparent;color:#fff;border:0;padding:0 0 14px;min-height:0;font-size:1rem}
 #start .logo{display:flex;align-items:center;gap:12px}
 #start .logo img{width:52px;height:52px;border-radius:14px}
-#start .logo b{font-size:2.2rem;letter-spacing:.02em}
+#start .logo b{font-size:2rem;letter-spacing:.01em;white-space:nowrap}
+#start .logo b i{font-style:normal;color:#a8de7c}
 #start .club{margin:6px 0 0;opacity:.8}
 #start .live{margin:26px 0 0;background:rgba(255,255,255,.1);border-radius:16px;padding:14px 16px}
 #start .live h3{margin:0 0 8px;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
@@ -184,7 +185,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
 <body>
 <div id="start" hidden>
  <div id="st-1">
-  <div class="logo"><img src="icon-192.png" alt=""><b>Fór</b></div>
+  <div class="logo"><img src="icon-192.png" alt=""><b>Fairway <i>Live</i></b></div>
   <p class="club">Kde dnes hráš? · <span id="st-date"></span></p>
   <input id="st-search" type="search" placeholder="Hľadať ihrisko alebo obec" autocomplete="off">
   <div id="st-list"></div>
@@ -211,7 +212,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
   </div>
   <div class="q">
     <h2>Chceš si zapisovať údery a zaznamenať svoju hru?</h2>
-    <p>Bez zapisovania ti Fór ukazuje len dianie na ihrisku, vzdialenosti a hlásenia.</p>
+    <p>Bez zapisovania ti Fairway Live ukazuje len dianie na ihrisku, vzdialenosti a hlásenia.</p>
     <button class="yes" id="st-yes">Áno, zapisovať hru</button>
     <button class="no" id="st-no">Nie, len info o ihrisku</button>
     <label>Odpaľujem z <select id="st-tee"></select></label>
@@ -348,7 +349,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
     </div>
     <div class="card">
       <h2>Displej</h2>
-      <p class="small muted">iPhone aj Android prestanú posielať polohu, keď zhasne displej alebo prepneš do inej appky. Pri teste nechaj Fór otvorený.</p>
+      <p class="small muted">iPhone aj Android prestanú posielať polohu, keď zhasne displej alebo prepneš do inej appky. Pri teste nechaj Fairway Live otvorený.</p>
       <div class="btns"><button id="g-wake">Nezhasínať displej: vypnuté</button></div>
     </div>
     <div class="card">
@@ -356,7 +357,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
       <p class="small muted" id="mode-txt"></p>
       <div class="btns"><button id="b-home">Úvodná obrazovka / nová hra</button></div>
     </div>
-    <p class="small muted">Fór · testovacia verzia 0.5. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
+    <p class="small muted">Fairway Live · testovacia verzia 0.5. Ostatné skupiny na mape pribudnú v ďalšej verzii (potrebujú server).</p>
   </section>
 </main>
 <div id="sum" hidden>
@@ -830,10 +831,10 @@ $("rep-feed").onclick=e=>{const d=e.target.closest("button[data-del]"),sh=e.targ
   if(d){reports.splice(+d.dataset.del,1);store.set("reports",reports);drawReports();renderRepList()}
   if(sh){const r=reports[+sh.dataset.show];showView("v-map");map.setView([r.lat,r.lon],18)}};
 async function sendReports(list){if(!Array.isArray(list))list=reports;
-  const txt="Fór · hlásenia z ihriska Apex Báč\n\n"+list.map(r=>{const ri=repInfo(r.k);
+  const txt="Fairway Live · hlásenia z ihriska Apex Báč\n\n"+list.map(r=>{const ri=repInfo(r.k);
     return `${ri.i} ${ri.t}${r.note?" („"+r.note+"“)":""} – jamka ${r.hole}, ${new Date(r.t).toLocaleTimeString("sk",{hour:"2-digit",minute:"2-digit"})}\nhttps://maps.google.com/?q=${r.lat},${r.lon}`}).join("\n\n");
   try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e&&e.name==="AbortError")return}
-  try{await navigator.clipboard.writeText(txt);showToast("Text hlásení je skopírovaný, vlož ho do správy.")}catch(e){download("for-hlasenia.txt",txt,"text/plain")}
+  try{await navigator.clipboard.writeText(txt);showToast("Text hlásení je skopírovaný, vlož ho do správy.")}catch(e){download("fairway-live-hlasenia.txt",txt,"text/plain")}
 }
 $("fab").onclick=openReport;
 function placeFab(){const d=$("dist");if(d&&d.offsetHeight)$("fab").style.bottom=(d.offsetHeight+28)+"px"}addEventListener("resize",placeFab);setTimeout(placeFab,300);if(window.ResizeObserver)new ResizeObserver(placeFab).observe($("dist"));
@@ -847,7 +848,7 @@ $("b-plan").onclick=()=>{if(!AKAD&&APEX_READY.includes(round.hole+1)){location.h
 function planSrc(){$("plan-img").src="holes/jamka-"+String(round.hole+1).padStart(2,"0")+".jpg"}
 $("plan-x").onclick=()=>{$("plan").hidden=true};
 $("plan").onclick=e=>{if(e.target.id==="plan")$("plan").hidden=true};
-$("c-export").onclick=()=>download("for-ihrisko-apex.json",JSON.stringify(course,null,1),"application/json");
+$("c-export").onclick=()=>download("fairway-live-ihrisko-apex.json",JSON.stringify(course,null,1),"application/json");
 $("c-import").onclick=()=>$("c-file").click();
 $("c-file").onchange=async e=>{const f=e.target.files[0];if(!f)return;
   try{const c=JSON.parse(await f.text());if(!Array.isArray(c.par)||c.par.length!==HOLES)throw 0;course=c;saveCourse();render();showToast("Ihrisko načítané.")}
@@ -904,11 +905,11 @@ $("g-clear").onclick=()=>{if(!confirm("Vymazať celý GPS záznam?"))return;trac
 $("g-export").onclick=()=>{
   const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const first=track[0]?new Date(track[0].t):new Date();
-  const name="Fór telefón "+first.toISOString().slice(0,16).replace("T"," ");
-  let x=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="For test 0.1" xmlns="http://www.topografix.com/GPX/1/1">\n<metadata><name>${esc(name)}</name><desc>${esc(navigator.userAgent)}</desc></metadata>\n<trk><name>${esc(name)}</name><trkseg>\n`;
+  const name="Fairway Live telefón "+first.toISOString().slice(0,16).replace("T"," ");
+  let x=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Fairway Live" xmlns="http://www.topografix.com/GPX/1/1">\n<metadata><name>${esc(name)}</name><desc>${esc(navigator.userAgent)}</desc></metadata>\n<trk><name>${esc(name)}</name><trkseg>\n`;
   for(const p of track)x+=`<trkpt lat="${p.lat}" lon="${p.lon}">${p.ele!=null?`<ele>${p.ele}</ele>`:""}<time>${new Date(p.t).toISOString()}</time><hdop>${p.acc}</hdop><desc>acc=${p.acc}</desc></trkpt>\n`;
   x+="</trkseg></trk>\n</gpx>\n";
-  download("for-telefon-"+first.toISOString().slice(0,10)+".gpx",x,"application/gpx+xml");
+  download("fairway-live-telefon-"+first.toISOString().slice(0,10)+".gpx",x,"application/gpx+xml");
 };
 trackLine.setLatLngs(track.map(p=>[p.lat,p.lon])).addTo(map);
 
@@ -1019,7 +1020,7 @@ $("b-courses").onclick=()=>{location.href="./?start=1"};
 const HCOL=["#ff7a00","#2bb5ff","#ff3d8b","#ffd400","#7cff6b","#b07cff"];
 function renderRoundBtn(){const on=!!(modeSt&&modeSt.score);$("round-btn").textContent=on?"🏁 Ukončiť kolo":"▶ Začať kolo";$("round-btn").className=on?"danger":"primary"}
 $("round-btn").onclick=()=>{
-  if(!(modeSt&&modeSt.score)){forceNew=false;choose(true);renderRoundBtn();showToast("Kolo beží: zapisuješ údery a nahrávam trasu. Nechaj Fór otvorený.");return}
+  if(!(modeSt&&modeSt.score)){forceNew=false;choose(true);renderRoundBtn();showToast("Kolo beží: zapisuješ údery a nahrávam trasu. Nechaj Fairway Live otvorený.");return}
   if(!confirm("Ukončiť kolo a ukázať prejdenú trasu?"))return;
   const now=Date.now();if(round.start&&round.holeStart!=null&&round.holeTimes[round.hole]==null)round.holeTimes[round.hole]=now-round.holeStart;
   round.end=now;saveRound();recording=false;store.set("recording",false);store.set("track",track);wake(false);

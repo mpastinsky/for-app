@@ -1,6 +1,6 @@
 {
-  "name": "Fór – golf na ihrisku",
-  "short_name": "Fór",
+  "name": "Fairway Live – živé info z ihriska",
+  "short_name": "Fairway Live",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
