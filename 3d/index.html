@@ -1187,7 +1187,7 @@ const hP=hL(...PIN)+.08;
  const lip=new THREE.Mesh(new THREE.PlaneGeometry(.132,.132).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({map:rt,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-16}));
  lip.position.copy(pos);lip.position.y+=.0008;lip.renderOrder=6;scene.add(lip);
  scene.userData.cupPos=pos.clone()}
-const pin=new THREE.Mesh(new THREE.CylinderGeometry(.0095,.0095,2.1,10),   // skutočná tyčka ~1,9 cm; z diaľky sa opticky zhrubne (pinVis), aby bola vidieť
+const pin=new THREE.Mesh(new THREE.CylinderGeometry(.0095,.0095,2.138,10).translate(0,-.019,0),   // skutočná tyčka ~1,9 cm; z diaľky sa opticky zhrubne (pinVis), aby bola vidieť
   new THREE.MeshStandardMaterial({roughness:.35,map:HQ?null:(()=>{   // tyčka s čierno-bielymi pásikmi (7 pásov); akadémia: biela tyčka ako v skutočnosti
   const c=document.createElement("canvas");c.width=4;c.height=14;const x=c.getContext("2d");for(let i=0;i<7;i++){x.fillStyle=i%2?"#151515":"#ffffff";x.fillRect(0,i*2,4,2)}
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;return t})()}));pin.position.copy(W(...PIN,hP+1.05-.06));pin.castShadow=true;scene.add(pin);
@@ -2286,22 +2286,22 @@ function startPlay(){
   // piesok: pri dopade do bunkra (a pri údere z neho) vyletí sprška zrniek v smere letu, krátky obláčik prachu a ostane jamka po dopade
   let SB=null;
   function sandBurst(x,y,sp,dx,dy,out){const h=gS(x,y)+.01,d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
-    if(!SB){const N=160,g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(N*3),3));
-      const pt=new THREE.Points(g,new THREE.PointsMaterial({map:(()=>{const c=document.createElement("canvas");c.width=c.height=32;const x=c.getContext("2d");x.fillStyle="#fff";x.beginPath();x.arc(16,16,14,0,7);x.fill();return new THREE.CanvasTexture(c)})(),alphaTest:.4,color:0xd8c08c,size:.17,transparent:true,depthWrite:false}));pt.frustumCulled=false;pt.visible=false;scene.add(pt);
+    if(!SB){const N=70,g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(N*3),3));
+      const pt=new THREE.Points(g,new THREE.PointsMaterial({sizeAttenuation:true,map:(()=>{const c=document.createElement("canvas");c.width=c.height=32;const x=c.getContext("2d");x.fillStyle="#fff";x.beginPath();x.arc(16,16,14,0,7);x.fill();return new THREE.CanvasTexture(c)})(),alphaTest:.4,color:0xd8c08c,size:.07,transparent:true,depthWrite:false}));pt.frustumCulled=false;pt.visible=false;scene.add(pt);
       const cv=document.createElement("canvas");cv.width=cv.height=64;const c=cv.getContext("2d"),gr=c.createRadialGradient(32,32,2,32,32,32);gr.addColorStop(0,"rgba(226,206,160,.85)");gr.addColorStop(1,"rgba(226,206,160,0)");c.fillStyle=gr;c.fillRect(0,0,64,64);
       const dust=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false}));dust.visible=false;scene.add(dust);
       const cr=new THREE.Mesh(new THREE.CircleGeometry(1,20).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x9c8455,transparent:true,opacity:.55,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-12}));cr.visible=false;scene.add(cr);
       SB={pt,dust,cr,N,v:new Float32Array(N*3),t:-1}}
-    const k=Math.min(1.8,.6+sp/18),P=SB.pt.geometry.attributes.position.array;SB.t=0;SB.h=h-.3;SB.x=x;SB.y=y;SB.k=k;
-    for(let i=0;i<SB.N;i++){const a=(Math.random()-.5)*(out?1.6:2.6),c=Math.cos(a),s2=Math.sin(a),fx=dx*c-dy*s2,fy=dx*s2+dy*c,v=(.6+Math.random()*1.6)*k*(out?1.4:1);
-      P[i*3]=x+(Math.random()-.5)*.08;P[i*3+1]=h;P[i*3+2]=-(y+(Math.random()-.5)*.08);SB.v[i*3]=fx*v;SB.v[i*3+1]=(1.4+Math.random()*2.2)*k;SB.v[i*3+2]=-fy*v}
-    SB.pt.geometry.attributes.position.needsUpdate=true;SB.pt.visible=true;SB.dust.visible=true;SB.dust.position.set(x,h+.15,-y);
-    if(!out){SB.cr.visible=true;SB.cr.position.set(x,h-.005,-y);SB.cr.scale.set(.12+.05*k,1,.18+.08*k);SB.cr.rotation.y=Math.atan2(dx,dy)}else SB.cr.visible=false;
+    const k=Math.min(1.4,.5+sp/30),P=SB.pt.geometry.attributes.position.array;SB.t=0;SB.h=h-.3;SB.x=x;SB.y=y;SB.k=k;
+    for(let i=0;i<SB.N;i++){const a=(Math.random()-.5)*(out?1.6:1.4),c=Math.cos(a),s2=Math.sin(a),fx=dx*c-dy*s2,fy=dx*s2+dy*c,v=(out?(.6+Math.random()*1.6)*k*1.4:(.15+Math.random()*.6)*k);   // dopad: jemne, nízko, hlavne dopredu
+      P[i*3]=x+(Math.random()-.5)*.08;P[i*3+1]=h;P[i*3+2]=-(y+(Math.random()-.5)*.08);SB.v[i*3]=fx*v;SB.v[i*3+1]=out?(1.4+Math.random()*2.2)*k:(.3+Math.random()*.7)*k;SB.v[i*3+2]=-fy*v}
+    SB.pt.geometry.attributes.position.needsUpdate=true;SB.pt.visible=true;SB.dust.visible=true;SB.dust.position.set(x,h+.05,-y);
+    if(!out){SB.cr.visible=true;SB.cr.position.set(x,h-.005,-y);SB.cr.scale.set(.07+.02*k,1,.09+.03*k);SB.cr.rotation.y=Math.atan2(dx,dy)}else SB.cr.visible=false;
     if(!out){msg("Do piesku! 🏖");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1500)}}
   function sandTick(dt){if(!SB||SB.t<0)return;SB.t+=dt;const t=SB.t,P=SB.pt.geometry.attributes.position.array,V=SB.v;
     for(let i=0;i<SB.N;i++){V[i*3+1]-=G*dt;P[i*3]+=V[i*3]*dt;P[i*3+2]+=V[i*3+2]*dt;const ny=P[i*3+1]+V[i*3+1]*dt,gz=gS(P[i*3],-P[i*3+2])+.01;if(ny<gz){P[i*3+1]=gz;V[i*3]*=.2;V[i*3+2]*=.2;V[i*3+1]=0}else P[i*3+1]=ny}
     SB.pt.geometry.attributes.position.needsUpdate=true;SB.pt.material.opacity=Math.max(0,1-Math.max(0,t-1)/1.1);
-    const ds=(.9+t*3.2)*SB.k;SB.dust.scale.set(ds,ds*.65,1);SB.dust.material.opacity=Math.max(0,.75*(1-t/2));
+    const ds=(.3+t*.8)*SB.k;SB.dust.scale.set(ds,ds*.4,1);SB.dust.material.opacity=Math.max(0,.35*(1-t/1.4));
     if(t>2.1){SB.t=-1;SB.pt.visible=false;SB.dust.visible=false}}
   let SPL=null;
   function splash(){S.mode="sink";S.t=0;S.sink=0;S.vx=S.vy=S.vz=0;const h=gS(S.x,S.y)+.02;
