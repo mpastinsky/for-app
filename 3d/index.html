@@ -17,6 +17,7 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}body.playing,b
 #bar{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);display:flex;gap:8px}
 #bar button{flex:1;font:600 .95rem var(--font);min-height:48px;border:0;border-radius:12px;background:#fff;color:#14211a;box-shadow:0 3px 12px rgba(0,0,0,.25)}
 #bar button.on{background:#0f6b4a;color:#fff}
+#v-fly,#v-top,#v-tee{display:none}html.pl #bar{display:none}   /* staré pohľady skryté hneď od načítania; v hre lišta vôbec nebliká */
 #tees{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 70px);display:flex;gap:6px;align-items:center;color:#fff;font-size:.85rem;text-shadow:0 1px 3px #000}
 #tees a{color:#14211a;background:rgba(255,255,255,.85);border-radius:999px;padding:7px 12px;text-decoration:none;font-weight:600;text-shadow:none}#tees a.on{background:#0f6b4a;color:#fff}#tees i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;border:1px solid #0005;vertical-align:-1px}
 #note{position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);color:#fff;font-size:11px;text-shadow:0 1px 2px #000;opacity:.9;pointer-events:auto;cursor:pointer}#note:not(.open){font-size:0;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.3);display:grid;place-items:center;opacity:.7}#note:not(.open)::after{content:"i";font:700 12px var(--font)}
@@ -72,7 +73,8 @@ try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
 <div id="note" onclick="this.classList.toggle('open')">Načítavam terén…</div>
-<div id="bar"><button id="v-tee" class="on">Z odpaliska</button><button id="v-fly">Let ku greenu</button><button id="v-top">Zhora</button><button id="v-all">Všetky jamky</button><button id="v-play">⛳ Hrať</button></div>
+<script>if(/[?&]play=1/.test(location.search))document.documentElement.classList.add("pl")</script>
+<div id="bar"><button id="v-tee" class="on">Z odpaliska</button><button id="v-fly">Let ku greenu</button><button id="v-top">Zhora</button><button id="v-all">Všetky jamky</button><button id="v-play">⛳ Vyskúšať jamku</button></div>
 <script type="module">
 import * as THREE from "three";
 import {OrbitControls} from "./lib/OrbitControls.js";
