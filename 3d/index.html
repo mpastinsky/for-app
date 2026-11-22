@@ -783,6 +783,117 @@ var PARAMS={
     tipShrink:0.3,leaderAng:4,leaderLen:1.0,leaderRad:0.75,
     barkColor:0x6a5a4c,twigColor:0x55463a,
     leafLevel:2,leafProb:0.33,maxLeaves:1500
+  },
+  /* nové typy podľa Martinových zimných fotiek z ihriska (22.11.) – náhodne na stromy, ktoré ešte nemali vlastný tvar */
+  n1:{ /* jemný dvojkmeň (foto pri odpalisku): kmeň sa delí nízko na dva, koruna ako vejár do strán, veľa jemných vetvičiek */
+    cx:0.3,cy:5.6,cz:0,rx:3.8,ry:3.5,rz:3.4,
+    maxLevel:5,maxSeg:36000,minR:0.006,pull:1.3,
+    rad0:0.15,lean:[0.05,0.02],
+    len:[1.1,4.6,2.4,1.4,0.8,0.48],
+    seg:[2,8,5,4,3,3],
+    taper:[0.7,0.32,0.26,0.26,0.3,0.4],
+    wobble:[0.03,0.1,0.2,0.28,0.34,0.34],
+    tropism:[0,0.07,0.03,0.0,-0.02,-0.03],
+    spread:[0,0.05,0.05,0.04,0.02,0.0],
+    kids:[2,6,5,4,3,0],
+    kidStart:[0.9,0.3,0.3,0.25,0.2,0],
+    angle:[0,16,46,54,56,60],
+    radRatio:[0,0.75,0.6,0.65,0.68,0.7],
+    tipShrink:0.4,leaderAng:12,leaderLen:1.0,leaderRad:0.85,
+    extras:[{dir:[-0.45,1,0.15],len:4.3}],
+    barkColor:0x655b50,twigColor:0x4b3d31,
+    leafLevel:4,leafProb:0.45,maxLeaves:5000
+  },
+  n2:{ /* viackmenný ker-strom (prúty zo zeme, ~5 m), široký hore */
+    cx:0,cy:3.3,cz:0,rx:2.4,ry:2.1,rz:2.2,
+    maxLevel:4,maxSeg:16000,minR:0.005,pull:1.6,
+    rad0:0.06,lean:[0,0],
+    len:[0.1,4.4,1.3,0.7,0.4,0.25],
+    seg:[1,8,4,3,3,3],
+    taper:[0.9,0.4,0.3,0.3,0.35,0.4],
+    wobble:[0.02,0.1,0.22,0.3,0.32,0.32],
+    tropism:[0,0.05,0.02,0.0,-0.02,-0.02],
+    spread:[0,0.08,0.03,0,0,0],
+    kids:[11,7,5,3,0,0],
+    kidStart:[0.5,0.25,0.3,0.3,0,0],
+    angle:[0,20,46,52,55,60],
+    radRatio:[0,0.7,0.5,0.6,0.65,0.7],
+    tipShrink:0.3,leaderAng:3,leaderLen:1.0,leaderRad:0.8,
+    barkColor:0x7a6c5d,twigColor:0x5a4a3c,
+    leafLevel:2,leafProb:0.4,maxLeaves:3000
+  },
+  n3:{ /* svetlý rovný kmeň, koruna sa rozkladá vysoko a široko (dva stromy pri greene) */
+    cx:0,cy:7.2,cz:0,rx:4.2,ry:3.4,rz:3.9,
+    maxLevel:5,maxSeg:40000,minR:0.007,pull:1.3,
+    rad0:0.2,lean:[0.02,0.0],
+    len:[3.6,4.8,2.6,1.5,0.85,0.5],
+    seg:[5,8,5,4,3,3],
+    taper:[0.55,0.3,0.25,0.25,0.3,0.4],
+    wobble:[0.02,0.09,0.17,0.25,0.3,0.3],
+    tropism:[0,0.05,0.03,0.0,-0.02,-0.03],
+    spread:[0,0.06,0.05,0.04,0.02,0.0],
+    kids:[5,6,5,4,3,0],
+    kidStart:[0.75,0.3,0.3,0.25,0.2,0],
+    angle:[0,40,50,54,56,60],
+    radRatio:[0,0.55,0.62,0.65,0.68,0.7],
+    tipShrink:0.4,leaderAng:6,leaderLen:0.9,leaderRad:0.8,
+    barkColor:0x9a9286,twigColor:0x5c5045,
+    leafLevel:4,leafProb:0.4,maxLeaves:6000
+  },
+  n4:{ /* osamelý štíhly strom pri greene: rovný kmeň, vajcovitá koruna, konáre šikmo nahor */
+    cx:0,cy:7.0,cz:0,rx:2.8,ry:4.0,rz:2.6,
+    maxLevel:5,maxSeg:36000,minR:0.007,pull:1.3,
+    rad0:0.18,lean:[0.01,0.01],
+    len:[4.4,4.0,2.1,1.25,0.72,0.42],
+    seg:[6,8,5,4,3,3],
+    taper:[0.5,0.3,0.25,0.25,0.3,0.4],
+    wobble:[0.02,0.08,0.16,0.24,0.3,0.3],
+    tropism:[0,0.11,0.06,0.03,0.0,-0.02],
+    spread:[0,0.02,0.03,0.03,0.02,0.0],
+    kids:[7,6,5,4,3,0],
+    kidStart:[0.4,0.3,0.3,0.25,0.2,0],
+    angle:[0,24,42,50,55,60],
+    radRatio:[0,0.45,0.6,0.65,0.68,0.7],
+    tipShrink:0.5,leaderAng:3,leaderLen:1.4,leaderRad:0.85,
+    barkColor:0x6b6258,twigColor:0x4d3f33,
+    leafLevel:4,leafProb:0.42,maxLeaves:5000
+  },
+  n5:{ /* agát so strukmi: kmeň rozdvojený vo ~2,5 m, previsnuté konce, listy agáta */
+    cx:0.3,cy:6.4,cz:0,rx:3.6,ry:3.6,rz:3.3,
+    maxLevel:5,maxSeg:36000,minR:0.007,pull:1.3,
+    rad0:0.18,lean:[0.04,0.03],
+    len:[2.5,4.4,2.5,1.45,0.82,0.5],
+    seg:[4,8,5,4,3,3],
+    taper:[0.55,0.3,0.25,0.25,0.3,0.4],
+    wobble:[0.03,0.11,0.19,0.27,0.32,0.32],
+    tropism:[0,0.05,0.0,-0.03,-0.06,-0.08],
+    spread:[0,0.04,0.05,0.04,0.02,0.0],
+    kids:[3,6,5,4,3,0],
+    kidStart:[0.85,0.35,0.3,0.25,0.2,0],
+    angle:[0,28,52,56,58,62],
+    radRatio:[0,0.65,0.62,0.65,0.68,0.7],
+    tipShrink:0.4,leaderAng:9,leaderLen:1.0,leaderRad:0.8,
+    extras:[{dir:[-0.7,0.8,-0.2],len:3.8}],
+    barkColor:0x5f554a,twigColor:0x4a3b2f,
+    leafLevel:4,leafProb:0.5,maxLeaves:5500
+  },
+  n6:{ /* stredný strom s niekoľkými šikmými kmeňmi z nízka (vedľa kríka na fotke), riedka koruna */
+    cx:0.2,cy:5.2,cz:0,rx:3.0,ry:3.0,rz:2.8,
+    maxLevel:5,maxSeg:28000,minR:0.006,pull:1.3,
+    rad0:0.12,lean:[0.03,0.0],
+    len:[0.7,4.6,2.0,1.15,0.68,0.4],
+    seg:[2,8,5,4,3,3],
+    taper:[0.75,0.33,0.26,0.26,0.3,0.4],
+    wobble:[0.03,0.12,0.2,0.28,0.32,0.32],
+    tropism:[0,0.04,0.02,0.0,-0.02,-0.03],
+    spread:[0,0.07,0.05,0.04,0.02,0.0],
+    kids:[4,6,5,4,3,0],
+    kidStart:[0.6,0.3,0.3,0.25,0.2,0],
+    angle:[0,30,48,54,56,60],
+    radRatio:[0,0.7,0.6,0.65,0.68,0.7],
+    tipShrink:0.4,leaderAng:10,leaderLen:0.9,leaderRad:0.75,
+    barkColor:0x6a5e52,twigColor:0x4f4034,
+    leafLevel:4,leafProb:0.42,maxLeaves:4000
   }
 };
 PARAMS.h2=PARAMS.h1;PARAMS.h3=PARAMS.h1;
@@ -936,6 +1047,12 @@ const LEAF={
   t10b:{tex:"oak",leafW:0.24,leafH:0.26,leafSpread:0.24,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.5,hue:0.26,hueVar:0.05,sat:0.88,lum:0.24,lumVar:0.08},
   t11:{tex:"oak",leafW:0.28,leafH:0.3,leafSpread:0.28,followDir:0.2,randDir:1.4,hang:0.0,faceUp:0.4,hue:0.275,hueVar:0.04,sat:0.92,lum:0.215,lumVar:0.08},
   t12:{tex:"oak",leafW:0.25,leafH:0.27,leafSpread:0.25,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.5,hue:0.255,hueVar:0.05,sat:0.88,lum:0.24,lumVar:0.08},
+  n1:{tex:"oak",leafW:0.27,leafH:0.29,leafSpread:0.26,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.5,hue:0.265,hueVar:0.05,sat:0.9,lum:0.225,lumVar:0.08},
+  n2:{tex:"oak",leafW:0.28,leafH:0.31,leafSpread:0.24,followDir:0.4,randDir:1.2,hang:0.0,faceUp:0.4,hue:0.25,hueVar:0.05,sat:0.85,lum:0.23,lumVar:0.09},
+  n3:{tex:"oak",leafW:0.31,leafH:0.33,leafSpread:0.28,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.45,hue:0.27,hueVar:0.04,sat:0.9,lum:0.22,lumVar:0.08},
+  n4:{tex:"oak",leafW:0.29,leafH:0.31,leafSpread:0.27,followDir:0.4,randDir:1.2,hang:0.0,faceUp:0.5,hue:0.275,hueVar:0.04,sat:0.92,lum:0.215,lumVar:0.08},
+  n5:{tex:"locust",leafW:0.3,leafH:0.46,leafSpread:0.25,followDir:0.7,randDir:0.7,hang:0.5,faceUp:0.9,hue:0.265,hueVar:0.04,sat:0.9,lum:0.23,lumVar:0.08},
+  n6:{tex:"oak",leafW:0.27,leafH:0.29,leafSpread:0.26,followDir:0.3,randDir:1.3,hang:0.0,faceUp:0.45,hue:0.26,hueVar:0.05,sat:0.88,lum:0.235,lumVar:0.08},
   h1:{tex:"oak",leafW:0.3,leafH:0.34,leafSpread:0.22,followDir:0.5,randDir:1.1,hang:0.0,faceUp:0.3,hue:0.26,hueVar:0.05,sat:0.85,lum:0.22,lumVar:0.09},
   h2:{tex:"oak",leafW:0.3,leafH:0.34,leafSpread:0.22,followDir:0.5,randDir:1.1,hang:0.0,faceUp:0.3,hue:0.24,hueVar:0.05,sat:0.8,lum:0.23,lumVar:0.09},
   h3:{tex:"oak",leafW:0.3,leafH:0.34,leafSpread:0.22,followDir:0.5,randDir:1.1,hang:0.0,faceUp:0.3,hue:0.275,hueVar:0.05,sat:0.85,lum:0.21,lumVar:0.09}};
@@ -956,12 +1073,12 @@ function makeLeaves(kind,sites,seed,maxL){const L=LEAF[kind],R=rng(seed+101);
     col.setHSL(L.hue+(R()-.5)*L.hueVar,L.sat+(R()-.5)*0.1,(L.lum+(R()-.5)*L.lumVar)*(.62+.3*ed+.28*upk));mesh.setColorAt(k,col)}
   mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
   mesh.castShadow=true;mesh.receiveShadow=true;mesh.computeBoundingSphere&&mesh.computeBoundingSphere();return mesh}
-function build(kind){const P=Object.assign({},PARAMS[kind],PMOB?{lowPoly:1,skipTube:5}:{lowPoly:1}),seed=1234+({t1:0,t2:77,t3:31,t4:58,t5:12,t6:91,t7:44,t8:63,t9:19,t10:7,t10b:83,t11:26,t12:52,h1:5,h2:39,h3:71}[kind]||0),g=generate(P,seed);
+function build(kind,lite){const P=Object.assign({},PARAMS[kind],PMOB?{lowPoly:1,skipTube:lite?4:5}:{lowPoly:1,skipTube:lite?5:0}),seed=1234+({t1:0,t2:77,t3:31,t4:58,t5:12,t6:91,t7:44,t8:63,t9:19,t10:7,t10b:83,t11:26,t12:52,h1:5,h2:39,h3:71,n1:17,n2:48,n3:66,n4:9,n5:35,n6:88}[kind]||0),g=generate(P,seed);
   const geo=new THREE.BufferGeometry();
   geo.setAttribute("position",new THREE.Float32BufferAttribute(g.pos,3));geo.setAttribute("normal",new THREE.Float32BufferAttribute(g.nor,3));
   geo.setAttribute("uv",new THREE.Float32BufferAttribute(g.uv,2));geo.setAttribute("color",new THREE.Float32BufferAttribute(g.col,3));geo.setIndex(g.idx);
   const wood=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({map:TX.bark,vertexColors:true}));wood.castShadow=true;wood.receiveShadow=true;
-  const leaves=makeLeaves(kind,g.sites,seed,PMOB?Math.min(3200,P.maxLeaves):P.maxLeaves);
+  const leaves=makeLeaves(kind,g.sites,seed,PMOB?Math.min(lite?2000:3200,P.maxLeaves):lite?Math.min(4000,P.maxLeaves):P.maxLeaves);
   const grp=new THREE.Group();grp.add(wood,leaves);return{grp,wood,leaves,P}}
 return{PARAMS,build}})():null;
 // natočenie: stromy sú modelované tak, ako ich vidno z odpaliska 3 (x = vpravo); na iných jamkách sa otočia, aby stáli rovnako v skutočnosti
@@ -972,7 +1089,17 @@ function procTree(x,y,kind){if(!inside(x,y))return;const z=hL(x,y),t=PT.build(ki
   TRUNKS.push([x,y,P.rad0*1.2,z+P.len[0]]);   // kolízia s kmeňom (pod rozdvojením)
   FADE.push({m:[t.leaves,t.wood],c:t.grp.localToWorld(new THREE.Vector3(P.cx,P.cy,P.cz)),b:W(x,y,z+P.len[0]*.6),r:Math.max(P.rx,P.rz),op:1})}
 // 5. hodnota 1 = strom s korunou až po zem (bez viditeľného kmeňa)
-DATA.trees.forEach(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(PROC[k])procTree(x,y,PROC[k]);else if(g)bush(x,y,r,h,k);else tree(x,y,r,h,k)});
+// ostatné stromy (ešte bez vlastného tvaru): náhodne jeden z nových typov n1–n6 podľa Martinových fotiek (22.11.), mierka podľa výšky stromu, náhodné natočenie.
+// Každý typ sa vygeneruje raz (ľahšia verzia: bez najjemnejších vetvičiek, menej väčších listov) a ďalšie stromy sú jeho kópie (zdieľaná geometria – šetrí telefón).
+const NKINDS=["n1","n2","n3","n4","n5","n6"],NROW=["n1","n4","n6","n2"],NP={},NCACHE={};
+function nPick(k,list){let a=(k+1)*2654435761>>>0;a^=a>>>13;a=Math.imul(a,1274126177)>>>0;return list[a%list.length]}
+function procClone(x,y,kind,h,rot){if(!inside(x,y))return null;const P=PT.PARAMS[kind],s=Math.max(.72,Math.min(1.3,h/(P.cy+P.ry))),z=hL(x,y);
+  const v=NCACHE[kind]||(NCACHE[kind]=PT.build(kind,1)),first=!v.used;v.used=1;
+  const g=first?v.grp:v.grp.clone();if(!first)g.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.userData=Object.assign({},o.material.userData)}});
+  g.scale.setScalar(s);g.rotation.y=rot;g.position.copy(W(x,y,z));scene.add(g);g.updateMatrixWorld(true);
+  TRUNKS.push([x,y,P.rad0*1.2*s,z+P.len[0]*s]);
+  FADE.push({m:[g.children[1],g.children[0]],c:g.localToWorld(new THREE.Vector3(P.cx,P.cy,P.cz)),b:W(x,y,z+P.len[0]*.6*s),r:Math.max(P.rx,P.rz)*s,op:1});return s}
+DATA.trees.forEach(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(PROC[k])procTree(x,y,PROC[k]);else if(HQ&&PT&&!g){const kd=nPick(k,NKINDS),sc=procClone(x,y,kd,h,k*2.39);if(sc)NP[k]={kd,s:sc}}else if(g)bush(x,y,r,h,k);else tree(x,y,r,h,k)});
 // --- živý plot z tují (DATA.hedges: [{p:[[východ,sever],…], h:výška m, w:šírka m}]) – napr. pri odpalisku 3 podľa Martinovej fotky a satelitu
 const HEDGES=(DATA.hedges||[]);
 function hSegD(e,n,a,b){const vx=b[0]-a[0],vy=b[1]-a[1],l=vx*vx+vy*vy,t=Math.max(0,Math.min(1,((e-a[0])*vx+(n-a[1])*vy)/l));return Math.hypot(e-a[0]-t*vx,n-a[1]-t*vy)}
@@ -988,7 +1115,7 @@ const HEDGE_PTS=[];   // body pozdĺž plotu (miestne x,y) – pre kolíziu lopt
        FADE.push({m:[g.children[1],g.children[0]],c:W(x,y,z+h*.6),b:W(x,y,z+.8),r:1,op:1})}
      else{const m=new THREE.Mesh(CROWNS.tall[k%3]||CROWNS.round[k%6],hm);m.scale.set(.6,h*.5,.5);m.rotation.y=ang;m.position.copy(W(x,y,z+h*.55));m.castShadow=true;scene.add(m)}}}})}
 // rad stromov pozdĺž okraja (vpravo od jednotky): obyčajné listnaté stromy
-DATA.row.forEach((p,k)=>{const[x,y]=loc(p);tree(x,y,1.9+((k*37)%10)/12,6.2+((k*53)%15)/10,k+100)});   // rad pri plote: menšie stromy (podľa satelitu)
+DATA.row.forEach((p,k)=>{const[x,y]=loc(p),h=6.2+((k*53)%15)/10;if(HQ&&PT)procClone(x,y,nPick(k+100,NROW),h,k*1.7+.4);else tree(x,y,1.9+((k*37)%10)/12,h,k+100)});   // rad pri plote: menšie stromy (podľa satelitu)
 DATA.woods.forEach((wd,wi)=>{const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;const park=false;   // za odpaliskom 3: park s vysokými borovicami a listnáčmi (podľa fotky)
   for(let k=0;k<3000&&n<(park?34:90);k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;const[x,y]=loc([e,nn]);if(y<-3&&y>-30&&Math.abs(x)<10)continue;   // za odpaliskom nechaj miesto pre kameru
@@ -1724,7 +1851,7 @@ function startPlay(){
   const gS=(x,y)=>hL(x,y)+.08;   // výška povrchu (vrátane jemnej siete greenu)
   const R=.06,G=9.81;
   // stromy ako prekážky (koruny)
-  const OBST=DATA.trees.map(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(PROC[k]){const P=PT.PARAMS[PROC[k]],z=hL(x,y);return{x,y,r:Math.max(P.rx,P.rz)*.9,z0:z+P.cy-P.ry*.85,z1:z+P.cy+P.ry}}return{x,y,r:r*1.05,z0:g?hL(x,y):hL(x,y)+h*.5-r*.2,z1:hL(x,y)+h*.5+r*2}});
+  const OBST=DATA.trees.map(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(PROC[k]){const P=PT.PARAMS[PROC[k]],z=hL(x,y);return{x,y,r:Math.max(P.rx,P.rz)*.9,z0:z+P.cy-P.ry*.85,z1:z+P.cy+P.ry}}if(NP[k]){const P=PT.PARAMS[NP[k].kd],q=NP[k].s,z=hL(x,y);return{x,y,r:Math.max(P.rx,P.rz)*.9*q,z0:z+(P.cy-P.ry*.85)*q,z1:z+(P.cy+P.ry)*q}}return{x,y,r:r*1.05,z0:g?hL(x,y):hL(x,y)+h*.5-r*.2,z1:hL(x,y)+h*.5+r*2}});
   HEDGE_PTS.forEach(([x,y,r,z0,z1])=>OBST.push({x,y,r,z0,z1}));   // kríky plotu: ako koruna stromu (cez riedke lístie môže prejsť)
   // loptička, stopa, mierenie
   // loptička: jamôčky (dimples) ako normálová mapa z jedného malého plátna (vypočíta sa raz, na iPhone lacné), plus potlač a čiara na mierenie
