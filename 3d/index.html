@@ -2137,7 +2137,8 @@ function startPlay(){
       // presnosť z kyvadla: v strede rovno, mimo stredu hák (vľavo) / slajs (vpravo) a strata dĺžky
       const[ZP]=zoneOf(p),e=Math.abs(u)<ZP?0:Math.sign(u)*(Math.abs(u)-ZP)/(1-ZP),cf=cl.c/215;
       a+=e*6*cf*Math.PI/180;S.side=e*1.6*cf*p;
-      dist=cl.c*S.lie.m*p*(1-(bk?.5:.25)*e*e)*(1+rr()*(bk?.1:.03));   // z bunkra: väčšia strata dĺžky mimo stredu a ±10 % rozptylconst th=cl.a*Math.PI/180,v=Math.sqrt(dist*G/Math.sin(2*th));
+      dist=cl.c*S.lie.m*p*(1-(bk?.5:.25)*e*e)*(1+rr()*(bk?.1:.03));   // z bunkra: väčšia strata dĺžky mimo stredu a ±10 % rozptyl
+      const th=cl.a*Math.PI/180,v=Math.sqrt(dist*G/Math.sin(2*th));
       S.vx=Math.sin(a)*v*Math.cos(th);S.vy=Math.cos(a)*v*Math.cos(th);S.vz=v*Math.sin(th);S.mode="fly"}
     else{const[ZP]=zoneOf(p),e=Math.abs(u)<ZP?0:Math.sign(u)*(Math.abs(u)-ZP)/(1-ZP);a+=e*4*Math.PI/180;   // pat: mimo stredu kyvadla potiahnutý (vľavo) / tlačený (vpravo) až o 4°
       putPrep();dist=S.pD||0;const v=p*S.pV;   // rovnaká rýchlosť ako v predikcii čiary
