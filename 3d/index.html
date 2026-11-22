@@ -2096,7 +2096,7 @@ function startPlay(){
   function setAim(){const A=bendAim()?BL:PIN;S.aim=Math.atan2(A[0]-S.x,A[1]-S.y)}
   function info(){const d=toPin();const wr=((WIND.a-S.aim)*180/Math.PI).toFixed(0);
     $("h-s").innerHTML=`<span class="hd">🚩 <b>${fm(d)} m</b></span><span class="wd"><svg viewBox="0 0 10 10" style="transform:rotate(${wr}deg)"><path d="M5 0L9.5 10L5 7.5L.5 10Z"/></svg><b>${Math.round(WIND.s)}</b> m/s</span><span>úder ${S.strokes+1} · ${S.tee?"odpalisko":S.lie.n}</span>`;
-    const cl=CLUBS[S.club];const cr=Math.round(cl.c*S.lie.m),tg=cl.a?Math.round(tgtL()):0;$("p-cn").textContent=cl.n+(cl.a?" · "+tg+" m":"");$("p-z").hidden=!cl.a;if(!cl.a)S.zoom=0;$("p-z").textContent=S.zoom>.5?"↩":"🔍"}
+    const cl=CLUBS[S.club];const cr=Math.round(cl.c*S.lie.m),tg=cl.a?Math.round(tgtL()):0;$("p-cn").textContent=cl.n+(cl.a?" · "+tg+" m":"");$("p-z").textContent=S.zoom>.5?"↩":"🔍"}
   function arcW(){const g=arcM.geometry,u=g.userData;if(!u||!u.C)return;const P=g.attributes.position.array,{C,U}=u,cp=camera.position;
     for(let k=0;k<P.length;k+=18){const d=Math.hypot(C[k]-cp.x,C[k+1]-cp.y,C[k+2]-cp.z),w=Math.max(.012,d*.0032);for(let j=0;j<18;j+=3){P[k+j]=C[k+j]+U[k+j]*w;P[k+j+1]=C[k+j+1]+U[k+j+1]*w;P[k+j+2]=C[k+j+2]+U[k+j+2]*w}}
     g.attributes.position.needsUpdate=true;g.computeBoundingSphere()}
@@ -2321,8 +2321,11 @@ function startPlay(){
   // kamera
   const camP=new THREE.Vector3(),camT=new THREE.Vector3();
   // priblíženie na miesto dopadu (dva prsty alebo 🔍): S.zoom 0 = za loptičkou … 1 = nad cieľovým krúžkom; kamera plynule medzi nimi
-  function camGoal(){const g=camGoal0();if(!(S.zoom>0&&CLUBS[S.club].a&&S.mode==="aim"))return g;
-    const dx=Math.sin(S.aim),dy=Math.cos(S.aim),L=TG.L||tgtL(),b=Math.min(16,6+L*.07),hz=gS(TG.x,TG.y),l=[[TG.x-dx*b,TG.y-dy*b,hz+b*.75],[TG.x+dx*2,TG.y+dy*2,gS(TG.x+dx*2,TG.y+dy*2)]],k=S.zoom*S.zoom*(3-2*S.zoom);
+  // pri pate: S.zoom 1 = vyšší pohľad za loptičkou, vidno loptičku, celú čiaru aj jamku
+  function camGoal(){const g=camGoal0();if(!(S.zoom>0&&S.mode==="aim"))return g;const dx=Math.sin(S.aim),dy=Math.cos(S.aim),k=S.zoom*S.zoom*(3-2*S.zoom);let l;
+    if(!CLUBS[S.club].a){const L=Math.max(2,toPin()),b=2.2+L*.5,hz=Math.max(gS(S.x,S.y),gS(PIN[0],PIN[1]));if(k>.35)S.low=0;
+      const mx=(S.x+PIN[0])/2,my=(S.y+PIN[1])/2;l=[[S.x-dx*b,S.y-dy*b,hz+1.4+L*.55],[mx,my,gS(mx,my)]]}
+    else{const L=TG.L||tgtL(),b=Math.min(16,6+L*.07),hz=gS(TG.x,TG.y);l=[[TG.x-dx*b,TG.y-dy*b,hz+b*.75],[TG.x+dx*2,TG.y+dy*2,gS(TG.x+dx*2,TG.y+dy*2)]]}
     return g.map((p,i)=>p.map((v,j)=>v+(l[i][j]-v)*k))}
   function camGoal0(){S.low=0;const dx=Math.sin(S.aim),dy=Math.cos(S.aim);const onG=sdist(S.x,S.y,green)<4;
     // loptička padá do jamky: kamera sa priblíži k jamke (vidno loptičku zblízka aj záblesk obruče)
@@ -2391,8 +2394,8 @@ function startPlay(){
   const clubTo=i=>{if(S.mode!=="aim")return;S.club=i;if(S.tl&&S.tl>=carry()-.5)S.tl=0;info();drawAim()};
   $("p-cp").onclick=()=>clubTo((S.club+1)%CLUBS.length);
   $("p-cm").onclick=()=>clubTo((S.club+CLUBS.length-1)%CLUBS.length);
-  $("p-z").onclick=()=>{if(S.mode!=="aim"||!CLUBS[S.club].a)return;S.zoom=S.zoom>.5?0:1;info();
-    msg(S.zoom?"Pohľad na miesto dopadu · ťukni alebo ťahaj na spresnenie":"Pohľad za loptičkou");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1800)};
+  $("p-z").onclick=()=>{if(S.mode!=="aim")return;S.zoom=S.zoom>.5?0:1;info();
+    msg(S.zoom?(CLUBS[S.club].a?"Pohľad na miesto dopadu · ťukni alebo ťahaj na spresnenie":"Pohľad na jamku"):"Pohľad za loptičkou");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1800)};
   // 👁 prepína pohľady: pri pate zblízka → zhora → prehľad, inak normálny ↔ prehľad
   $("p-v").onclick=()=>{const putt=!CLUBS[S.club].a;S.view=putt?(S.view===0?2:S.view===2?1:0):(S.view===1?0:1);
     S.zoom=0;msg({0:putt?"Pohľad zblízka":"Pohľad za loptičkou",1:"Prehľad zhora",2:"Pohľad zhora na jamku"}[S.view]);const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1300)};
@@ -2401,7 +2404,7 @@ function startPlay(){
   let dragT=false;const tgtHit=(cx,cy)=>{tV.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);tRay.setFromCamera(tV,camera);return tRay.intersectObject(ground)[0]};
   // dva prsty: roztiahnutie = priblížiť na miesto dopadu, zovretie = späť za loptičku (ako zoom fotky v telefóne)
   const PT2=new Map();let pz=null;const pDist=()=>{const[a,b]=[...PT2.values()];return Math.hypot(a[0]-b[0],a[1]-b[1])};
-  renderer.domElement.addEventListener("pointerdown",e=>{PT2.set(e.pointerId,[e.clientX,e.clientY]);if(PT2.size===2&&S.mode==="aim"&&!SW&&CLUBS[S.club].a){pz={d:pDist(),z:S.zoom||0};drag=null;tap=null;dragT=false;dY=null}},true);
+  renderer.domElement.addEventListener("pointerdown",e=>{PT2.set(e.pointerId,[e.clientX,e.clientY]);if(PT2.size===2&&S.mode==="aim"&&!SW){pz={d:pDist(),z:S.zoom||0};drag=null;tap=null;dragT=false;dY=null}},true);
   addEventListener("pointermove",e=>{if(!PT2.has(e.pointerId))return;PT2.set(e.pointerId,[e.clientX,e.clientY]);if(pz&&PT2.size===2){S.zoom=Math.max(0,Math.min(1,pz.z+(pDist()-pz.d)/220));info();e.stopImmediatePropagation()}},true);
   for(const ev of["pointerup","pointercancel"])addEventListener(ev,e=>{PT2.delete(e.pointerId);if(pz&&PT2.size<2){pz=null;tap=null;drag=null;dragT=false;if(S.zoom<.08)S.zoom=0;if(S.zoom>.92)S.zoom=1;info()}},true);
   renderer.domElement.addEventListener("pointerdown",e=>{if(pz)return;drag=e.clientX;tap=[e.clientX,e.clientY,performance.now(),S.aim];dragT=false;
@@ -2416,7 +2419,13 @@ function startPlay(){
     if(h){S.aim=t[3];setTarget(h.point.x,-h.point.z)}});
   addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim"||SW)return;S.aim+=(e.clientX-drag)*.0006;drag=e.clientX;drawAim()});
   addEventListener("pointerup",()=>{drag=null});
-  game={ballPos:ball.position,update(dt){hudTick();fxTick(dt);
+  // poistka: chyba v jednom snímku nesmie zaseknúť hru – ukáže sa text chyby (na screenshot) a hra sa obnoví; strážca: dlho bez stavu „mierenie“ → nová príprava
+  let errT=0;
+  function gameErr(e){const now=performance.now();if(now-errT>4000){errT=now;msg("⚠ Chyba: "+String(e&&e.message||e).slice(0,80));try{localStorage.setItem("for.err",String(e&&e.stack||e).slice(0,600))}catch(_){}}
+    if(S.mode==="aim")$("p-hit").disabled=false;else if(S.mode!=="in"&&!S.rec){S.rec=1;setTimeout(()=>{S.rec=0;if(S.mode==="in")return;try{S.mode="wait";prepare()}catch(_){S.mode="aim";$("p-hit").disabled=false}},1200)}}
+  game={ballPos:ball.position,update(dt){try{
+      if(S.mode!=="aim"&&S.mode!=="in"){S.nt=(S.nt||0)+dt;if(S.nt>(S.mode==="wait"?8:35)){S.nt=0;try{S.vx=S.vy=S.vz=0;S.sink=0;S.hop=0;if(S.mode!=="wait")S.z=gS(S.x,S.y)+R;S.mode="wait";prepare()}catch(e){gameErr(e)}}}else S.nt=0;
+      hudTick();fxTick(dt);
       if(turn&&S.mode==="aim"){S.aim+=turn*dt*.16;drawAim()}
       if(S.pDirty&&S.mode==="aim"&&(!SW||SW.ph===2)&&(++pLast%2===0||!turn)){S.pDirty=0;if(!CLUBS[S.club].a)S.pRes=puttLine(SW?SW.p:putNeed())}
       if(SW){const cl=CLUBS[S.club];
@@ -2432,12 +2441,12 @@ function startPlay(){
       {const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(S.mode==="drop"||S.mode==="in"?.36:2.5,Math.max(nearG?(S.low===2?.3:.24):.35,dd/(nearG?40:14))))}
       if(S.mode!=="in")place();   // výška loptičky podľa aktuálnej veľkosti (leží na tráve)
       // pri patovaní je vlajka vytiahnutá, aby bolo vidno jamku
-      {const pull=S.mode!=="fly"&&!CLUBS[S.club].a&&toPin()<25;pin.visible=flag.visible=!pull}}};
+      {const pull=S.mode!=="fly"&&!CLUBS[S.club].a&&toPin()<25;pin.visible=flag.visible=!pull}}catch(e){gameErr(e)}}};
   document.getElementById("h-t").innerHTML=`<span class="hn">${hNum}</span><span class="hp">PAR ${PAR}${SC.length?" · zatiaľ "+SC.reduce((a,b)=>a+b,0):""}</span>`;
   prepare();{const[p,t]=camGoal();camP.copy(W(...p));camT.copy(W(...t))}camUpd(0,true);
   // spustené z už otvorenej jamky: kamera plynulo priletí z aktuálneho pohľadu za loptičku (nie skok)
   if(window.__from){camP.copy(window.__from.p);camT.copy(window.__from.t);camera.position.copy(camP);camera.lookAt(camT);window.__from=null}
-  if(Q.has("dbg"))window.__g={sandBurst,cupHit,putSim,puttLine,putNeed,drawAim,info,S,step,ring,setTarget,tgtL,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R,ball,camera,renderer,scene,leafBurst,OBST,TRUNKS,splash,pinHit,pin,PINW};
+  if(Q.has("dbg"))window.__g={upd:dt=>game.update(dt),sandBurst,cupHit,putSim,puttLine,putNeed,drawAim,info,S,step,ring,setTarget,tgtL,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R,ball,camera,renderer,scene,leafBurst,OBST,TRUNKS,splash,pinHit,pin,PINW};
 }
 
 // iOS Safari ignoruje user-scalable=no: zablokuj priblíženie stránky (pinch a dvojťuk); 3D kamera používa vlastné dotyky na canvase
