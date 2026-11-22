@@ -1121,7 +1121,7 @@ DATA.row.forEach((p,k)=>{const[x,y]=loc(p),h=6.2+((k*53)%15)/10;if(HQ&&PT)procCl
 if(HQ&&PT)(DATA.groves||[]).forEach((G,gi)=>{let sd=4242+gi*977;const R=()=>((sd=(sd*16807)%2147483647)/2147483647);
   const xs=G.p.map(p=>p[0]),ys=G.p.map(p=>p[1]),X0=Math.min(...xs),X1=Math.max(...xs),Y0=Math.min(...ys),Y1=Math.max(...ys);
   const padsE=Object.values(DATA.pads).flat(),gD=G.green||7,pD=G.pad||8,placed=[];
-  const ok=(e,n,d)=>inPoly([e,n],G.p)&&padsE.every(q=>Math.hypot(e-q[0],n-q[1])>pD)&&DATA.greens.every(g=>sdist(e,n,g)>gD)&&!(DATA.fairways||[]).some(F=>sdist(e,n,F)<2)&&placed.every(q=>Math.hypot(e-q[0],n-q[1])>d)&&!(G.camClear||[]).some(C=>inPoly([e,n],C));
+  const ok=(e,n,d)=>inPoly([e,n],G.p)&&padsE.every(q=>Math.hypot(e-q[0],n-q[1])>pD)&&DATA.greens.every(g=>sdist(e,n,g)>gD)&&!(DATA.fairways||[]).some(F=>sdist(e,n,F)<2)&&placed.every(q=>Math.hypot(e-q[0],n-q[1])>d)&&!(G.hedge&&nearHedge(e,n,G.hedge))&&!(G.treeGap&&DATA.trees.some(t=>Math.hypot(e-t[0],n-t[1])<G.treeGap))&&!(G.camClear||[]).some(C=>inPoly([e,n],C));
   for(let t=0,n=0;t<4000&&n<G.n;t++){const e=X0+R()*(X1-X0),nn=Y0+R()*(Y1-Y0);if(!ok(e,nn,G.gap||3.2))continue;n++;placed.push([e,nn]);
     const[x,y]=loc([e,nn]);procClone(x,y,NKINDS[Math.floor(R()*NKINDS.length)],(G.h||[7,12])[0]+R()*((G.h||[7,12])[1]-(G.h||[7,12])[0]),R()*6.28,3)}
   for(let t=0,n=0;t<4000&&n<(G.shrubs||0);t++){const e=X0+R()*(X1-X0),nn=Y0+R()*(Y1-Y0);if(!inPoly([e,nn],G.p)||padsE.some(q=>Math.hypot(e-q[0],nn-q[1])<pD-2)||DATA.greens.some(g=>sdist(e,nn,g)<gD-2)||(DATA.fairways||[]).some(F=>sdist(e,nn,F)<1))continue;n++;(DATA.shrubs=DATA.shrubs||[]).push([e,nn,.9+R()*1.1])}});
@@ -1141,7 +1141,7 @@ function woodsBuild(){const WC={};Object.entries(WOODI).forEach(([key,L])=>{cons
 DATA.woods.forEach((wd,wi)=>{const xs=wd.map(p=>p[0]),yy=wd.map(p=>p[1]);let n=0;const park=false;   // za odpaliskom 3: park s vysokými borovicami a listnáčmi (podľa fotky)
   for(let k=0;k<3000&&n<(park?34:WOODI?(PMOB?85:130):90);k++){const e=Math.min(...xs)+rnd()*(Math.max(...xs)-Math.min(...xs)),nn=Math.min(...yy)+rnd()*(Math.max(...yy)-Math.min(...yy));
     if(!inPoly([e,nn],wd))continue;const[x,y]=loc([e,nn]);if(y<-3&&y>-30&&Math.abs(x)<10)continue;   // za odpaliskom nechaj miesto pre kameru
-    n++;if(park){if(k%5<2)pine(x,y,2.6+rnd()*1.6,15+rnd()*6,k);else tree(x,y,2.6+rnd()*1.8,13+rnd()*6,k)}else{const br=3+rnd()*2.5,bh=10+rnd()*7;if(!nearHedge(e,nn,br+3)&&!(DATA.woods_clear||[]).some(P=>inPoly([e,nn],P))){if(WOODI)woodsAdd(x,y,bh,k,wi);else bush(x,y,br,bh,k)}}}});
+    n++;if(park){if(k%5<2)pine(x,y,2.6+rnd()*1.6,15+rnd()*6,k);else tree(x,y,2.6+rnd()*1.8,13+rnd()*6,k)}else{const br=3+rnd()*2.5,bh=10+rnd()*7;if(!nearHedge(e,nn,1.2)&&!(DATA.woods_clear||[]).some(P=>inPoly([e,nn],P))){if(WOODI)woodsAdd(x,y,bh,k,wi);else bush(x,y,br,bh,k)}}}});
 if(WOODI)woodsBuild();   // pri živom plote nič veľké; woods_clear = miesta, kde podľa satelitu stromy nie sú (pri odpalisku 3 za plotom)
 
 // --- nízke kríky (len na určených miestach)
