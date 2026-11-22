@@ -1,4 +1,4 @@
-# Fór – testovacia appka (v0.1)
+# Fairway Live – testovacia appka (v0.1)
 
 Webová appka do mobilu pre ihrisko Apex Golf v Báči. Otvára sa cez odkaz, dá sa pridať na plochu.
 
