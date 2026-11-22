@@ -1261,7 +1261,7 @@ const arcs=[];
   const[lx,ly]=P(.45);arcs.push({d,pos:W(lx,ly,hL(lx,ly)+1.2)})}}
 {const pts=[],seg=(a,b)=>{const L=Math.hypot(b[0]-a[0],b[1]-a[1]);for(let t=0;t<=L;t+=.5){const x=a[0]+(b[0]-a[0])*t/L,y=a[1]+(b[1]-a[1])*t/L;pts.push(W(x,y,hL(x,y)+.3))}};
  if(BL){seg([0,0],BL);seg(BL,[0,c])}else seg([0,0],[0,c]);
- scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:0xd23b2a,dashSize:3,gapSize:2})).computeLineDistances())}
+ /* červená čiara odpalisko–green: Martin ju nechce (22.11.) */}
 
 // ================= HLÁSENIA priamo v 3D (zdieľané s appkou cez localStorage "for.reports") =================
 // hlásenia: g = skupina v ponuke (prvé ťuknutie), w = kľúčové slová pre hlas (bez diakritiky)
