@@ -384,57 +384,8 @@ for(const B of myBunkers){const[bx0,bx1,by0,by1]=B.bb.map(Math.round),bw=bx1-bx0
 // okolie mimo modelu (rovina)
 const far=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:STYLE.dry?0x9c9a52:0x6a8a3c,roughness:1,fog:!HQ}));
 {let mn=1e9;const pp=geo.attributes.position;for(let i=0;i<pp.count;i++)mn=Math.min(mn,pp.getY(i));far.position.set(0,mn-2,-c/2)}scene.add(far);
-// --- 3D steblá trávy zblízka (len vylepšená grafika): ~22 000 stebiel v štvorci 12 × 12 m okolo miesta, kam sa pozeráme.
-// Steblá sa neprepočítavajú v JS – vertex shader ich „pretáča“ s kamerou (mod), výšku berie z mapy terénu a dĺžku z mapy povrchu
-// (rough vysoký, prvý kos nižší, fairway nízky, green/bunker/voda bez stebiel). Farba z tej istej textúry ako zem, takže sedí.
+// 3D steblá trávy boli odstránené (v156, na želanie Martina – zle vyzerali); zostáva len trávová textúra/shader zeme.
 let BLADES=null;
-if(HQ){// výšky priamo z vrcholov siete terénu (rovnaké trojuholníky ako zem), aby steblá nestáli nad ani pod zemou
- const gx=geo.parameters.widthSegments,gy=geo.parameters.heightSegments,Wg=gx+1,Hg=gy+1,hd=new Float32Array(Wg*Hg),gp=geo.attributes.position;
- for(let iy=0;iy<=gy;iy++)for(let ix=0;ix<=gx;ix++)hd[(gy-iy)*Wg+ix]=gp.getY(iy*Wg+ix);
- const hT=new THREE.DataTexture(hd,Wg,Hg,THREE.RedFormat,THREE.FloatType);hT.needsUpdate=true;
- // mapa dĺžky stebiel (0,5 m/px): R = výška/0,13 m
- const KW=(X1-X0)*2,KH=(Y1-Y0)*2,kc=document.createElement("canvas");kc.width=KW;kc.height=KH;const k=kc.getContext("2d");
- k.setTransform(2,0,0,-2,-X0*2,Y1*2);const kp=P=>{k.beginPath();P.forEach(([x,y],i)=>i?k.lineTo(x,y):k.moveTo(x,y));k.closePath()};k.lineJoin="round";
- k.fillStyle="rgb(255,0,0)";k.fillRect(X0,Y0,X1-X0,Y1-Y0);
- const fw=(MOW?MOW.map(P=>P.map(loc)):[]);for(const P of fw){kp(P);k.fillStyle="rgb(40,0,0)";k.fill()}
- READY.forEach(h=>{for(const poly of (DATA.mow&&DATA.mow[h])||[]){kp(poly.map(loc));k.fillStyle="rgb(40,0,0)";k.fill()}
-   if(DATA.greens[h-1]){const G=DATA.greens[h-1].map(loc);kp(G);k.lineWidth=8;k.strokeStyle="rgb(70,0,0)";k.stroke();k.lineWidth=3;k.strokeStyle="rgb(0,0,0)";k.stroke();k.fillStyle="#000";k.fill()}
-   (DATA.pads[h]||[]).forEach(pd=>{const[x,y]=loc(pd);k.beginPath();k.arc(x,y,4.5,0,7);k.fillStyle="rgb(30,0,0)";k.fill()})});
- for(const P of allBunkL){kp(P);k.lineWidth=.6;k.strokeStyle="#000";k.stroke();k.fillStyle="#000";k.fill()}
- for(const P of waterL){kp(P);k.lineWidth=1.5;k.strokeStyle="#000";k.stroke();k.fillStyle="#000";k.fill()}
- const kT=new THREE.CanvasTexture(kc);BGU.kT.value=kT;
- // jedno steblo: 7 vrcholov, 3 články, zúžené ku špičke
- const mk=(N,S,seed)=>{const bg=new THREE.InstancedBufferGeometry();
- const bp=[-.5,0,.5,0,-.4,.35,.4,.35,-.25,.7,.25,.7,0,1],pos=[];for(let i=0;i<7;i++)pos.push(bp[i*2],bp[i*2+1],0);
- bg.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));bg.setAttribute("normal",new THREE.Float32BufferAttribute(Array(7).fill([0,1,0]).flat(),3));
- bg.setAttribute("uv",new THREE.Float32BufferAttribute(Array(14).fill(0),2));bg.setIndex([0,1,2,2,1,3,2,3,4,4,3,5,4,5,6]);
- let sd=seed;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;const off=new Float32Array(N*2),rnd=new Float32Array(N*4);
- for(let i=0;i<N;i++){off[i*2]=r()*S;off[i*2+1]=r()*S;rnd[i*4]=r()*6.283;rnd[i*4+1]=.55+r()*.45;rnd[i*4+2]=r();rnd[i*4+3]=r()}
- bg.setAttribute("aOff",new THREE.InstancedBufferAttribute(off,2));bg.setAttribute("aRnd",new THREE.InstancedBufferAttribute(rnd,4));bg.instanceCount=N;
- const U={uC:{value:new THREE.Vector2()},uS:{value:S},uT:{value:0},hT:{value:hT},kT:{value:kT},uG:{value:new THREE.Vector4(X0,Y0,X1,Y1)},uWH:{value:new THREE.Vector2(Wg,Hg)}};
- const bm=new THREE.MeshLambertMaterial({map:tex,side:THREE.DoubleSide});
- bm.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
-  sh.vertexShader=sh.vertexShader.replace("#include <common>",`#include <common>
-uniform vec2 uC,uWH;uniform float uS,uT;uniform sampler2D hT,kT;uniform vec4 uG;attribute vec2 aOff;attribute vec4 aRnd;varying float vB,vR,vF;
-float hAt(vec2 p){vec2 g=clamp((p-uG.xy)/(uG.zw-uG.xy)*(uWH-1.),vec2(0.),uWH-1.001);ivec2 i=ivec2(floor(g));vec2 f=fract(g);
- float hb=texelFetch(hT,i,0).r,hc=texelFetch(hT,i+ivec2(1,0),0).r,ha=texelFetch(hT,i+ivec2(0,1),0).r,hd=texelFetch(hT,i+ivec2(1,1),0).r;
- return f.y>f.x?hb+(ha-hb)*f.y+(hd-ha)*f.x:hb+(hc-hb)*f.x+(hd-hc)*f.y;}`)
-  .replace("#include <uv_vertex>",`vec2 bo=uC-uS*.5,bxy=bo+mod(aOff-bo,uS);vec2 buv=(bxy-uG.xy)/(uG.zw-uG.xy);
- float bk=texture2D(kT,buv).r,bd=length(bxy-uC),bf=pow(1.-smoothstep(uS*.08,uS*.5,bd),1.4);float bh=.11*bk*aRnd.y*bf;
-#ifdef USE_MAP
- vMapUv=buv;
-#endif
-vB=position.y;vR=aRnd.z;vF=bf*bf;`)
-  .replace("#include <begin_vertex>",`float ca=cos(aRnd.x),sa=sin(aRnd.x),wv=position.x*(.007+.006*aRnd.z)*step(.001,bh);
- float yy=position.y,bend=(.25+.5*aRnd.w)*yy*yy*bh;
- vec3 transformed=vec3(bxy.x+ca*wv+sa*bend,hAt(bxy)-.004+yy*bh,-(bxy.y+sa*wv-ca*bend));if(bh<.004)transformed=vec3(0.,-1e4,0.);`);
-  sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nvarying float vB,vR,vF;").replace("#include <normal_fragment_begin>","#include <normal_fragment_begin>\nnormal=normalize(vNormal);").replace("#include <map_fragment>","#include <map_fragment>\ndiffuseColor.rgb*=mix(vec3(1.),mix(.62,1.12,sqrt(clamp(vB,0.,1.)))*mix(vec3(.9,.95,.85),vec3(1.1,1.06,.9),vR),vF);")};
- const mesh=new THREE.Mesh(bg,bm);mesh.frustumCulled=false;mesh.receiveShadow=true;scene.add(mesh);return{U,mesh}};
- // dve vrstvy: hustá tesne pred kamerou (9 m) a redšia ďalej (22 m) – hustota plynulo klesá, bez ostrej hranice
- const LAY=[[mk(36000,9,4242),4],[mk(30000,22,777),9.5]];
- BLADES={tick(t,px,py,fx,fy,camH){for(const[L,o]of LAY){L.U.uT.value=t;L.U.uC.value.set(px+fx*o,py+fy*o);L.mesh.visible=camH<28}
-   if(camH<28)BGU.uC.value.copy(LAY[1][0].U.uC.value);else BGU.uC.value.set(1e6,1e6)},
-  setQ(f){for(const[L]of LAY){const g=L.mesh.geometry;g.N0=g.N0||g.instanceCount;g.instanceCount=Math.round(g.N0*f)}}}}
 if(Q.has("dbg"))Object.assign(window,{__B:BLADES,__hL:hL,__sc:scene,__cam:camera,__r:renderer});
 
 // --- stromy
