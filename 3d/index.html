@@ -2332,7 +2332,7 @@ function startPlay(){
         if(waterL.some(P=>inPoly([S.x,S.y],P))){splash();return}
         if(sf===SURF.sand){sandBurst(S.x,S.y,Math.hypot(S.vx,S.vy,S.vz),S.vx,S.vy);{const l=Math.hypot(S.vx,S.vy)||1;S.sandCam=[S.vx/l,S.vy/l]}S.sinkF=Math.max(.2,Math.min(.62,.12-S.vz/32));S.vx=S.vy=S.vz=0;S.sink=0;stopBall();return}   // čím vyšší pád, tým hlbšie (až „volské oko“)
    // zaborí sa trochu do piesku
-        if(sf===SURF.green&&!S.hop&&-S.vz>6)addMark(S.x,S.y);
+        if(sf===SURF.green&&!S.hop&&-S.vz>8&&S.prev&&Math.hypot(S.x-S.prev[0],S.y-S.prev[1])>70)addMark(S.x,S.y);   // pitchmark len po dlhom údere (prudký dopad z diaľky)
         const kk=S.hop?.85:sf.k;S.vz=-S.vz*(S.hop?.3:sf.r);S.vx*=kk;S.vy*=kk;if(S.vz<1.2){S.vz=0;S.mode="roll"}}}
     else if(S.mode==="roll"){const sf=sfQ(S.x,S.y),[gx,gy]=grQ(S.x,S.y),sp=Math.hypot(S.vx,S.vy);
       let ax=-G*gx*.71,ay=-G*gy*.71;
@@ -2478,7 +2478,7 @@ function startPlay(){
   // ťahanie prstom do strán = smer (rýchlejšie a so zrýchlením pri švihu, aby sa dalo plynule namieriť aj úplne inam, napr. opačne od jamky);
   // pri priblížení (🔍 / dva prsty) ťahanie jedným prstom posúva pohľad ako mapu – kamera nie je viazaná na žltú čiaru
   let dragY=null;addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim"||SW)return;const d=e.clientX-drag;drag=e.clientX;
-    if(S.zoom>.5){const yy=dragY==null?e.clientY:dragY;dragY=e.clientY;const dv=e.clientY-yy,A=S.aim+(S.yaw||0),kk=camera.position.distanceTo(camT)/innerHeight*1.6,pn=S.pan||(S.pan=[0,0]);
+    if(S.zoom>.5&&CLUBS[S.club].a){const yy=dragY==null?e.clientY:dragY;dragY=e.clientY;const dv=e.clientY-yy,A=S.aim+(S.yaw||0),kk=camera.position.distanceTo(camT)/innerHeight*1.6,pn=S.pan||(S.pan=[0,0]);
       pn[0]+=-Math.cos(A)*d*kk+Math.sin(A)*dv*kk;pn[1]+=Math.sin(A)*d*kk+Math.cos(A)*dv*kk;return}
     S.aim+=d*(.0016+Math.min(.004,Math.abs(d)*.00022))*aimK();drawAim()});
   addEventListener("pointerup",()=>{dragY=null});
