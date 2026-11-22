@@ -449,8 +449,9 @@ const _fd=new THREE.Vector3(),_fq=new THREE.Vector3();   // bez nových objektov
 function fadeTrees(){const cp=camera.position,bp=game&&game.ballPos,goals=bp?[bp]:[];
   for(const f of FADE){let hit=false;const dc=f.c.distanceTo(cp);if(bp&&dc<f.r+1)hit=true;
     else for(const g of goals){const d=_fd.copy(g).sub(cp),L=d.length();d.divideScalar(L);
-      for(let j=0;j<2;j++){const pt=j?f.b:f.c,rr=j?1.6:f.r+1.2,s=_fq.copy(pt).sub(cp).dot(d);if(s>0&&s<L-1){_fq.copy(cp).addScaledVector(d,s);if(_fq.distanceTo(pt)<rr){hit=true;break}}}if(hit)break}
-    const to=hit?.28:1;if(Math.abs(f.op-to)<.01)continue;f.op+=(to-f.op)*.18;if(Math.abs(f.op-to)<.02)f.op=to;
+      {const s=_fq.copy(f.c).sub(cp).dot(d);if(s>0&&s<L-1){_fq.copy(cp).addScaledVector(d,s);if(_fq.distanceTo(f.c)<f.r*.85)hit=true}}if(!hit){const hx=d.x,hz=d.z,h2=hx*hx+hz*hz;if(h2>1e-6){const s=((f.b.x-cp.x)*hx+(f.b.z-cp.z)*hz)/h2;if(s>0&&s<L-.5){_fq.copy(cp).addScaledVector(d,s);if(Math.hypot(_fq.x-f.b.x,_fq.z-f.b.z)<.7&&_fq.y<f.c.y&&_fq.y>hL(f.b.x,-f.b.z)-.5)hit=true}}}if(hit)break}
+    const to=hit?.55:1;   // len jemne priehľadné (v hre, keď strom zakrýva loptičku)
+    if(Math.abs(f.op-to)<.01)continue;f.op+=(to-f.op)*.18;if(Math.abs(f.op-to)<.02)f.op=to;
     for(const m of f.m){const M=m.material,tr=f.op<1;if(M.transparent!==tr){M.transparent=tr;M.depthWrite=!tr;M.needsUpdate=true;if(M.userData.aT!==undefined)M.alphaTest=tr?.12:M.userData.aT;else if(M.map===LEAFTEX&&LEAFTEX)M.alphaTest=tr?.12:.45}M.opacity=f.op}}}
 // lomená jamka (dogleg): bod zlomu DATA.bend[h] = [východ, sever]
 const BL=DATA.bend&&DATA.bend[hNum]?loc(DATA.bend[hNum]):null;
