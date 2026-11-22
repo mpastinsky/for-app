@@ -1109,7 +1109,7 @@ const HEDGE_PTS=[];   // body pozdĺž plotu (miestne x,y) – pre kolíziu lopt
 {const VAR=HQ&&PT?["h1","h2","h3"].map(kd=>PT.build(kd)):null;
  const hm=HQ?null:leafV.clone();
  let k=0;HEDGES.forEach(H=>{const h=H.h||3,w=H.w||1.2,gap=H.gap||1.6;for(let i=1;i<H.p.length;i++){const a=H.p[i-1],b=H.p[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.round(L/gap));
-   for(let j=0;j<=n;j++){if(j===0&&i>1)continue;k++;const sh=((k*53)%11)/11-.5,t=Math.max(0,Math.min(1,(j+(j>0&&j<n?sh*.25:0))/n)),e=a[0]+(b[0]-a[0])*t,nn=a[1]+(b[1]-a[1])*t,[x,y]=loc([e,nn]);if(!inside(x,y))continue;
+   for(let j=0;j<=n;j++){if(j===0&&i>1)continue;k++;if(H.skip&&j>0&&j<n&&(k*7919%97)/97<H.skip)continue;/* občas medzera v plote (Martin 22.11.) */const sh=((k*53)%11)/11-.5,t=Math.max(0,Math.min(1,(j+(j>0&&j<n?sh*.25:0))/n)),e=a[0]+(b[0]-a[0])*t,nn=a[1]+(b[1]-a[1])*t,[x,y]=loc([e,nn]);if(!inside(x,y))continue;
      const[x2,y2]=loc(b),[x1,y1]=loc(a),ang=Math.atan2(y2-y1,x2-x1),z=hL(x,y),hs=(.9+((k*37)%9)/40)*h/3.3;HEDGE_PTS.push([x,y,w*.45,z+.5,z+h*hs]);
      if(VAR){const v=VAR[k%3],g=v.grp.clone();g.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.userData=Object.assign({},o.material.userData)}});g.scale.setScalar(hs);g.rotation.y=ang+(k%2?Math.PI:0)+sh*.3;g.position.copy(W(x,y,z));scene.add(g);g.updateMatrixWorld(true);
        FADE.push({m:[g.children[1],g.children[0]],c:W(x,y,z+h*.6),b:W(x,y,z+.8),r:1,op:1})}
@@ -1252,7 +1252,7 @@ DATA.pads[hNum].forEach((pd,j)=>{const[cx,cy]=loc(pd);const m=new THREE.MeshStan
 // --- oblúky a línia hry (prilepené na terén)
 const arcs=[];
 {const A=BL||[0,0],dl=Math.hypot(A[0],A[1]-c),ux=A[0]/dl,uy=(A[1]-c)/dl,full=BL?dl+Math.hypot(...BL):c;
- for(const d of (PAR>3?[50,100,150,200]:[50,100])){if(d>=full-10)continue;const pts=[],P=a=>{const ca=Math.cos(a),sa=Math.sin(a);return[(ux*ca-uy*sa)*d,c+(ux*sa+uy*ca)*d]};
+ for(const d of []){/* oblúky 50/100 m Martin nechce (22.11.) */if(d>=full-10)continue;const pts=[],P=a=>{const ca=Math.cos(a),sa=Math.sin(a);return[(ux*ca-uy*sa)*d,c+(ux*sa+uy*ca)*d]};
   for(let a=-0.45;a<=0.451;a+=0.03){const[x,y]=P(a);pts.push(W(x,y,hL(x,y)+.35))}
   scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.8})));
   const[lx,ly]=P(.45);arcs.push({d,pos:W(lx,ly,hL(lx,ly)+1.2)})}}
