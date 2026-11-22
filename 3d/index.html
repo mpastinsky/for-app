@@ -1185,10 +1185,13 @@ const hP=hL(...PIN)+.08;
  const lip=new THREE.Mesh(new THREE.PlaneGeometry(.132,.132).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({map:rt,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-8,polygonOffsetUnits:-16}));
  lip.position.copy(pos);lip.position.y+=.0008;lip.renderOrder=6;scene.add(lip);
  scene.userData.cupPos=pos.clone()}
-const pin=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,2.1,12),new THREE.MeshStandardMaterial({roughness:.35,map:HQ?null:(()=>{   // tyčka s čierno-bielymi pásikmi (7 pásov); akadémia: biela tyčka ako v skutočnosti
+const pin=new THREE.Mesh(new THREE.CylinderGeometry(.0095,.0095,2.1,10),   // skutočná tyčka ~1,9 cm; z diaľky sa opticky zhrubne (pinVis), aby bola vidieť
+  new THREE.MeshStandardMaterial({roughness:.35,map:HQ?null:(()=>{   // tyčka s čierno-bielymi pásikmi (7 pásov); akadémia: biela tyčka ako v skutočnosti
   const c=document.createElement("canvas");c.width=4;c.height=14;const x=c.getContext("2d");for(let i=0;i<7;i++){x.fillStyle=i%2?"#151515":"#ffffff";x.fillRect(0,i*2,4,2)}
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.NearestFilter;return t})()}));pin.position.copy(W(...PIN,hP+1.05-.06));pin.castShadow=true;scene.add(pin);
-if(HQ){const knob=new THREE.Mesh(new THREE.SphereGeometry(.032,16,10),new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:.4}));knob.position.y=1.06;pin.add(knob)}
+if(HQ){const knob=new THREE.Mesh(new THREE.SphereGeometry(.016,14,8),new THREE.MeshStandardMaterial({color:0xf2f0ea,roughness:.4}));knob.position.y=1.06;knob.name="knob";pin.add(knob)}
+// tyčka: blízko skutočná hrúbka (v jamke ostane miesto pre loptičku), z diaľky širšia, aby nezmizla
+function pinVis(cam){const d=cam.position.distanceTo(pin.position),k=Math.max(1,Math.min(6,d/14));if(Math.abs(pin.scale.x-k)<.01)return;pin.scale.set(k,1,k);const kn=pin.getObjectByName("knob");if(kn)kn.scale.set(1,k,1)}
 const flagG=new THREE.PlaneGeometry(.75,.5,16,5).translate(.375,0,0);const flagB=Float32Array.from(flagG.attributes.position.array);
 // Golden Golf Tour vlajka (akadémia): predná strana logo, zadná zlatý monogram
 function ggMark(x,cx,cy,s,col){   // dva prepletené krúžky „GG“ (s = výška znaku)
@@ -2057,7 +2060,7 @@ function startPlay(){
   window.__G={S,PIN,green,gS,R,get prepare(){return prepare},get camUpd(){return camUpd}};   // pre automatické testy (screenshoty)
   // ---- HUD podľa vzoru golfových hier: vietor, mini-mapa, cieľ, dĺžka úderu
   const fm=d=>d<10?d.toFixed(1).replace(".",","):String(Math.round(d));
-  const WIND=(()=>{const s=.5+Math.random()*4.5,a=Math.random()*Math.PI*2;return{s,a,x:Math.sin(a)*s,y:Math.cos(a)*s}})();
+  const WIND={s:0,a:0,x:0,y:0};   // vietor vypnutý (Martin): loptička letí presne podľa ukazovateľa
   const TG={x:0,y:0,L:0},SHOTS=[];let mapDirty=1,mapF=0;
   const ui=document.createElement("div");ui.innerHTML=`<canvas id="p-map"></canvas><div id="p-tgt" hidden><b></b><small></small></div>
     <div id="p-shot" hidden><div>Dĺžka úderu <b id="p-sd"></b></div><div>Do jamky <b id="p-sp"></b></div></div>`;
@@ -2117,9 +2120,11 @@ function startPlay(){
       if(d>mx+2){msg("Tak ďaleko to nedoletí – max "+Math.round(mx)+" m");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1600)}}
     drawAim()}
   const bendAim=()=>BL&&Math.hypot(BL[0]-S.x,BL[1]-S.y)>45&&(S.x*BL[0]+S.y*BL[1])/Math.hypot(...BL)<Math.hypot(...BL)-30;
+  // citlivosť mierenia: čím bližší cieľ (krátky pat, priblížený pohľad), tým jemnejšie sa otáča
+  function aimK(){const L=CLUBS[S.club].a?tgtL():toPin();let k=Math.min(1,Math.max(.15,L/60));if(S.zoom>.5)k*=.4;return k}
   function setAim(){const A=bendAim()?BL:PIN;S.aim=Math.atan2(A[0]-S.x,A[1]-S.y)}
   function info(){const d=toPin();const wr=((WIND.a-S.aim)*180/Math.PI).toFixed(0);
-    $("h-s").innerHTML=`<span class="hd">🚩 <b>${fm(d)} m</b></span><span class="wd"><svg viewBox="0 0 10 10" style="transform:rotate(${wr}deg)"><path d="M5 0L9.5 10L5 7.5L.5 10Z"/></svg><b>${Math.round(WIND.s)}</b> m/s</span><span>úder ${S.strokes+1} · ${S.tee?"odpalisko":S.lie.n}</span>`;
+    $("h-s").innerHTML=`<span class="hd">🚩 <b>${fm(d)} m</b></span><span>úder ${S.strokes+1} · ${S.tee?"odpalisko":S.lie.n}</span>`;
     const cl=CLUBS[S.club];const cr=Math.round(cl.c*S.lie.m),tg=cl.a?Math.round(tgtL()):0;$("p-cn").textContent=cl.n+(cl.a?" · "+tg+" m":"");$("p-z").textContent=S.zoom>.5?"↩":"🔍"}
   function arcW(){const g=arcM.geometry,u=g.userData;if(!u||!u.C)return;const P=g.attributes.position.array,{C,U}=u,cp=camera.position;
     for(let k=0;k<P.length;k+=18){const d=Math.hypot(C[k]-cp.x,C[k+1]-cp.y,C[k+2]-cp.z),w=Math.max(.012,d*.0032);for(let j=0;j<18;j+=3){P[k+j]=C[k+j]+U[k+j]*w;P[k+j+1]=C[k+j+1]+U[k+j+1]*w;P[k+j+2]=C[k+j+2]+U[k+j+2]*w}}
@@ -2157,11 +2162,11 @@ function startPlay(){
   let rs=Date.now()%100000+11;const rr=()=>((rs=(rs*16807)%2147483647)/2147483647)*2-1;
   function shoot(p,u=0){if(S.mode!=="aim")return;const cl=CLUBS[S.club];REC.G.shot({h:hNum,n:S.strokes+1,club:cl.n,pow:Math.round(p*100),lie:S.tee?"odpalisko":S.lie.n,from:[S.x,S.y]});S.prev=[S.x,S.y];S.strokes++;S.hop=0;S.lm=markAt(S.x,S.y);S.sink=0;if(SB)SB.cr.visible=false;if(S.lie===SURF.sand&&cl.a)sandBurst(S.x,S.y,9,Math.sin(S.aim),Math.cos(S.aim),1);S.tee=false;
     let a=S.aim,dist;S.side=0;
-    if(cl.a){const acc=S.lie===SURF.rough?1.2:S.lie===SURF.sand?2.6:.6,bk=S.lie===SURF.sand;a+=rr()*acc*Math.PI/180*(.5+p*.5);
+    if(cl.a){const acc=S.lie===SURF.rough?1.2:S.lie===SURF.sand?2.6:.6,bk=S.lie===SURF.sand;if(bk)a+=rr()*acc*Math.PI/180*(.5+p*.5);   // náhodný rozptyl už len z bunkra; inak pri strede presne do kruhu
       // presnosť z kyvadla: v strede rovno, mimo stredu hák (vľavo) / slajs (vpravo) a strata dĺžky
       const[ZP]=zoneOf(p),e=Math.abs(u)<ZP?0:Math.sign(u)*(Math.abs(u)-ZP)/(1-ZP),cf=cl.c/215;
       a+=e*6*cf*Math.PI/180;S.side=e*1.6*cf*p;
-      dist=cl.c*S.lie.m*p*(1-(bk?.5:.25)*e*e)*(1+rr()*(bk?.1:.03));   // z bunkra: väčšia strata dĺžky mimo stredu a ±10 % rozptyl
+      dist=cl.c*S.lie.m*p*(1-(bk?.5:.25)*e*e)*(bk?1+rr()*.1:1);   // z bunkra: väčšia strata dĺžky mimo stredu a ±10 % rozptyl
       const th=cl.a*Math.PI/180,v=vFor(dist,th,S.aim);
       S.vx=Math.sin(a)*v*Math.cos(th);S.vy=Math.cos(a)*v*Math.cos(th);S.vz=v*Math.sin(th);S.mode="fly"}
     else{const[ZP]=zoneOf(p),e=Math.abs(u)<ZP?0:Math.sign(u)*(Math.abs(u)-ZP)/(1-ZP);a+=e*4*Math.PI/180;   // pat: mimo stredu kyvadla potiahnutý (vľavo) / tlačený (vpravo) až o 4°
@@ -2249,7 +2254,7 @@ function startPlay(){
     return false}
   // tyčka vlajky (valec r 3,5 cm, ~2 m nad greenom; pri pate je vytiahnutá = neviditeľná): skúšame celý úsek pohybu.
   // Pomalá loptička pri zemi po náraze spadne do jamky, rýchla sa odrazí (tlmene). Vo vzduchu sa odrazí; nízko a pomaly môže skĺznuť po tyčke do jamky.
-  const PINR=.035+.025;
+  const PINR=.0095+R+.003;   // tyčka + loptička
   function pinHit(ox,oy){if(!pin.visible)return false;const dx=S.x-ox,dy=S.y-oy,L2=dx*dx+dy*dy;
     const h=S.z-R-gS(PIN[0],PIN[1]);if(h>2.02||h<-.05)return false;
     if(Math.max(ox,S.x)<PIN[0]-PINR||Math.min(ox,S.x)>PIN[0]+PINR||Math.max(oy,S.y)<PIN[1]-PINR||Math.min(oy,S.y)>PIN[1]+PINR)return false;
@@ -2258,9 +2263,9 @@ function startPlay(){
     if(b<1e-4){nx=-S.vx;ny=-S.vy;b=sp}nx/=b;ny/=b;const vn=S.vx*nx+S.vy*ny;if(vn>=0)return false;
     const head=Math.min(1,Math.abs(vn)/sp);   // 1 = čelne, 0 = iba šuchne
     // tyčka sa zatrasie podľa sily nárazu
-    {const k=Math.min(.09,.012+Math.abs(vn)*.012);PINW.vx-=nx*k*9;PINW.vy-=ny*k*9;PINW.on=1}
+    {const k=Math.min(.1,.02+Math.abs(vn)*.014);PINW.vx-=nx*k*9;PINW.vy-=ny*k*9;PINW.on=1}
     if(navigator.vibrate)navigator.vibrate(20);
-    const low=h<.12,pDrop=low?(sp<1.1+1.4*head?1:0):(h<1.2&&sp<5?(1-sp/5)*(1-h/1.2)*.7*head:0);
+    const low=h<.12,pDrop=low?(sp<1.1+1.4*head?1:0):(S.mode==="fly"&&(S.vz||0)<0&&h<.45?(sp<9?1:.5):h<1.2&&sp<5?(1-sp/5)*(1-h/1.2)*.7*head:0);   // padajúca loptička pri spodku tyčky skončí v jamke (miesto vedľa tyčky)
     if(Math.random()<pDrop){S.x=PIN[0]+nx*CUP*.5;S.y=PIN[1]+ny*CUP*.5;S.vx=S.vy=0;S.vz=Math.min(S.vz||0,0)*.3;S.mode="drop";S.t=0;S.sink=0;msg("Od tyčky do jamky! 🚩");return true}
     const tx=S.vx-vn*nx,ty=S.vy-vn*ny,en=low?.3:.38,et=low?.55:.7;
     S.vx=-vn*en*nx+tx*et;S.vy=-vn*en*ny+ty*et;if(!low)S.vz=(S.vz||0)*.6;
@@ -2313,7 +2318,6 @@ function startPlay(){
     if(S.mode==="sink"){S.t+=dt;S.sink=Math.min(.6,S.t*S.t*.5);if(S.t>1.7)penalty("Voda · trestná rana");return}
     if(S.mode==="fly"){S.vz-=G*dt;
       // jemný odpor vzduchu
-      S.vx+=WIND.x*.12*dt;S.vy+=WIND.y*.12*dt;   // vietor
       if(S.side){const h=Math.hypot(S.vx,S.vy)||1,ux=S.vy/h,uy=-S.vx/h;S.vx+=ux*S.side*dt;S.vy+=uy*S.side*dt}   // zakrivenie (hák/slajs)
       const sp=Math.hypot(S.vx,S.vy,S.vz),kd=.0016*sp;S.vx-=S.vx*kd*dt;S.vy-=S.vy*kd*dt;S.vz-=S.vz*kd*dt;
       {const ox=S.x,oy=S.y;S.x+=S.vx*dt;S.y+=S.vy*dt;S.z+=S.vz*dt;trunkHit(ox,oy);if(pinHit(ox,oy)){if(S.mode==='drop')return}else if(!S.hop&&S.z-gS(S.x,S.y)<.25&&cupHit(ox,oy))return}
@@ -2471,7 +2475,7 @@ function startPlay(){
   let dragY=null;addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim"||SW)return;const d=e.clientX-drag;drag=e.clientX;
     if(S.zoom>.5){const yy=dragY==null?e.clientY:dragY;dragY=e.clientY;const dv=e.clientY-yy,A=S.aim+(S.yaw||0),kk=camera.position.distanceTo(camT)/innerHeight*1.6,pn=S.pan||(S.pan=[0,0]);
       pn[0]+=-Math.cos(A)*d*kk+Math.sin(A)*dv*kk;pn[1]+=Math.sin(A)*d*kk+Math.cos(A)*dv*kk;return}
-    S.aim+=d*(.0016+Math.min(.004,Math.abs(d)*.00022));drawAim()});
+    S.aim+=d*(.0016+Math.min(.004,Math.abs(d)*.00022))*aimK();drawAim()});
   addEventListener("pointerup",()=>{dragY=null});
   addEventListener("pointerup",()=>{drag=null});
   // poistka: chyba v jednom snímku nesmie zaseknúť hru – ukáže sa text chyby (na screenshot) a hra sa obnoví; strážca: dlho bez stavu „mierenie“ → nová príprava
@@ -2481,7 +2485,7 @@ function startPlay(){
   game={ballPos:ball.position,update(dt){try{
       if(S.mode!=="aim"&&S.mode!=="in"){S.nt=(S.nt||0)+dt;if(S.nt>(S.mode==="wait"?8:35)){S.nt=0;try{S.vx=S.vy=S.vz=0;S.sink=0;S.hop=0;if(S.mode!=="wait")S.z=gS(S.x,S.y)+R;S.mode="wait";prepare()}catch(e){gameErr(e)}}}else S.nt=0;
       hudTick();fxTick(dt);
-      if(turn&&S.mode==="aim"){S.turnT=(S.turnT||0)+dt;S.aim+=turn*dt*Math.min(1.2,.2+S.turnT*.8);drawAim()}else S.turnT=0;   // ◀ ▶: podržaním sa otáčanie zrýchľuje
+      if(turn&&S.mode==="aim"){S.turnT=(S.turnT||0)+dt;S.aim+=turn*dt*Math.min(1.2,.2+S.turnT*.8)*aimK();drawAim()}else S.turnT=0;   // ◀ ▶: podržaním sa otáčanie zrýchľuje
       if(S.pDirty&&S.mode==="aim"&&(!SW||SW.ph===2)&&(++pLast%2===0||!turn)){S.pDirty=0;if(!CLUBS[S.club].a)S.pRes=puttLine(SW?SW.p:putNeed())}
       if(SW){const cl=CLUBS[S.club];
         if(SW.ph===1){const p=powOf(performance.now()-SW.t0);if(cl.a)zones(p);else if(++pLast%4===0)S.pRes=puttLine(p);$("pm-pow").style.strokeDasharray=(p*314.16).toFixed(1)+" 999";
@@ -2493,7 +2497,7 @@ function startPlay(){
       if(S.mode==="fly"||S.mode==="roll"||S.mode==="drop"||S.mode==="sink"){place();if(S.tr<600){trailP.set([S.x,S.z+.05,-S.y],S.tr*3);S.tr++;trailG.setDrawRange(0,S.tr);trailG.attributes.position.needsUpdate=true}
         if(S.mode==="roll"||S.mode==="wait")info()}
       camUpd(dt,false);
-      {const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(S.mode==="drop"||S.mode==="in"?.36:2.5,Math.max(nearG?(S.low===2?.3:.24):.35,dd/(nearG?40:14))))}
+      pinVis(camera);{const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(S.mode==="drop"||S.mode==="in"?.36:2.5,Math.max(nearG?(S.low===2?.3:.24):.35,dd/(nearG?40:14))))}
       if(S.mode!=="in")place();   // výška loptičky podľa aktuálnej veľkosti (leží na tráve)
       // pri patovaní je vlajka vytiahnutá, aby bolo vidno jamku
       {const pull=S.mode!=="fly"&&!CLUBS[S.club].a&&toPin()<25;pin.visible=flag.visible=!pull}}catch(e){gameErr(e)}}};
