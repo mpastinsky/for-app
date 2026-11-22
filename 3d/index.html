@@ -2126,7 +2126,7 @@ function startPlay(){
   function aimK(){const L=CLUBS[S.club].a?tgtL():toPin();let k=Math.min(1,Math.max(.15,L/60));if(S.zoom>.5)k*=.4;return k}
   function setAim(){const A=bendAim()?BL:PIN;S.aim=Math.atan2(A[0]-S.x,A[1]-S.y)}
   function info(){const d=toPin();const wr=((WIND.a-S.aim)*180/Math.PI).toFixed(0);
-    $("h-s").innerHTML=`<span class="hd">🚩 <b>${fm(d)} m</b></span><span>úder ${S.strokes+1} · ${S.tee?"odpalisko":S.lie.n}</span>`;
+    $("h-s").innerHTML=`<span class="hd">🚩 <b>${fm(d)} m</b></span><span>úder ${S.strokes+1} · ${S.tee?"odpalisko":S.lie.n}${S.sinkF>.35?" · zaborená":""}</span>`;
     const cl=CLUBS[S.club];const cr=Math.round(cl.c*S.lie.m),tg=cl.a?Math.round(tgtL()):0;$("p-cn").textContent=cl.n+(cl.a?" · "+tg+" m":"");$("p-z").textContent=S.zoom>.5?"↩":"🔍"}
   function arcW(){const g=arcM.geometry,u=g.userData;if(!u||!u.C)return;const P=g.attributes.position.array,{C,U}=u,cp=camera.position;
     for(let k=0;k<P.length;k+=18){const d=Math.hypot(C[k]-cp.x,C[k+1]-cp.y,C[k+2]-cp.z),w=Math.max(.012,d*.0032);for(let j=0;j<18;j+=3){P[k+j]=C[k+j]+U[k+j]*w;P[k+j+1]=C[k+j+1]+U[k+j+1]*w;P[k+j+2]=C[k+j+2]+U[k+j+2]*w}}
@@ -2162,13 +2162,13 @@ function startPlay(){
       if(d>1e-5&&d<20){rotAx.set(-dy/d,0,-dx/d);ball.rotateOnWorldAxis(rotAx,Math.min(d/rb,.6)*(S.mode==="fly"?.35:1))}}
     lastBX=S.x;lastBY=S.y}
   let rs=Date.now()%100000+11;const rr=()=>((rs=(rs*16807)%2147483647)/2147483647)*2-1;
-  function shoot(p,u=0){if(S.mode!=="aim")return;const cl=CLUBS[S.club];REC.G.shot({h:hNum,n:S.strokes+1,club:cl.n,pow:Math.round(p*100),lie:S.tee?"odpalisko":S.lie.n,from:[S.x,S.y]});S.prev=[S.x,S.y];S.strokes++;S.hop=0;S.lm=markAt(S.x,S.y);S.sink=0;S.sinkF=0;if(SB)SB.cr.visible=false;if(S.lie===SURF.sand&&cl.a)sandBurst(S.x,S.y,9,Math.sin(S.aim),Math.cos(S.aim),1);S.tee=false;
+  function shoot(p,u=0){if(S.mode!=="aim")return;const cl=CLUBS[S.club];REC.G.shot({h:hNum,n:S.strokes+1,club:cl.n,pow:Math.round(p*100),lie:S.tee?"odpalisko":S.lie.n,from:[S.x,S.y]});S.prev=[S.x,S.y];S.strokes++;S.hop=0;S.lm=markAt(S.x,S.y);S.sink=0;S.plugF=S.sinkF||0;S.sinkF=0;if(SB)SB.cr.visible=false;if(S.lie===SURF.sand&&cl.a)sandBurst(S.x,S.y,9,Math.sin(S.aim),Math.cos(S.aim),1);S.tee=false;
     let a=S.aim,dist;S.side=0;
     if(cl.a){const acc=S.lie===SURF.rough?1.2:S.lie===SURF.sand?2.6:.6,bk=S.lie===SURF.sand;if(bk)a+=rr()*acc*Math.PI/180*(.5+p*.5);   // náhodný rozptyl už len z bunkra; inak pri strede presne do kruhu
       // presnosť z kyvadla: v strede rovno, mimo stredu hák (vľavo) / slajs (vpravo) a strata dĺžky
       const[ZP]=zoneOf(p),e=Math.abs(u)<ZP?0:Math.sign(u)*(Math.abs(u)-ZP)/(1-ZP),cf=cl.c/215;
       a+=e*6*cf*Math.PI/180;S.side=e*1.6*cf*p;
-      dist=cl.c*S.lie.m*p*(1-(bk?.5:.25)*e*e)*(bk?1+rr()*.1:1);   // z bunkra: väčšia strata dĺžky mimo stredu a ±10 % rozptyl
+      dist=cl.c*S.lie.m*p*(1-(bk?.5:.25)*e*e)*(bk?1+rr()*.1:1)*(bk?1-.6*(S.plugF||0):1);   // zaborená loptička: kratší úder   // z bunkra: väčšia strata dĺžky mimo stredu a ±10 % rozptyl
       const th=cl.a*Math.PI/180,v=vFor(dist,th,S.aim);
       S.vx=Math.sin(a)*v*Math.cos(th);S.vy=Math.cos(a)*v*Math.cos(th);S.vz=v*Math.sin(th);S.mode="fly"}
     else{const[ZP]=zoneOf(p),e=Math.abs(u)<ZP?0:Math.sign(u)*(Math.abs(u)-ZP)/(1-ZP);a+=e*4*Math.PI/180;   // pat: mimo stredu kyvadla potiahnutý (vľavo) / tlačený (vpravo) až o 4°
@@ -2332,7 +2332,8 @@ function startPlay(){
        else if(!inT)S.tIn=null}
       const g=gS(S.x,S.y)+R;if(S.z<=g){S.z=g;const sf=surf(S.x,S.y);
         if(waterL.some(P=>inPoly([S.x,S.y],P))){splash();return}
-        if(sf===SURF.sand){sandBurst(S.x,S.y,Math.hypot(S.vx,S.vy,S.vz),S.vx,S.vy);{const l=Math.hypot(S.vx,S.vy)||1;S.sandCam=[S.vx/l,S.vy/l]}S.sinkF=Math.max(.2,Math.min(.62,.12-S.vz/32));S.vx=S.vy=S.vz=0;S.sink=0;stopBall();return}   // čím vyšší pád, tým hlbšie (až „volské oko“)
+        if(sf===SURF.sand){sandBurst(S.x,S.y,Math.hypot(S.vx,S.vy,S.vz),S.vx,S.vy);{const l=Math.hypot(S.vx,S.vy)||1;S.sandCam=[S.vx/l,S.vy/l]}{const tgt=Math.max(.25,Math.min(.7,.15-S.vz/30)),hs=Math.hypot(S.vx,S.vy),l=hs||1;S.pl={t:0,x:S.x,y:S.y,dx:S.vx/l,dy:S.vy/l,d:Math.min(.45,hs*.018),f:tgt}}S.sinkF=0;S.vx=S.vy=S.vz=0;S.sink=0;S.mode="plug";return}   // v piesku: krátky posun dopredu a zaborenie (čím vyšší pád, tým hlbšie)
+   // čím vyšší pád, tým hlbšie (až „volské oko“)
    // zaborí sa trochu do piesku
         if(sf===SURF.green&&!S.hop&&-S.vz>8&&S.prev&&Math.hypot(S.x-S.prev[0],S.y-S.prev[1])>70)addMark(S.x,S.y);   // pitchmark len po dlhom údere (prudký dopad z diaľky)
         const kk=S.hop?.85:sf.k;S.vz=-S.vz*(S.hop?.3:sf.r);S.vx*=kk;S.vy*=kk;if(S.vz<1.2){S.vz=0;S.mode="roll"}}}
@@ -2352,6 +2353,7 @@ function startPlay(){
       S.x+=(dT[0]-S.x)*Math.min(1,dt*9);S.y+=(dT[1]-S.y)*Math.min(1,dt*9);
       S.dv+=G*dt;S.z-=S.dv*dt;if(S.z<=fl){S.z=fl;S.dv=S.dv>.45?-S.dv*.22:0}
       if(S.t>.85&&S.z<=fl+1e-3){S.z=fl;holed();return}}
+    if(S.mode==="plug"){const P=S.pl;P.t+=dt;const f=Math.min(1,P.t/.45),e=1-(1-f)*(1-f);S.x=P.x+P.dx*P.d*e;S.y=P.y+P.dy*P.d*e;S.z=gS(S.x,S.y)+R;S.sinkF=P.f*e;if(f>=1){S.pl=null;stopBall()}return}
     if(S.mode==="fly"||S.mode==="roll"){S.t+=dt;
       if(S.x<X0+3||S.x>X1-3||S.y<Y0+3||S.y>Y1-3){penalty("Mimo ihriska · trestná rana");return}
       if(S.mode==="roll"&&waterL.some(P=>inPoly([S.x,S.y],P))){splash();return}
@@ -2380,7 +2382,7 @@ function startPlay(){
     if(S.mode==="drop"||S.mode==="in"){if(!S.cd){const cx=camP.x-PIN[0],cy=-camP.z-PIN[1],l=Math.hypot(cx,cy)||1;S.cd=[cx/l,cy/l]}
       const h=gS(PIN[0],PIN[1]);return[[PIN[0]+S.cd[0]*.34,PIN[1]+S.cd[1]*.34,h+.36],[PIN[0],PIN[1],h-.06]]}
     // dopad do bunkra: kamera priletí bližšie k loptičke, aby bolo vidieť piesok
-    if(S.mode==="wait"&&S.sandCam){const[fx,fy]=S.sandCam,h=gS(S.x,S.y);return[[S.x-fx*2.6+fy*1.2,S.y-fy*2.6-fx*1.2,h+1.4],[S.x,S.y,h+.1]]}
+    if((S.mode==="wait"||S.mode==="plug")&&S.sandCam){const[fx,fy]=S.sandCam,h=gS(S.x,S.y);return[[S.x-fx*2.6+fy*1.2,S.y-fy*2.6-fx*1.2,h+1.4],[S.x,S.y,h+.1]]}
     if(S.mode==="fly"||S.mode==="roll"){const d=Math.max(1,Math.hypot(S.vx,S.vy));const fx=S.vx/d,fy=S.vy/d;
       if((S.mode==="roll"||S.hop)&&!CLUBS[S.club].a&&S.view===2){const hz=Math.max(gS(S.x,S.y),gS(PIN[0],PIN[1]));return[[S.x-fx*2.6,S.y-fy*2.6,hz+1.5],[S.x+fx*2,S.y+fy*2,gS(S.x+fx*2,S.y+fy*2)]]}   // pat zhora
       if((S.mode==="roll"||S.hop)&&!CLUBS[S.club].a){S.low=1;return[[S.x-fx*1.3,S.y-fy*1.3,gS(S.x,S.y)+.42],[S.x+fx*2.5,S.y+fy*2.5,gS(S.x+fx*2.5,S.y+fy*2.5)]]}   // pat: kamera nízko za loptičkou
