@@ -164,6 +164,72 @@ for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();flyTo(+l.el.textCont
    if(!fix||Date.now()-fix>60000)msg("📡 Hľadám GPS polohu… (pod holým nebom pár sekúnd)");clearTimeout(wd);wd=setTimeout(()=>{if(!fix||Date.now()-fix>20000)bad({code:3})},16000)};
  pill.lastChild.onclick=()=>{if(wid!=null){navigator.geolocation.clearWatch(wid);wid=null}pill.hidden=true;spr.visible=false;b.classList.remove("on");fix=0}}
 const v=new THREE.Vector3();
+// ================= HLÁSENIA a 📼 KOLO aj na prehľade 18 jamiek (ako na prehľade akadémie, Martin 23.11.) =================
+// hlásenia aj kolo sú v localStorage spoločné s 3D jamkami (for.reports, for.round, for.rounds)
+{const LA0=DATA.origin[0],LO0=DATA.origin[1],MLON=111320*Math.cos(LA0*Math.PI/180),toEN=(la,lo)=>[(lo-LO0)*MLON,(la-LA0)*111200];
+ const inA=(e,n)=>e>e0&&e<e1&&n>n0&&n<n1;
+ const ld=k=>{try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}};
+ const esc=x=>String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+ const nearH=(e,n)=>{let bh=READY[0],bd=1e9;for(const h of READY){const T=DATA.pads[h][tIdx]||DATA.pads[h][0],G=DATA.gc[h-1],vx=G[0]-T[0],vy=G[1]-T[1],L2=vx*vx+vy*vy||1,k=Math.max(0,Math.min(1,((e-T[0])*vx+(n-T[1])*vy)/L2)),d=Math.hypot(e-T[0]-vx*k,n-T[1]-vy*k);if(d<bd){bd=d;bh=h}}return bh};
+ const st=document.createElement("style");st.textContent=`
+#fab18{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);z-index:20;width:56px;height:56px;border-radius:50%;border:0;padding:0;background:#ff8a00;font-size:1.6rem;box-shadow:0 3px 12px rgba(0,0,0,.4)}
+#fab18 small,#rec18 small{position:absolute;top:58px;left:50%;transform:translateX(-50%);font:700 .7rem system-ui,sans-serif;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+#rec18{position:fixed;right:16px;top:calc(env(safe-area-inset-top,0px) + 150px);z-index:20;width:48px;height:48px;border-radius:50%;border:0;padding:0;background:rgba(15,61,43,.85);color:#fff;font-size:1.25rem;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+#rec18 small{top:50px;font-size:.68rem}
+.rp18{position:fixed;transform:translate(-50%,-100%);z-index:4;min-width:30px;height:30px;padding:0 4px;box-sizing:border-box;border-radius:15px 15px 15px 3px;border:2px solid #fff;background:#fff;font:700 15px system-ui,sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.45)}
+.rp18.hot{background:#ffd9d4;border-color:#e0312b}
+#pop18,#msg18{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 150px);z-index:30;background:#fff;color:#14211a;border-radius:14px;padding:10px 12px;box-shadow:0 4px 16px rgba(0,0,0,.4);font:500 .9rem system-ui,sans-serif;max-width:420px;margin:0 auto}
+#pop18[hidden],#msg18[hidden]{display:none}#pop18 small{color:#667}#pop18 a{display:inline-block;margin-top:8px;padding:8px 12px;border-radius:10px;background:#0f6b4a;color:#fff;text-decoration:none;font-weight:700}
+#msg18{background:rgba(15,40,28,.94);color:#fff;text-align:center}
+#rnd18{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 156px);z-index:22;display:flex;align-items:center;gap:8px;background:rgba(15,40,28,.92);color:#fff;font:600 .82rem system-ui,sans-serif;padding:6px 6px 6px 12px;border-radius:14px;max-width:calc(100vw - 90px)}
+#note{right:auto!important;left:8px}#rnd18[hidden]{display:none}#rnd18 button{border:0;border-radius:10px;background:#ffd400;color:#14211a;font:700 .8rem system-ui,sans-serif;min-height:32px;padding:0 10px}`;
+ document.head.appendChild(st);
+ const fab=document.createElement("button");fab.id="fab18";fab.setAttribute("aria-label","Nahlásiť");fab.innerHTML="⚠️<small>Nahlásiť</small>";document.body.appendChild(fab);
+ const rb=document.createElement("button");rb.id="rec18";rb.setAttribute("aria-label","Kolo");rb.innerHTML="📼<small>Kolo</small>";document.body.appendChild(rb);
+ const pop=document.createElement("div");pop.id="pop18";pop.hidden=true;document.body.appendChild(pop);
+ const msgE=document.createElement("div");msgE.id="msg18";msgE.hidden=true;document.body.appendChild(msgE);let mt=0;
+ const msg=(t,ms=3200)=>{msgE.textContent=t;msgE.hidden=false;clearTimeout(mt);mt=setTimeout(()=>msgE.hidden=true,ms)};
+ // --- hlásenia: piny na celom ihrisku (rovnaké typy a platnosť ako v 3D jamke)
+ const RI={slow:["🐢","Pomalá skupina"],wet:["💧","Mokro / blato"],help:["🆘","Zranenie / pomoc",1],pitch:["⛳","Pitchmarky na greene"],greenbad:["🟤","Zlý stav greenu"],flag:["🚩","Chýba vlajka / jamka"],
+   divot:["🟫","Divoty"],mole:["🐀","Krtince"],branch:["🌳","Zlomená vetva / strom"],tee:["📍","Chýba kolík / značka"],bunker:["🏖️","Neupravený bunker"],trash:["🗑️","Neporiadok / odpadky"],animal:["🦌","Zvieratá na ihrisku"],
+   drink:["🥤","Chýba občerstvenie"],pass:["🤝","Pustíme rýchlejšiu skupinu"],fast:["🏃","Rýchla skupina za nami"],ball:["🔍","Hľadáme loptičku"],fore:["⚠️","Nebezpečná loptička"],storm:["⛈️","Búrka / blesky",1],great:["👍","Super stav ihriska"],text:["💬","Vlastný text"],other:["❗","Iné"]};
+ const TTL={slow:15,fast:15,pass:10,ball:10,text:240,fore:15,help:60,storm:60,animal:30,drink:240,great:360,flag:720,wet:1440,bunker:1440,tee:1440,trash:2880,other:1440,branch:4320,pitch:4320,divot:4320,mole:4320,greenbad:4320};
+ const exp=r=>r.exp||(r.t+(TTL[r.k]||360)*60000);
+ const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"práve teraz":m<60?"pred "+m+" min":"pred "+Math.round(m/60)+" h"};
+ let pins=[];
+ function drawPins(){pins.forEach(p=>p.el.remove());pins=[];const L=ld("for.reports"),now=Date.now();if(!Array.isArray(L))return;
+   L.forEach(r=>{if(!r||exp(r)<=now||r.lat==null)return;const[e,n]=toEN(r.lat,r.lon);if(!inA(e,n))return;const ri=RI[r.k]||RI.other;
+     const el=document.createElement("button");el.className="rp18"+(ri[2]?" hot":"");el.textContent=ri[0];document.body.appendChild(el);
+     el.onclick=ev=>{ev.stopPropagation();const h=r.hole||nearH(e,n);pop.innerHTML=`<b>${ri[0]} ${esc(r.k==="text"&&r.txt?r.txt:ri[1])}</b><br><small>Jamka ${h} · ${ago(r.t)}${(r.yes||0)?" · potvrdené "+r.yes+"×":""}</small><br><a href="./?c=apex&h=${h}&t=${tIdx}">Otvoriť jamku ${h}</a>`;pop.hidden=false};
+     pins.push({el,v:W(e,n,hAt(e,n)+4)})})}
+ drawPins();addEventListener("storage",e=>{if(e.key==="for.reports")drawPins()});setInterval(drawPins,60000);
+ document.addEventListener("pointerdown",e=>{if(!pop.hidden&&!pop.contains(e.target))pop.hidden=true},true);
+ // ⚠️ Nahlásiť: hlási sa vždy z jamky, kde stojíš (poloha) → otvorí tú jamku s ponukou hlásení
+ let busy=false;
+ fab.onclick=()=>{if(busy)return;if(!navigator.geolocation){msg("Ťukni na číslo jamky a nahlás to priamo tam.");return}busy=true;msg("📡 Zisťujem, na ktorej jamke si…",16000);
+   navigator.geolocation.getCurrentPosition(p=>{busy=false;try{localStorage.setItem("for.gps","1")}catch(e){}const[e,n]=toEN(p.coords.latitude,p.coords.longitude);
+     if(!inA(e,n)){msg("Hlásiť sa dá len na ihrisku. Ťukni na číslo jamky, ak chceš jamku len pozrieť.");return}const h=nearH(e,n);msg("Jamka "+h+" · otváram hlásenia…",4000);forNav("./?c=apex&h="+h+"&t="+tIdx+"&rep=1")},
+    er=>{busy=false;if(er&&er.code===1){try{localStorage.setItem("for.gps","0")}catch(_){}msg("❌ Poloha zamietnutá. Hlásiť sa dá len z ihriska s polohou (Safari › aA › Nastavenia webu › Poloha).",6000)}else msg("⏳ GPS zatiaľ neodpovedá, skús o chvíľu znova.")},
+    {enableHighAccuracy:true,maximumAge:10000,timeout:15000})};
+ // --- 📼 Kolo: trasa a skutočné údery posledného kola na celom ihrisku (export a zapisovanie sú v 3D jamke)
+ let shown=[];const pill=document.createElement("div");pill.id="rnd18";pill.hidden=true;pill.innerHTML="<span></span><button>✕ Skryť</button>";document.body.appendChild(pill);
+ const hide=()=>{shown.forEach(o=>{scene.remove(o);o.geometry&&o.geometry.dispose()});shown=[];pill.hidden=true;rb.style.background=""};
+ pill.lastChild.onclick=hide;
+ rb.onclick=()=>{if(shown.length){hide();return}
+   const cand=[ld("for.round"),...(Array.isArray(ld("for.rounds"))?ld("for.rounds"):[])].filter(r=>r&&r.trk&&/18/.test(r.course||""));
+   const r=cand.find(r=>(r.trk||[]).length||(r.shots||[]).some(s=>s.src==="gps"));
+   if(!r){msg("Zatiaľ žiadne kolo na 18 jamkách. Záznam zapneš v jamke cez 📼 Kolo › ● Nahrávať GPS trasu.",5000);return}
+   const a=[];let last=null,nb=0;for(const p of r.trk||[]){if(p[4]!=null&&p[4]>30)continue;const[e,n]=toEN(p[0],p[1]);if(!inA(e,n))continue;
+     if(last&&Math.hypot(e-last[0],n-last[1])>60){if(a.length)a.push(NaN,NaN,NaN)}a.push(e,hAt(e,n)+2,-n);last=[e,n];nb++}
+   // čiara po úsekoch (bez skokov GPS)
+   let seg=[];const flush=()=>{if(seg.length>3){const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(seg,3));const ln=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffd400,depthTest:false,transparent:true}));ln.renderOrder=11;scene.add(ln);shown.push(ln)}seg=[]};
+   for(let i=0;i<a.length;i+=3){if(isNaN(a[i]))flush();else seg.push(a[i],a[i+1],a[i+2])}flush();
+   const S=(r.shots||[]).filter(s=>s.src==="gps"&&Array.isArray(s.from));let ns=0;
+   for(const s of S){const[e,n]=toEN(s.from[0],s.from[1]);if(!inA(e,n))continue;ns++;const cv=document.createElement("canvas");cv.width=cv.height=64;const x=cv.getContext("2d");x.fillStyle=s.acc>30?"#8a8f8c":"#d32f2f";x.beginPath();x.arc(32,32,28,0,7);x.fill();x.strokeStyle="#fff";x.lineWidth=4;x.stroke();
+     x.fillStyle="#fff";x.font="bold 22px system-ui";x.textAlign="center";x.textBaseline="middle";x.fillText(String(s.h),32,33);const t=new THREE.CanvasTexture(cv);
+     const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true,sizeAttenuation:false}));sp.scale.set(.035,.035,1);sp.renderOrder=13;sp.position.copy(W(e,n,hAt(e,n)+3));scene.add(sp);shown.push(sp)}
+   pill.firstChild.textContent=`📼 Kolo ${new Date(r.start).toLocaleString("sk-SK",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"})} · údery: ${ns}`+(nb||ns?"":" · bez bodov na ihrisku");pill.hidden=false;rb.style.background="#0f6b4a"};
+ window.__pins18=pins;window.__pinsUpd=()=>{for(const p of pins){v.copy(p.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;p.el.style.display=vis?"grid":"none";if(vis){p.el.style.left=(v.x+1)/2*innerWidth+"px";p.el.style.top=(1-v.y)/2*innerHeight+"px"}}}}
 let snapDone=false;
 window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
 // pred prechodom na inú 3D obrazovku: posledný záber ostane ako obrázok a 3D scéna sa hneď uvoľní (na mobile naraz len jedna 3D scéna v pamäti – inak sa iPhone zasekol)
@@ -172,6 +238,7 @@ window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(s
  const done=()=>{document.body.appendChild(i);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
 
 function frame(){if(window.__stopped)return;if(controls.enabled)controls.update();renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{if(window.__EMB)parent.postMessage({forReady:1},"*");const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}})}
+  if(window.__pinsUpd)window.__pinsUpd();
   for(const l of labels){v.copy(l.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=(v.x+1)/2*innerWidth+"px";l.el.style.top=(1-v.y)/2*innerHeight+"px"}}
   requestAnimationFrame(frame)}
 frame();

@@ -1860,6 +1860,8 @@ window.__playHere=u=>{if(PLAY||game)return false;let U;try{U=new URL(u)}catch(e)
   // nové objekty hry (loptička, čiary, terč): shadery sa pripravia na pozadí a dovtedy ostane na obrazovke posledný záber – bez zaseknutia
   window.__hold=true;const go=()=>{window.__hold=false};try{scene.traverse(o=>{const M=o.material;if(M)for(const k in M){const v=M[k];if(v&&v.isTexture&&renderer.initTexture)renderer.initTexture(v)}})}catch(e){}setTimeout(go,2500);const pr=preAll(false);if(pr&&pr.then)pr.then(go,go);else go();return true};
 if(PLAY)startPlay();
+// ?rep=1 (z prehľadu 18 jamiek: ⚠️ Nahlásiť) → hneď otvorí ponuku hlásení na tejto jamke
+else if(Q.has("rep"))setTimeout(()=>{try{openSheet()}catch(e){}},700);
 function startPlay(){
   REC.G.start(hNum,!ONE&&hNum===READY[0]&&!SC.length);
   // počas hry žiadne upozornenia: skryjeme špendlíky aj tlačidlo ⚠️ (hlásenia ostávajú uložené)

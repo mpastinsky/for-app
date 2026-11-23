@@ -977,9 +977,10 @@ $("st-back").onclick=()=>stStep("st-l");
 document.querySelectorAll("#start .lay").forEach(b=>b.onclick=()=>{
   // akadémia: rovno 3D jamka 1
   if(b.dataset.l==="akad"){try{localStorage.setItem("for.layout","akad")}catch(e){}location.href="3d/?h=1&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]??1)+"&v=all";return}
-  if(b.dataset.l===LAYOUT){stStep("st-2");return}
-  try{localStorage.setItem("for.layout",b.dataset.l);sessionStorage.setItem("for.next","q")}catch(e){}
-  location.reload()});
+  // 18 jamiek: rovnako ako akadémia rovno do 3D prehľadu celého ihriska (Martin 23.11.)
+  try{localStorage.setItem("for.layout","full")}catch(e){}location.href="3d/ihrisko.html?t="+apexTee();return});
+// odpalisko 18-ky (čierne 0 … červené 4) z uloženého nastavenia 18-ky, inak žlté
+function apexTee(){let t=AKAD?null:course.tee;if(AKAD)try{t=(JSON.parse(localStorage.getItem("for.course")||"null")||{}).tee}catch(e){}return {black:0,white:1,yellow:2,blue:3,red:4}[t]??2}
 
 /* ---------- úvodná obrazovka a režim ---------- */
 let modeSt=store.get("mode",null); // {score:bool,t:ms}
@@ -1071,6 +1072,8 @@ if(QP.has("start")||QP.has("map"))history.replaceState(null,"",location.pathname
 // akadémia nemá satelitnú mapu: všetko je v 3D
 // akadémia nemá satelitnú mapu (Martin 19.11.): vždy rovno do 3D
 if(AKAD&&!QP.has("start")){location.replace("3d/?h="+(round.hole+1)+"&t="+({black:0,white:0,yellow:1,blue:1,red:2}[course.tee]??1))}
+// 18 jamiek tiež bez 2D mapy: rovno 3D prehľad (stará mapa ostáva len cez ?map)
+else if(!AKAD&&!QP.has("start")&&!QP.has("map")&&!nextQ){location.replace("3d/ihrisko.html?t="+apexTee())}
 else if(QP.has("start"))showStart();
 else if(QP.has("map")){$("start").hidden=true;showView("v-map");if(QP.has("at")){const q=QP.get("at").split(",").map(Number);if(q.length===2&&q.every(isFinite)){tapPt=q;renderTap();map.setView(q,18)}}if(QP.has("rep"))setTimeout(openReport,400)}
 else if(nextQ){showStart();stStep("st-2")}
