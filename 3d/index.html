@@ -1941,15 +1941,18 @@ function startPlay(){
   function clearMarks(){while(MARKS.length)scene.remove(MARKS.pop().mesh)}
   function markAt(x,y){for(let i=0;i<MARKS.length;i++)if(Math.hypot(MARKS[i].x-x,MARKS[i].y-y)<MKR)return i;return -1}
   function markHit(ox,oy,x,y,vx,vy,last){for(let i=0;i<MARKS.length;i++){if(i===last)continue;const m=MARKS[i],dx=x-ox,dy=y-oy,L2=dx*dx+dy*dy;let q=L2>0?((m.x-ox)*dx+(m.y-oy)*dy)/L2:1;q=Math.max(0,Math.min(1,q));
-      if(Math.hypot(ox+dx*q-m.x,oy+dy*q-m.y)<MKR){const c=Math.cos(m.a),s2=Math.sin(m.a);return[(vx*c-vy*s2)*.82,(vx*s2+vy*c)*.82,i]}}return null}
-  function putSim(a,p){putPrep();const v=p*S.pV;let x=S.x,y=S.y,vx=Math.sin(a)*v,vy=Math.cos(a)*v,t=0,mb=9,res="stop",lip=0,hopd=0,lm=markAt(x,y);const P=[[x,y]],dt=1/240;
+      if(Math.hypot(ox+dx*q-m.x,oy+dy*q-m.y)<MKR){   // rýchla: menšie vychýlenie + malý poskok; pomalá: väčšie vychýlenie a viac pribrzdí
+        const sp=Math.hypot(vx,vy),f=Math.max(0,Math.min(1,(sp-.8)/1.8)),ang=m.a*(.32-.14*f),k=.8+.15*f,c=Math.cos(ang),s2=Math.sin(ang);
+        return[(vx*c-vy*s2)*k,(vx*s2+vy*c)*k,i,sp>2.2?Math.min(.75,.22*sp):0]}}return null}
+  function putSim(a,p){putPrep();const v=p*S.pV;let x=S.x,y=S.y,vx=Math.sin(a)*v,vy=Math.cos(a)*v,t=0,mb=9,res="stop",lip=0,hopd=0,lm=markAt(x,y),bh=0,bv=0;const P=[[x,y]],dt=1/240;
     while(t<14){t+=dt;const sf=sfQ(x,y),[gx,gy]=grQ(x,y),sp=Math.hypot(vx,vy),sl=Math.hypot(G*gx*.71,G*gy*.71);let ax=-G*gx*.71,ay=-G*gy*.71;
-      if(sp>1e-3){ax-=sf.f*vx/sp;ay-=sf.f*vy/sp}const nvx=vx+ax*dt,nvy=vy+ay*dt;
-      if(sp<.06&&sl<sf.f||nvx*vx+nvy*vy<0&&sl<sf.f)break;
+      if(bh>0||bv>0){bv-=G*dt;bh+=bv*dt;if(bh<=0){bh=0;bv=bv<-.4?-bv*.3:0};ax=0;ay=0}
+      if(sp>1e-3&&!bh){ax-=sf.f*vx/sp;ay-=sf.f*vy/sp}const nvx=vx+ax*dt,nvy=vy+ay*dt;
+      if(!bh&&(sp<.06&&sl<sf.f||nvx*vx+nvy*vy<0&&sl<sf.f))break;
       const ox=x,oy=y;vx=nvx;vy=nvy;x+=vx*dt;y+=vy*dt;
-      if(MARKS.length){const r=markHit(ox,oy,x,y,vx,vy,lm);if(r){vx=r[0];vy=r[1];lm=r[2]}}
+      if(MARKS.length&&!bh){const r=markHit(ox,oy,x,y,vx,vy,lm);if(r){vx=r[0];vy=r[1];lm=r[2];if(r[3]){bv=r[3];bh=1e-4}}}
       const dx=x-ox,dy=y-oy,L2=dx*dx+dy*dy;let q=L2>0?((PIN[0]-ox)*dx+(PIN[1]-oy)*dy)/L2:1;q=Math.max(0,Math.min(1,q));const b=Math.hypot(ox+dx*q-PIN[0],oy+dy*q-PIN[1]);mb=Math.min(mb,b);
-      if(b<CAP){const s2=Math.hypot(vx,vy),bi=impB(ox,oy,vx,vy);if(!hopd&&s2<capV(bi)){P.push([PIN[0],PIN[1]]);res="in";break}if(!lip){if(bi<CUP&&s2>=HOPV||bi<CUP*.5){hopd=1;vx*=.8;vy*=.8}else{const r=lipOut(vx,vy,ox,oy,bi,s2);vx=r[0];vy=r[1]}lip=1}}
+      if(b<CAP&&bh<.02){const s2=Math.hypot(vx,vy),bi=impB(ox,oy,vx,vy);if(!hopd&&s2<capV(bi)){P.push([PIN[0],PIN[1]]);res="in";break}if(!lip){if(bi<CUP&&s2>=HOPV||bi<CUP*.5){hopd=1;vx*=.8;vy*=.8}else{const r=lipOut(vx,vy,ox,oy,bi,s2);vx=r[0];vy=r[1]}lip=1}}
       if(x<X0+3||x>X1-3||y<Y0+3||y>Y1-3||waterL.some(W=>inPoly([x,y],W)))break;
       const l=P[P.length-1];if(Math.hypot(x-l[0],y-l[1])>.05)P.push([x,y])}
     if(res!=="in"&&Math.hypot(x-PIN[0],y-PIN[1])<CUP+.006){P.push([PIN[0],PIN[1]]);res="in"}
@@ -2001,6 +2004,7 @@ function startPlay(){
   // HUD
   const hud=document.createElement("div");hud.id="play";hud.innerHTML=`
    <div id="p-msg"></div>
+   <button id="p-fix" hidden>🔧 Opraviť pitchmark</button>
    <div id="p-row"><button id="p-l" aria-label="Mieriť vľavo">◀</button>
      <div id="p-club"><button id="p-cp" aria-label="Kratšia palica">‹</button><span id="p-cn"></span><button id="p-cm" aria-label="Dlhšia palica">›</button></div>
      <button id="p-r" aria-label="Mieriť vpravo">▶</button><button id="p-z" aria-label="Pozrieť sa na miesto dopadu">🔍</button><button id="p-v" aria-label="Zmeniť pohľad">👁</button></div>
@@ -2022,6 +2026,7 @@ function startPlay(){
    #p-hit{position:relative;overflow:hidden;min-height:58px;border:0;border-radius:14px;background:#0f6b4a;color:#fff;font:700 1.05rem var(--font);box-shadow:0 3px 12px rgba(0,0,0,.3);touch-action:none;user-select:none;-webkit-user-select:none}
    #p-ht{position:relative}
    #p-hit:disabled{background:#6f8f80}
+   #p-fix{align-self:center;background:rgba(20,60,25,.8);color:#fff;border:1px solid rgba(255,255,255,.35);padding:7px 14px;border-radius:999px;font-weight:600;font-size:.9rem;margin-top:6px;pointer-events:auto}
    #p-msg{align-self:center;background:rgba(0,0,0,.55);color:#fff;padding:7px 14px;border-radius:999px;font-weight:600;font-size:.95rem;text-align:center}
    #p-msg:empty{display:none}
    #hio{position:fixed;inset:0;z-index:60;pointer-events:none;display:flex;align-items:center;justify-content:center;transition:opacity .4s}
@@ -2145,7 +2150,7 @@ function startPlay(){
   function setAim(){const A=bendAim()?BL:PIN;S.aim=Math.atan2(A[0]-S.x,A[1]-S.y)}
   function info(){const d=toPin();const wr=((WIND.a-S.aim)*180/Math.PI).toFixed(0);
     $("h-s").innerHTML=`<span class="hd">🚩 <b>${fm(d)} m</b></span><span>úder ${S.strokes+1} · ${S.tee?"odpalisko":S.lie.n}${S.sinkF>.35?" · zaborená":""}</span>`;
-    const cl=CLUBS[S.club];const cr=Math.round(cl.c*S.lie.m),tg=cl.a?Math.round(tgtL()):0;$("p-cn").textContent=cl.n+(cl.a?" · "+tg+" m":"");$("p-z").textContent=S.zoom>.5?"↩":"🔍"}
+    const cl=CLUBS[S.club];const cr=Math.round(cl.c*S.lie.m),tg=cl.a?Math.round(tgtL()):0;$("p-cn").textContent=cl.n+(cl.a?" · "+tg+" m":"");$("p-z").textContent=S.zoom>.5?"↩":"🔍";$("p-fix").hidden=!(MARKS.length&&S.mode==="aim")}
   function arcW(){const g=arcM.geometry,u=g.userData;if(!u||!u.C)return;const P=g.attributes.position.array,{C,U}=u,cp=camera.position;
     for(let k=0;k<P.length;k+=18){const d=Math.hypot(C[k]-cp.x,C[k+1]-cp.y,C[k+2]-cp.z),w=Math.max(.012,d*.0032);for(let j=0;j<18;j+=3){P[k+j]=C[k+j]+U[k+j]*w;P[k+j+1]=C[k+j+1]+U[k+j+1]*w;P[k+j+2]=C[k+j+2]+U[k+j+2]*w}}
     g.attributes.position.needsUpdate=true;g.computeBoundingSphere()}
@@ -2180,7 +2185,7 @@ function startPlay(){
       if(d>1e-5&&d<20){rotAx.set(-dy/d,0,-dx/d);ball.rotateOnWorldAxis(rotAx,Math.min(d/rb,.6)*(S.mode==="fly"?.35:1))}}
     lastBX=S.x;lastBY=S.y}
   let rs=Date.now()%100000+11;const rr=()=>((rs=(rs*16807)%2147483647)/2147483647)*2-1;
-  function shoot(p,u=0){if(S.mode!=="aim")return;const cl=CLUBS[S.club];REC.G.shot({h:hNum,n:S.strokes+1,club:cl.n,pow:Math.round(p*100),lie:S.tee?"odpalisko":S.lie.n,from:[S.x,S.y]});S.prev=[S.x,S.y];S.strokes++;S.hop=0;S.lm=markAt(S.x,S.y);S.sink=0;S.plugF=S.sinkF||0;S.sinkF=0;if(SB)SB.cr.visible=false;if(S.lie===SURF.sand&&cl.a)sandBurst(S.x,S.y,9,Math.sin(S.aim),Math.cos(S.aim),1);S.tee=false;
+  function shoot(p,u=0){if(S.mode!=="aim")return;const cl=CLUBS[S.club];REC.G.shot({h:hNum,n:S.strokes+1,club:cl.n,pow:Math.round(p*100),lie:S.tee?"odpalisko":S.lie.n,from:[S.x,S.y]});S.prev=[S.x,S.y];S.strokes++;S.hop=0;S.bh=S.bv=0;S.pinPass=0;$("p-fix").hidden=true;S.lm=markAt(S.x,S.y);S.sink=0;S.plugF=S.sinkF||0;S.sinkF=0;if(SB)SB.cr.visible=false;if(S.lie===SURF.sand&&cl.a)sandBurst(S.x,S.y,9,Math.sin(S.aim),Math.cos(S.aim),1);S.tee=false;
     let a=S.aim,dist;S.side=0;
     if(cl.a){const acc=S.lie===SURF.rough?1.2:S.lie===SURF.sand?2.6:.6,bk=S.lie===SURF.sand;if(bk)a+=rr()*acc*Math.PI/180*(.5+p*.5);   // náhodný rozptyl už len z bunkra; inak pri strede presne do kruhu
       // presnosť z kyvadla: v strede rovno, mimo stredu hák (vľavo) / slajs (vpravo) a strata dĺžky
@@ -2306,10 +2311,16 @@ function startPlay(){
     const sp=Math.hypot(S.vx,S.vy);if(sp<.05)return false;
     if(b<1e-4){nx=-S.vx;ny=-S.vy;b=sp}nx/=b;ny/=b;const vn=S.vx*nx+S.vy*ny;if(vn>=0)return false;
     const head=Math.min(1,Math.abs(vn)/sp);   // 1 = čelne, 0 = iba šuchne
+    const low=h<.12;
+    // vo vzduchu: v realite loptička tyčku väčšinou o pár cm minie – rozhodne sa raz pri prelete (≈1 z 3 zasiahne, čelný zásah častejšie ako okrajový)
+    if(!low){if(S.pinPass)return false;S.pinPass=1;setTimeout(()=>{S.pinPass=0},600);if(Math.random()>.18+.25*head)return false}
+    if(head<.4){   // len šuchne: jemne sa vychýli a trochu spomalí, letí/kotúľa sa ďalej
+      const sg=Math.sign(S.vx*ny-S.vy*nx)||1,a=sg*(.06+.25*(.4-head)),c=Math.cos(a),s2=Math.sin(a),k=low?.85:.9,vx=S.vx;S.vx=(vx*c-S.vy*s2)*k;S.vy=(vx*s2+S.vy*c)*k;
+      PINW.vx-=nx*.2;PINW.vy-=ny*.2;PINW.on=1;S.x=PIN[0]+nx*PINR*1.02;S.y=PIN[1]+ny*PINR*1.02;msg("Šuchla o tyčku");{const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1300)}return true}
     // tyčka sa zatrasie podľa sily nárazu
     {const k=Math.min(.1,.02+Math.abs(vn)*.014);PINW.vx-=nx*k*9;PINW.vy-=ny*k*9;PINW.on=1}
     if(navigator.vibrate)navigator.vibrate(20);
-    const low=h<.12,pDrop=low?(sp<1.1+1.4*head?1:0):(S.mode==="fly"&&(S.vz||0)<0&&h<.45?(sp<9?1:.5):h<1.2&&sp<5?(1-sp/5)*(1-h/1.2)*.7*head:0);   // padajúca loptička pri spodku tyčky skončí v jamke (miesto vedľa tyčky)
+    const pDrop=low?(sp<1.1+1.4*head?1:0):(S.mode==="fly"&&(S.vz||0)<0&&h<.45?(sp<9?.6:.25):h<1.2&&sp<5?(1-sp/5)*(1-h/1.2)*.7*head:0);   // padajúca loptička pri spodku tyčky skončí v jamke (miesto vedľa tyčky)
     if(Math.random()<pDrop){S.x=PIN[0]+nx*CUP*.5;S.y=PIN[1]+ny*CUP*.5;S.vx=S.vy=0;S.vz=Math.min(S.vz||0,0)*.3;S.mode="drop";S.t=0;S.sink=0;msg("Od tyčky do jamky! 🚩");return true}
     const tx=S.vx-vn*nx,ty=S.vy-vn*ny,en=low?.3:.38,et=low?.55:.7;
     S.vx=-vn*en*nx+tx*et;S.vy=-vn*en*ny+ty*et;if(!low)S.vz=(S.vz||0)*.6;
@@ -2381,13 +2392,14 @@ function startPlay(){
         const kk=S.hop?.85:sf.k;S.vz=-S.vz*(S.hop?.3:sf.r);S.vx*=kk;S.vy*=kk;if(S.vz<1.2){S.vz=0;S.mode="roll"}}}
     else if(S.mode==="roll"){const sf=sfQ(S.x,S.y),[gx,gy]=grQ(S.x,S.y),sp=Math.hypot(S.vx,S.vy);
       let ax=-G*gx*.71,ay=-G*gy*.71;
-      if(sp>1e-3){ax-=sf.f*S.vx/sp;ay-=sf.f*S.vy/sp}
+      if(S.bh>0||S.bv>0){S.bv-=G*dt;S.bh+=S.bv*dt;if(S.bh<=0){S.bh=0;S.bv=S.bv<-.4?-S.bv*.3:0}ax=0;ay=0}   // poskok po pitchmarku: vo vzduchu bez trenia
+      if(sp>1e-3&&!S.bh){ax-=sf.f*S.vx/sp;ay-=sf.f*S.vy/sp}
       const nvx=S.vx+ax*dt,nvy=S.vy+ay*dt;
-      if(sp<.06&&Math.hypot(G*gx*.71,G*gy*.71)<sf.f){stopBall();return}
-      if(nvx*S.vx+nvy*S.vy<0&&Math.hypot(G*gx*.71,G*gy*.71)<sf.f){stopBall();return}
-      const ox=S.x,oy=S.y;S.vx=nvx;S.vy=nvy;S.x+=S.vx*dt;S.y+=S.vy*dt;trunkHit(ox,oy);S.z=gS(S.x,S.y)+R;
-      if(MARKS.length){const r=markHit(ox,oy,S.x,S.y,S.vx,S.vy,S.lm);if(r){S.vx=r[0];S.vy=r[1];S.lm=r[2]}}
-      if(pinHit(ox,oy)){if(S.mode==="drop")return}else if(cupHit(ox,oy))return}
+      if(!S.bh&&sp<.06&&Math.hypot(G*gx*.71,G*gy*.71)<sf.f){stopBall();return}
+      if(!S.bh&&nvx*S.vx+nvy*S.vy<0&&Math.hypot(G*gx*.71,G*gy*.71)<sf.f){stopBall();return}
+      const ox=S.x,oy=S.y;S.vx=nvx;S.vy=nvy;S.x+=S.vx*dt;S.y+=S.vy*dt;trunkHit(ox,oy);S.z=gS(S.x,S.y)+R+(S.bh||0);
+      if(MARKS.length&&!S.bh){const r=markHit(ox,oy,S.x,S.y,S.vx,S.vy,S.lm);if(r){S.vx=r[0];S.vy=r[1];S.lm=r[2];if(r[3]){S.bv=r[3];S.bh=1e-4}}}
+      if(pinHit(ox,oy)){if(S.mode==="drop")return}else if((S.bh||0)<.02&&cupHit(ox,oy))return}
     else if(S.mode==="drop"){   // pád do jamky: gravitácia až na dno (10 cm), malé odrazenie, loptička ostane v jamke viditeľná
       if(!S.t){S.dv=Math.max(0,-(S.vz||0))*.5;S.sink=0;   // s tyčkou: loptička ostane vedľa nej, nie pod ňou
         let ux=S.x-PIN[0],uy=S.y-PIN[1],ul=Math.hypot(ux,uy);if(ul<1e-3){ux=-Math.sin(S.aim);uy=-Math.cos(S.aim);ul=1}const o=pin.visible?.0095+R+.003:0;S.dT=[PIN[0]+ux/ul*o,PIN[1]+uy/ul*o]}
@@ -2488,6 +2500,9 @@ function startPlay(){
   const clubTo=i=>{if(S.mode!=="aim")return;S.club=i;if(S.tl&&S.tl>=carry()-.5)S.tl=0;info();drawAim()};
   $("p-cp").onclick=()=>clubTo((S.club+1)%CLUBS.length);
   $("p-cm").onclick=()=>clubTo((S.club+CLUBS.length-1)%CLUBS.length);
+  // oprava pitchmarku: len keď hráč sám chce (tlačidlo sa ukáže, kým na greene nejaký je); oprava = posledný (vlastný) pitchmark zmizne
+  $("p-fix").onclick=e=>{e.stopPropagation();const m=MARKS.pop();if(!m)return;S.pDirty=1;pvKey="";let t=0;const g=m.mesh;(function an(){t+=.06;g.scale.setScalar(Math.max(.01,1-t));if(t<1)requestAnimationFrame(an);else scene.remove(g)})();
+    msg("Pitchmark opravený ✓");setTimeout(()=>{if($("p-msg").textContent.startsWith("Pitchmark"))msg("")},1500);S.lm=markAt(S.x,S.y);info()};
   $("p-z").onclick=()=>{if(S.mode!=="aim")return;S.zoom=S.zoom>.5?0:1;S.pan=[0,0];S.yaw=0;S.zd=1;info();
     msg(S.zoom?(CLUBS[S.club].a?"Pohľad na dopad · ťahaj = posun, 2 prsty = otočiť a priblížiť, ťuk = cieľ":"Pohľad na jamku · ťahaj = posun, 2 prsty = otočiť a priblížiť"):"Pohľad za loptičkou");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1800)};
   // 👁 prepína pohľady: pri pate zblízka → zhora → prehľad, inak normálny ↔ prehľad
