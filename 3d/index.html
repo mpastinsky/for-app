@@ -283,6 +283,11 @@ else{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8))
 const waterL=(DATA.water||[]).map(P=>P.map(loc));
 for(const P of waterL){g2.save();path(P);g2.lineWidth=2.5*ppm;g2.strokeStyle="#6f9a4a";g2.stroke();g2.fillStyle="#3d7397";g2.fill();g2.clip();
   g2.fillStyle="rgba(255,255,255,.07)";for(let k=0;k<40;k++){g2.beginPath();g2.ellipse(rnd()*TEX,rnd()*TEX,(8+rnd()*20)*ppm,1.2*ppm,0,0,7);g2.fill()}g2.restore()}
+// cesty pre vozíky (z leteckých záberov; DATA.paths: [{w,p:[[e,n],…]}])
+for(const Pp of (DATA.paths||[])){const P=Pp.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
+  g2.lineCap=g2.lineJoin="round";g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));
+  g2.lineWidth=(Pp.w+.6)*ppm;g2.strokeStyle="rgba(70,80,50,.45)";g2.stroke();g2.lineWidth=Pp.w*ppm;g2.strokeStyle="#c8c4b6";g2.stroke();
+  g2.lineWidth=Pp.w*.5*ppm;g2.strokeStyle="rgba(255,255,250,.18)";g2.stroke()}
 const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
 // ostatné jamky v zábere (prehľad „Všetky jamky“): rovnaký vzhľad ako aktuálna jamka – fairway s pásmi kosenia po smere hry,
 // green s prvým kosom, lemom a pásmi 1,2 m, odpaliská
