@@ -11,7 +11,7 @@ export function pcNav(controls,camera,dom){
     document.body.insertAdjacentHTML("beforeend",`<div id="nav3"><button data-a="rl" title="Otočiť doľava">⟲</button><button data-a="f" title="Dopredu">▲</button><button data-a="rr" title="Otočiť doprava">⟳</button><button data-a="zi" title="Priblížiť">＋</button><button data-a="tu" title="Sklopiť pohľad">⤒</button><button data-a="b" title="Dozadu">▼</button><button data-a="td" title="Pohľad zhora">⤓</button><button data-a="zo" title="Oddialiť">－</button></div>`);
     const sph=new THREE.Spherical(),off=new THREE.Vector3();
     const act=a=>{if(!controls.enabled)return;const T=controls.target,cp=camera.position;off.copy(cp).sub(T);
-      if(a==="zi"||a==="zo"){const k=a==="zi"?.94:1/.94;off.multiplyScalar(k);const L=off.length();if(L<controls.minDistance||L>controls.maxDistance)return;cp.copy(T).add(off)}
+      if(a==="zi"||a==="zo"){const k=a==="zi"?.9:1/.9;off.multiplyScalar(k);const L=off.length();if(L<controls.minDistance||L>controls.maxDistance)return;cp.copy(T).add(off)}
       else if(a==="rl"||a==="rr"||a==="tu"||a==="td"){sph.setFromVector3(off);if(a==="rl")sph.theta+=.04;if(a==="rr")sph.theta-=.04;if(a==="tu")sph.phi=Math.max(.05,sph.phi-.03);if(a==="td")sph.phi=Math.min(controls.maxPolarAngle,sph.phi+.03);off.setFromSpherical(sph);cp.copy(T).add(off)}
       else{const d=new THREE.Vector3(-off.x,0,-off.z).normalize().multiplyScalar((a==="f"?1:-1)*Math.max(1.5,off.length()*.03));T.add(d);cp.add(d)}};
     let timer=null;const stop=()=>{clearInterval(timer);timer=null};const nav=document.getElementById("nav3");
@@ -23,6 +23,10 @@ export function pcNav(controls,camera,dom){
   // dotyk: 1 prst = posun po ihrisku (dopredu, dozadu, do strán), 2 prsty = sklon hore/dole, otáčanie a priblíženie
   controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;controls.panXFactor=.6;
   // na telefóne pôvodná rýchlosť, s myšou na počítači pomalšie
-  if(fine){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=1.2}
-  dom.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?1.2:1},{capture:true});
+  // zoom kolieskom/touchpadom (Martin 23.11.: bol príliš pomalý) – OrbitControls delí krok kolieska celým devicePixelRatio, na Retina Macu bol zoom polovičný; vyrovnáme to
+  const ZW=2.8*Math.max(1,window.devicePixelRatio|0);
+  if(fine){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=ZW}
+  dom.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?ZW:1},{capture:true});
+  // koliesko/touchpad bez predchádzajúceho kliknutia (napr. pero/dotyk predtým nastavil 1) – pred zoomom vždy rýchlosť pre koliesko
+  if(fine)dom.addEventListener("wheel",()=>{controls.zoomSpeed=ZW},{capture:true,passive:true});
 }
