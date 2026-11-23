@@ -55,6 +55,7 @@ try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("
 // Súradnice ENU (východ, sever) z apex.json – rovnaké ako pri jednotlivých jamkách, aby sa dal neskôr pripojiť celý areál.
 import * as THREE from "three";
 import {OrbitControls} from "./lib/OrbitControls.js";
+import {pcNav} from "./lib/pcnav.js";
 const Q=new URLSearchParams(location.search);
 const DATA=await (await fetch("apex.json")).json();
 const TILES=await Promise.all(DATA.tiles.map(async f=>{const t=await (await fetch(f)).json();t.H=new Int16Array(Uint8Array.from(atob(t.cm),c=>c.charCodeAt(0)).buffer);return t}));
@@ -128,7 +129,9 @@ const cx=(e0+e1)/2,cn=(n0+n1)/2,asp=innerWidth/innerHeight,tv=Math.tan(25*Math.P
 const LEN=n1-n0,WID=e1-e0,dist=land?Math.max(LEN/2/(tv*asp),WID/2/tv)*1.08:Math.max(LEN/2/tv,WID/2/(tv*asp))*1.12;
 const home=land?{pos:W(cx-dist*.35,cn,dist),target:W(cx+dist*.03,cn,0)}:{pos:W(cx,cn-dist*.35-dist*.04,dist),target:W(cx,cn-dist*.04,0)};
 camera.position.copy(home.pos);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(home.target);controls.enableDamping=true;controls.maxPolarAngle=1.35;controls.minDistance=60;controls.maxDistance=dist*1.6;controls.screenSpacePanning=false;controls.update();
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(home.target);controls.enableDamping=true;controls.maxPolarAngle=1.35;controls.minDistance=8;controls.maxDistance=dist*1.6;
+// rovnaké ovládanie kamery ako na Akadémii (koliesko ku kurzoru, rýchlosť, tlačidlá ＋ − vľavo dole)
+pcNav(controls,camera,renderer.domElement);controls.update();
 document.getElementById("load").remove();
 // ⛳ Hrať kolo: prelet nadol na odpalisko jamky 1, potom hra
 // ťuk na číslo jamky: ten istý prelet k odpalisku vybranej jamky
