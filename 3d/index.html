@@ -2245,7 +2245,7 @@ function startPlay(){
   // scorekarta po jamke / kole (vzhľad podľa skorekarty Apex Báč): bloky po 9 jamkách, Par, S.I., údery so symbolmi (birdie ○, bogey □)
   let SCA=[];
   function scoreCard(all){const old=$("sc-ov");if(old)old.remove();
-    const pl=all.filter(x=>x!=null),tot=pl.reduce((a,b)=>a+b,0),parP=pl.reduce((a,_,i)=>a+(PARS[READY[i]-1]||3),0),dd=tot-parP;
+    const pl=all.filter(x=>x!=null),tot=pl.reduce((a,b)=>a+b,0),parP=all.reduce((a,x,i)=>x==null?a:a+(PARS[READY[i]-1]||3),0),dd=tot-parP;
     const LEN=DATA.len&&DATA.len[tIdx],SI=DATA.si,par=h=>PARS[h-1]||3,fd=d=>d===0?"E":d>0?"+"+d:String(d);
     const sym=(n,p)=>{if(n==null)return"–";const d=n-p;return`<span class="s ${d<=-2?"e":d===-1?"b":d===1?"o":d>=2?"d":""}">${n}</span>`};
     const B=[];for(let i=0;i<READY.length;i+=9)B.push(READY.slice(i,i+9));
@@ -2264,19 +2264,19 @@ function startPlay(){
     o.innerHTML=`<div class="sc"><h2>Scorekarta</h2><div class="sub">${CRS==="apex"?"Apex Báč":"Akadémia Apex"} · odpalisko ${TEE_N[tIdx]}${LEN?" ("+LEN.reduce((a,b)=>a+b,0)+" m)":""} · ${new Date().toLocaleDateString("sk-SK")}${pl.length<READY.length?" · "+pl.length+"/"+READY.length+" jamiek":""}</div>
       ${html}<div class="tot"><div><b>${tot}</b><small>úderov</small></div><div><b>${fd(dd)}</b><small>${dd===0?"na par":dd>0?"nad par":"pod par"}</small></div><div><b>${pl.length}</b><small>jamiek</small></div></div>
       <div class="leg"><span class="s e">2</span>eagle<span class="s b">3</span>birdie<span class="s o">5</span>bogey<span class="s d">6</span>double+</div>
-      <div class="btns"><a href="#" data-scx>Zavrieť</a><a class="alt" href="#" data-rexp>📤 Export kola</a></div></div>`;
+      <div class="btns"><a href="#" data-scx>Zavrieť</a></div></div>`;
     o.addEventListener("click",e=>{if(e.target===o||e.target.closest("[data-scx]")){e.preventDefault();o.remove()}});document.body.appendChild(o)}
   document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-scard]");if(t){e.preventDefault();scoreCard(SCA)}});
-  function showRes(n){if(ONE){const d=n-PAR,nxt=READY[READY.indexOf(hNum)+1];
+  function showRes(n){if(ONE){SCA=READY.map(h=>h===hNum?n:null);const d=n-PAR,nxt=READY[READY.indexOf(hNum)+1];
       $("p-res").innerHTML=`<h2>Jamka ${hNum} dohraná</h2><div>${n} ${n===1?"úder":n<5?"údery":"úderov"} · ${d===0?"na par":d>0?"+"+d+" nad par":d+" pod par"}</div>
       <a class="go" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1">Hrať znova</a>${nxt?`<a class="go alt" href="?${CQ}h=${nxt}&t=${tIdx}&play=1&one=1">Jamka ${nxt} ›</a>`:""}
-      <a class="go alt" href="#" data-rexp>📤 Export kola</a><a class="go alt" href="?${CQ}h=${READY[0]}&t=${tIdx}${CRS==="apex"?"":"&v=all"}">Späť na prehľad</a>`;$("p-res").hidden=false;return}
+      <a class="go alt" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="?${CQ}h=${READY[0]}&t=${tIdx}${CRS==="apex"?"":"&v=all"}">Späť na prehľad</a>`;$("p-res").hidden=false;return}
     const all=SC.concat([n]);const tot=all.reduce((a,b)=>a+b,0),par=all.reduce((a,_,i)=>a+(PARS[READY[i]-1]||3),0),dd=tot-par;
     SCA=all;
     const last=hNum===LASTH;const nx=`?${CQ}h=${READY[READY.indexOf(hNum)+1]}&t=${tIdx}&play=1&sc=${all.join("-")}`;
     $("p-res").innerHTML=`<h2>${last?"Koniec kola":"Jamka "+hNum+" dohraná"}</h2><div>${last?"Spolu "+tot+" úderov · "+(dd===0?"na par":dd>0?"+"+dd+" nad par":dd+" pod par"):"Zatiaľ "+tot+" · "+(dd===0?"na par":dd>0?"+"+dd:dd)}</div>
       ${last?`<a class="go" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="?${CQ}h=${READY[0]}&t=${tIdx}&play=1">Hrať znova</a>`:`<a class="go" href="${nx}">Ďalšia jamka ›</a><a class="go alt" href="#" data-scard>📋 Scorekarta</a>`}
-      <a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}">Ukončiť hru</a>${last?'<a class="lnk" href="#" data-rexp>📤 Export kola (GPX/CSV)</a>':''}`;
+      <a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}">Ukončiť hru</a>`;
     $("p-res").hidden=false;if(last)setTimeout(()=>{if(!$("sc-ov"))scoreCard(all)},400)}
   function penalty(t){REC.G.end(S.x,S.y,toPin(),t,1);S.sink=0;S.sinkF=0;S.strokes++;SHOTS.pop();S.x=S.prev[0];S.y=S.prev[1];S.z=gS(S.x,S.y)+R;msg(t);setTimeout(()=>{if(S.mode!=="in")prepare()},900);S.mode="wait"}
   function stopBall(){if(Math.hypot(S.x-PIN[0],S.y-PIN[1])<CUP+.006){S.mode="drop";S.t=0;S.sink=0;return}S.vx=S.vy=0;S.mode="wait";const sf=surf(S.x,S.y);if(sf===SURF.sand&&!S.sinkF)S.sinkF=.12;shotInfo();REC.G.end(S.x,S.y,toPin(),sf.n);
@@ -2560,7 +2560,7 @@ function startPlay(){
         else{$("pm-nd").setAttribute("transform","rotate("+(needle()*90).toFixed(1)+" 120 120)");$("p-ht").textContent="Ťukni, keď je ručička v strede"}}
       else if(S.mode==="aim")$("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";
       const n=4;for(let i=0;i<n;i++)step(dt/n);
-      if(S.mode==="fly"||S.mode==="roll"||S.mode==="drop"||S.mode==="sink"){place();if(S.tr<600){trailP.set([S.x,S.z+.05,-S.y],S.tr*3);S.tr++;trailG.setDrawRange(0,S.tr);trailG.attributes.position.needsUpdate=true}
+      if(S.mode==="fly"||S.mode==="roll"||S.mode==="drop"||S.mode==="sink"){place();if(S.tr<600&&CLUBS[S.club].a){trailP.set([S.x,S.z+.05,-S.y],S.tr*3);S.tr++;trailG.setDrawRange(0,S.tr);trailG.attributes.position.needsUpdate=true}
         if(S.mode==="roll"||S.mode==="wait")info()}
       camUpd(dt,false);
       {const nearG=S.mode!=="fly"&&sdist(S.x,S.y,green)<6||S.cd,dd=camera.position.distanceTo(ball.position);ball.scale.setScalar(Math.min(S.mode==="drop"||S.mode==="in"?.36:2.5,Math.max(nearG?(S.low===2?.3:.24):.35,dd/(nearG?40:14))))}
