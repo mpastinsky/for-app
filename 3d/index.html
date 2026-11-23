@@ -1232,8 +1232,12 @@ function ggFlag(back){const W=640,H=420,cv=document.createElement("canvas");cv.w
   x.strokeStyle="rgba(200,200,220,.35)";x.lineWidth=1.5;x.setLineDash([5,4]);x.beginPath();x.moveTo(sl+5,H-7);x.lineTo(W,H-7);x.moveTo(sl+5,7);x.lineTo(W,7);x.stroke();x.setLineDash([]);
   return cv}
 const mkTex=cv=>{const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
-const flagTex=HQ?mkTex(ggFlag(0)):(()=>{const cv=document.createElement("canvas");cv.width=256;cv.height=170;const x=cv.getContext("2d");x.fillStyle="#d8262a";x.fillRect(0,0,256,170);
-  x.fillStyle="#fff";x.font="900 64px system-ui,sans-serif";x.textAlign="center";x.textBaseline="middle";x.save();x.translate(128,88);x.scale(Math.min(1,200/x.measureText(CLUBN).width),1);x.fillText(CLUBN,0,0);x.restore();
+// 18 jamiek: červená vlajka s veľkým číslom jamky a menším názvom klubu (Martin 23.11.)
+const flagTex=HQ?mkTex(ggFlag(0)):(()=>{const W=384,H=256,sl=W*.1,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");x.fillStyle="#d8262a";x.fillRect(0,0,W,H);
+  x.fillStyle="rgba(255,255,255,.12)";x.fillRect(0,0,sl,H);
+  const cx=sl+(W-sl)/2;x.fillStyle="#fff";x.textAlign="center";x.textBaseline="alphabetic";
+  x.font="900 168px system-ui,sans-serif";x.save();x.translate(cx,H*.68);x.scale(Math.min(1,(W-sl)*.86/x.measureText(String(hNum)).width),1);x.fillText(String(hNum),0,0);x.restore();
+  x.font="800 40px system-ui,sans-serif";x.save();x.translate(cx,H*.9);x.scale(Math.min(1,(W-sl)*.7/x.measureText(CLUBN).width),1);x.fillText(CLUBN,0,0);x.restore();
   return mkTex(cv)})();
 const flagTexB=HQ?mkTex(ggFlag(1)):flagTex;   // akadémia: skutočná vlajka Golden Golf Tour, zozadu zlatý monogram
 const flagMat=new THREE.MeshStandardMaterial({map:flagTex,side:THREE.DoubleSide,roughness:.7});
