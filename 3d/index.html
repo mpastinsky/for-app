@@ -1874,13 +1874,13 @@ function startPlay(){
   // povrchy: odskok, zachovaná rýchlosť po dopade, trenie pri kotúľaní (m/s²), vplyv na dĺžku úderu
   // g = ako povrch „chytí“ spätnú rotáciu pri prvom dopade (rough menej – tráva medzi loptičkou a palicou). Trenie f: green najmenšie (kotúľa najďalej), fairway, rough, piesok skoro hneď stojí.
   const SURF={green:{n:"green",r:.18,k:.62,f:.56,m:1,g:1},collar:{n:"lem greenu",r:.2,k:.62,f:1.2,m:1,g:1},cut:{n:"prvý kos",r:.22,k:.6,f:1.6,m:.97,g:1},
-    fair:{n:"fairway",r:.25,k:.62,f:1.6,m:1,g:1},rough:{n:"rough",r:.12,k:.32,f:3.8,m:.88,g:.8},sand:{n:"bunker",r:.02,k:.12,f:12,m:.72,g:1}};
+    fair:{n:"fairway",r:.25,k:.62,f:1.6,m:1,g:1},rough:{n:"rough",r:.12,k:.4,f:3.8,m:.88,g:.8},sand:{n:"bunker",r:.02,k:.12,f:12,m:.72,g:1}};
   // dopad plného úderu (Martin 23.11.: loptička sa kotúľala príliš dlho). Fyzika: náraz do svahu (kolmá a pozdĺžna zložka voči terénu),
   // odskok r, strata rýchlosti v tráve k a pri prvom dopade spätná rotácia – čím viac loftu a rýchlejší úder, tým viac sa loptička „zabrzdí“.
-  // Výsledok na rovine (plný úder): driver ~25 m kotúľania na fairway, 7 železo ~6 m, SW ~1,5 m; na greene ďalej, v roughu kratšie.
+  // Výsledok na rovine (plný úder): driver ~35 m kotúľania na fairway, 7 železo ~9 m, SW ~2,5 m (v196: Martin chcel trochu viac); na greene ďalej, v roughu kratšie.
   function bounceV(sf,x,y,vx,vy,vz,n){const vh=Math.hypot(vx,vy);if(vh<1e-4)return[0,0,-vz*sf.r];const ux=vx/vh,uy=vy/vh,[gx,gy]=grad(x,y),sl=Math.max(-.5,Math.min(.5,gx*ux+gy*uy));
     const cs=1/Math.sqrt(1+sl*sl),vn=(-vz+vh*sl)*cs,vt=(vh+vz*sl)*cs;   // do kopca: viac nárazu, menej rýchlosti dopredu; z kopca naopak
-    const sp=n===0?Math.min(.95,.6+CLUBS[S.club].a*.007)*Math.min(1,Math.sqrt(Math.hypot(vh,vz)/30))*sf.g:0;
+    const sp=n===0?Math.min(.95,.52+CLUBS[S.club].a*.007)*Math.min(1,Math.sqrt(Math.hypot(vh,vz)/30))*sf.g:0;
     const nt=Math.max(0,vt)*sf.k*(1-Math.min(.97,sp)),nn=Math.max(0,vn)*sf.r;
     const h=(nt-nn*sl)*cs,z=(nn+nt*sl)*cs;return[ux*Math.max(0,h),uy*Math.max(0,h),z]}
   scene.children.filter(o=>o.isLine).forEach(o=>o.visible=false);   // oblúky a línia hry v hre netreba
