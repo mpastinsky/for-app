@@ -55,6 +55,11 @@ button:disabled{opacity:.45}
 #start .lay{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:76px;background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:16px;padding:12px 16px;margin-bottom:12px;text-align:left}
 #start .lay b{font-size:1.15rem}#start .lay small{opacity:.8;font-weight:500}
 #start .lay.cur{background:#fff;color:#0f3d2b;border-color:#fff}
+#areal{margin:16px 0 0;position:relative}
+#areal svg{display:block;width:100%;max-height:68vh;background:#dfe5c6;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.3);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#areal .hit{cursor:pointer}#areal text{pointer-events:none}#areal .hit:active{opacity:.75}
+#areal p{margin:6px 2px 0;font-size:.82rem;opacity:.75}
+#areal .ld{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:.8}
 #start .back{align-self:flex-start;background:transparent;color:#fff;border:0;padding:0 0 14px;min-height:0;font-size:1rem}
 #start .logo{display:flex;align-items:center;gap:12px}
 #start .logo img{width:52px;height:52px;border-radius:14px}
@@ -195,6 +200,7 @@ td .mini{min-height:34px;min-width:34px;padding:0 6px;border-radius:8px}
   <button class="back" id="st-lback">‹ Ihriská</button>
   <div class="logo"><img src="icon-192.png" alt=""><b>Apex Golf</b></div>
   <p class="club">Báč · Čo dnes hráš?</p>
+  <div id="areal"><svg id="ar-svg" role="img" aria-label="Mapa areálu Apex Golf Báč"></svg><p>Ťukni na jamku, akadémiu alebo clubhouse.</p></div>
   <div class="q">
     <button class="lay" data-l="full"><b>18-jamkové ihrisko</b><small>par 72 · 6 169 m z čiernych</small></button>
     <button class="lay" data-l="akad"><b>3-jamková akadémia</b><small>krátke kolo, tréning</small></button>
@@ -481,6 +487,8 @@ let course=Object.assign(JSON.parse(JSON.stringify(AKAD?DEFAULT_AKAD:DEFAULT_COU
 course.len=JSON.parse(JSON.stringify((AKAD?DEFAULT_AKAD:DEFAULT_COURSE).len));
 {const dg=(AKAD?DEFAULT_AKAD:DEFAULT_COURSE).greens;course.greens=course.greens.map((g,i)=>g||dg[i]||null);if(AKAD)course.tees=DEFAULT_AKAD.tees}
 let round=store.get("round",{hole:0,strokes:Array(HOLES).fill(0),start:null,holeStart:null,holeTimes:Array(HOLES).fill(null)});
+// 3D záznam kola (📼 Kolo v 3d/) ukladá do rovnakého kľúča "for.round" iný formát -> tu by renderMap spadol; vtedy začni čisté skóre
+if(!round||!Array.isArray(round.strokes)||typeof round.hole!=="number")round={hole:0,strokes:Array(HOLES).fill(0),start:null,holeStart:null,holeTimes:Array(HOLES).fill(null)};
 let track=store.get("track",[]);
 let recording=store.get("recording",false);
 const saveCourse=()=>store.set("course",course);
@@ -970,8 +978,62 @@ function renderCourses(){
     `<button class="crs ${c.active?"on":""}" ${c.active?`data-c="${c.id}"`:"disabled"}><div><b>${c.n}</b><small>${c.p} · ${c.h}</small></div><span class="tag">${c.active?"Spustiť":"čoskoro"}</span></button>`).join("")||'<p class="foot">Nič sa nenašlo.</p>';
 }
 $("st-search").oninput=renderCourses;
-const stStep=id=>{["st-1","st-l","st-2"].forEach(x=>$(x).hidden=x!==id);$("start").scrollTop=0};
+const stStep=id=>{["st-1","st-l","st-2"].forEach(x=>$(x).hidden=x!==id);$("start").scrollTop=0;if(id==="st-l")renderAreal()};
 $("st-list").onclick=e=>{const b=e.target.closest("button[data-c]");if(b)stStep("st-l")};
+/* ---------- mapa celého areálu Apex Báč (Martin 24.11.): 18-ka, akadémia, clubhouse, cesty – z dát 3D (3d/apex.json, 3d/akademia.json) ---------- */
+let arealDone=false;
+async function renderAreal(){if(arealDone)return;arealDone=true;const svg=$("ar-svg");
+  let D,K;try{[D,K]=await Promise.all(["3d/apex.json","3d/akademia.json"].map(u=>fetch(u).then(r=>r.json())))}catch(e){arealDone=false;svg.parentElement.querySelector("p").textContent="Mapu sa nepodarilo načítať.";return}
+  const AR=D.area||{},la0=D.origin[0],MLON=111320*Math.cos(la0*Math.PI/180);
+  // akadémia má vlastný počiatok (green 1) -> posun do ENU 18-ky
+  const AK=[(17.368905-D.origin[1])*MLON,(48.0007065-la0)*111200],ak=p=>[p[0]+AK[0],p[1]+AK[1]];
+  const ext=[...(AR.south||[]),...(AR.north||[]),...(AR.akad||[]),...D.gc,...K.gc.map(ak)];
+  let e0=Math.min(...ext.map(p=>p[0]))-20,e1=Math.max(...ext.map(p=>p[0]))+20,n0=Math.min(...ext.map(p=>p[1]))-20,n1=Math.max(...ext.map(p=>p[1]))+20;
+  const W=e1-e0,R=W*.03,f=v=>Math.round(v*10)/10,P=pts=>pts.map(p=>f(p[0])+","+f(-p[1])).join(" ");
+  const poly=(pts,a)=>`<polygon points="${P(pts)}" ${a}/>`,line=(pts,a)=>`<polyline points="${P(pts)}" fill="none" stroke-linecap="round" stroke-linejoin="round" ${a}/>`;
+  const tee=apexTee();let o="";
+  // podklad: plochy ihriska (rough)
+  for(const k of ["south","north","akad"])if(AR[k])o+=poly(AR[k],'fill="#a9c77a" stroke="#8fae62" stroke-width="2"');
+  // cesty
+  for(const r of AR.roads||[])o+=line(r.p,`stroke="#fff" stroke-width="${r.w+3}"`)+line(r.p,`stroke="${r.t==="main"?"#8d9096":"#b8ad97"}" stroke-width="${r.w}"`);
+  for(const r of D.paths||[])o+=line(r.p,`stroke="#e4d9bf" stroke-width="${Math.max(2.5,r.w)}"`);
+  for(const q of D.paved||[])o+=poly(q.p,'fill="#c9c4b8"');
+  // 18-ka: fairwaye, odpaliská, greeny, bunkre, voda, stromy
+  for(const h in D.mow||{})for(const m of D.mow[h])o+=poly(m,'fill="#86c257"');
+  for(const t of D.teeboxes||[])o+=poly(t.p,'fill="#86c257"');
+  for(const g of (D.practice&&D.practice.greens)||[])o+=poly(g,'fill="#b9e98a" stroke="#6fa84a" stroke-width="1"');
+  for(const g of D.greens)o+=poly(g,'fill="#b9e98a" stroke="#6fa84a" stroke-width="1"');
+  for(const b of D.bunkers)o+=poly(b,'fill="#f3e6bd"');
+  for(const w of D.water)o+=poly(w,'fill="#4f9fd1" stroke="#3b84b3" stroke-width="1.5"');
+  o+=`<g fill="#3e6b2e" fill-opacity=".85">${D.trees.map(t=>`<circle cx="${f(t[0])}" cy="${f(-t[1])}" r="${f(Math.max(2.5,t[2]))}"/>`).join("")}</g>`;
+  // akadémia
+  for(const w of K.woods||[])o+=poly(w.map(ak),'fill="#4c7a38" fill-opacity=".9"');
+  for(const m of K.fairways||[])o+=poly(m.map(ak),'fill="#86c257"');
+  for(const g of K.greens)o+=poly(g.map(ak),'fill="#b9e98a" stroke="#6fa84a" stroke-width="1"');
+  for(const b of K.bunkers)o+=poly(b.map(ak),'fill="#f3e6bd"');
+  o+=`<g fill="#3e6b2e" fill-opacity=".85">${[...K.trees,...(K.row||[]).map(p=>[p[0],p[1],2.5])].map(t=>{const[x,y]=ak(t);return `<circle cx="${f(x)}" cy="${f(-y)}" r="${f(Math.max(2.5,t[2]))}"/>`}).join("")}</g>`;
+  // clubhouse (budova U podľa 3D modelu)
+  const C=D.clubhouse;let cc=null;
+  if(C){const v=C.v,u=[v[1],-v[0]],at=(a,b)=>[C.o[0]+u[0]*a+v[0]*b,C.o[1]+u[1]*a+v[1]*b],rect=(a0,a1,b0,b1)=>[at(a0,b0),at(a1,b0),at(a1,b1),at(a0,b1)];
+    o+=`<g class="hit" data-a="club" fill="#d9692f" stroke="#8a3d16" stroke-width="1">${[rect(0,C.ww,0,C.L),rect(C.ww,C.wing,C.L-C.ww,C.L),rect(C.ww,C.wing,0,C.ww)].map(r=>poly(r,"")).join("")}</g>`;
+    for(const S of C.sheds||[]){const cs=Math.cos(S.a),sn=Math.sin(S.a),c=(x,y)=>[S.c[0]+x*cs-y*sn,S.c[1]+x*sn+y*cs];o+=poly([c(-S.L/2,-S.W/2),c(S.L/2,-S.W/2),c(S.L/2,S.W/2),c(-S.L/2,S.W/2)],'fill="#7a5a45"')}
+    cc=at(C.wing/2,C.L/2)}
+  // čiary jamiek + klikateľné čísla
+  const lbl=(x,y,t,a)=>`<g class="hit" ${a}><rect x="${f(x-t.length*R*.33-R*.55)}" y="${f(-y-R*.8)}" width="${f(t.length*R*.66+R*1.1)}" height="${f(R*1.6)}" rx="${f(R*.8)}" fill="#fff" stroke="#0f3d2b" stroke-width="${f(R*.12)}"/><text x="${f(x)}" y="${f(-y+R*.36)}" text-anchor="middle" font-size="${f(R)}" font-weight="700" fill="#0f3d2b">${t}</text></g>`;
+  for(const h of D.ready){const L=D.line[h];if(!L)continue;
+    o+=`<g class="hit" data-h="${h}">${line(L,`stroke="#fff" stroke-opacity=".55" stroke-width="${f(R*.16)}" stroke-dasharray="${f(R*.5)} ${f(R*.4)}"`)}${line(L,`stroke="transparent" stroke-width="${f(R*2.2)}"`)}</g>`}
+  for(const h of D.ready){const g=D.gc[h-1];
+    o+=`<g class="hit" data-h="${h}"><circle cx="${f(g[0])}" cy="${f(-g[1])}" r="${f(R*.95)}" fill="#fff" stroke="#0f3d2b" stroke-width="${f(R*.12)}"/><text x="${f(g[0])}" y="${f(-g[1]+R*.38)}" text-anchor="middle" font-size="${f(R*1.05)}" font-weight="800" fill="#0f3d2b">${h}</text></g>`}
+  // akadémia: celá plocha je klikateľná
+  if(AR.akad){o+=poly(AR.akad,'class="hit" data-a="akad" fill="transparent"');const c=AR.akad.reduce((s,p)=>[s[0]+p[0]/AR.akad.length,s[1]+p[1]/AR.akad.length],[0,0]);o+=lbl(c[0],c[1]-R*1.2,"⛳ Akadémia",'data-a="akad"')}
+  if(cc){o+=lbl(cc[0]+R*.6,cc[1]+R*2.6,"🍽 Clubhouse",'data-a="club"')}
+  o+=`<text x="${f(e0+R*.6)}" y="${f(-n0-R*.5)}" font-size="${f(R*.62)}" fill="#55613f">Apex Golf Báč · sever ↑</text>`;
+  svg.setAttribute("viewBox",`${f(e0)} ${f(-n1)} ${f(W)} ${f(n1-n0)}`);svg.setAttribute("font-family","system-ui,sans-serif");svg.innerHTML=o;
+  svg.onclick=ev=>{const g=ev.target.closest(".hit");if(!g)return;
+    if(g.dataset.h){try{localStorage.setItem("for.layout","full")}catch(e){}location.href="3d/?c=apex&h="+g.dataset.h+"&t="+apexTee();return}
+    if(g.dataset.a==="akad"){document.querySelector('#start .lay[data-l="akad"]').click();return}
+    if(g.dataset.a==="club"){try{localStorage.setItem("for.layout","full")}catch(e){}location.href="3d/ihrisko.html?t="+apexTee()+"&club=1"}};
+}
 $("st-lback").onclick=()=>stStep("st-1");
 $("st-back").onclick=()=>stStep("st-l");
 document.querySelectorAll("#start .lay").forEach(b=>b.onclick=()=>{
