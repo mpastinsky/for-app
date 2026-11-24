@@ -87,6 +87,9 @@ const Q=new URLSearchParams(location.search);
 const CRS=Q.get("c")==="apex"?"apex":"akademia",CQ=CRS==="apex"?"c=apex&":"";
 const HQ=CRS!=="apex",OTHL=[];   // vylepšená grafika (zatiaľ akadémia)
 const DATA=await (await fetch(CRS+".json")).json();
+// okolie areálu (Martin 24.11.): dáta druhého ihriska + nízky terén celého areálu; akadémii pridáme plochy 18-ky, ktoré zasahujú do jej okna
+const AR=await import("./lib/areal.js").then(M=>M.loadAreal(CRS,DATA).then(A=>A&&{M,A})).catch(e=>{console.warn(e);return null});
+if(AR)AR.M.injectForeign(DATA,AR.A);
 const READY=DATA.ready||DATA.gc.map((_,i)=>i+1),LASTH=READY[READY.length-1];
 const PARS=DATA.par||READY.map(()=>3);
 const hNum=READY.includes(parseInt(Q.get("h")))?parseInt(Q.get("h")):READY[0];
@@ -290,6 +293,10 @@ for(const S of (DATA.shores||[])){let sq=31;const sr=()=>(sq=(sq*16807)%21474836
   for(let i=1;i<P.length;i++){const[x1,y1]=P[i-1],[x2,y2]=P[i],L=Math.hypot(x2-x1,y2-y1),nx=-(y2-y1)/(L||1),ny=(x2-x1)/(L||1);
     for(let k=0;k<L*7;k++){const t=sr(),o=(sr()-.5)*w,x=x1+(x2-x1)*t+nx*o,y=y1+(y2-y1)*t+ny*o,r=(.12+sr()*.28)*ppm,v=sr();
       g2.fillStyle=gv?(v<.5?"#cfc6a8":"#8f8770"):(v<.4?"#b5ad9c":v<.75?"#6a665c":"#958e7e");g2.beginPath();g2.ellipse(tx(x),ty(y),r*1.3,r,t*6,0,7);g2.fill()}}}
+// kreslenie v súradniciach ENU ihriska (metre) priamo do textúry okna: afinný prevod loc() + mierka textúry
+const enuT=()=>{const px=TEX/(X1-X0),py=TEX/(Y1-Y0);g2.setTransform(px*rt[0],-py*u[0],px*rt[1],-py*u[1],px*(-(rt[0]*T[0]+rt[1]*T[1])-X0),py*(Y1+u[0]*T[0]+u[1]*T[1]))};
+// hlavná cesta Báč a príjazd ku clubhousu (apex.json area.roads)
+if(AR&&DATA.area&&DATA.area.roads){g2.save();enuT();AR.M.paintRoads(g2,DATA.area.roads,e=>e,n=>n,1);g2.restore()}
 // cesty pre vozíky (z leteckých záberov; DATA.paths: [{w,p:[[e,n],…]}])
 for(const Pp of (DATA.paths||[])){const P=Pp.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
   g2.lineCap=g2.lineJoin="round";g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));
@@ -314,6 +321,8 @@ const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
 for(const Q2 of (DATA.paved||[])){const P=Q2.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;path(P);g2.fillStyle=Q2.t==="parking"?"#8d8c86":"#bdb6a6";g2.fill();g2.lineWidth=.4*ppm;g2.strokeStyle="#77746a";g2.stroke()}
 for(const PG of ((DATA.practice&&DATA.practice.greens)||[])){const P=PG.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
   g2.lineJoin="round";path(P);g2.lineWidth=6*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();path(P);g2.lineWidth=2*ppm;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill()}
+// driving range (apex.json range), ak zasahuje do okna jamky – rovnaký vzhľad ako v prehľade areálu
+if(AR&&DATA.range&&[...DATA.range.fan,...DATA.range.tee,...(DATA.range.targets||[])].some(p=>{const[x,y]=loc(p);return x>X0-30&&x<X1+30&&y>Y0-30&&y<Y1+30})){g2.save();enuT();AR.M.paintRange(g2,DATA.range,e=>e,n=>n,1,true);g2.restore()}
 // greeny: lem (fringe) + plocha
 // farby trávnika okolo greenu (detail v jemnej textúre nižšie)
 g2.lineJoin="round";path(green);g2.lineWidth=8*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
@@ -1902,6 +1911,12 @@ if(DATA.clubhouse){const C=DATA.clubhouse,[cx,cy]=loc(C.o);const cc=loc([C.o[0]+
     renderer.domElement.addEventListener("pointerdown",e=>{dn=[e.clientX,e.clientY]});
     renderer.domElement.addEventListener("pointerup",e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>8||game)return;
       mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(mv,camera);if(rc.intersectObjects(CLUB.hits,false).length)clubMenu(C)})}}}
+// okolie areálu mimo okna jamky: terén a povrch celého areálu, stromy, vlajky ostatných jamiek, driving range, clubhouse (lib/areal.js)
+if(AR){try{const OK=await AR.M.buildAreal(THREE,{A:AR.A,hNum,loc,hL,H0,win:[X0,X1,Y0,Y1],farY:far.position.y,mobile:PMOB,club:!!CLUB,groundFog:!HQ});scene.add(OK.group);
+  if(Q.has("dbg"))window.__ar=OK;
+  if(OK.clubhouse&&AR.A.AP.clubhouse){const C=AR.A.AP.clubhouse,o=AR.A.off,[lx,ly]=loc([OK.clubhouse.center[0]-o[0],OK.clubhouse.center[1]-o[1]]);label("🍽 "+C.name,W(lx,ly,OK.clubhouse.top-H0+3),"club");
+    const el=labels[labels.length-1].el;el.style.pointerEvents="auto";el.style.cursor="pointer";el.onclick=async e=>{e.stopPropagation();(await import("./lib/clubhouse.js")).clubMenu(C)}}
+}catch(e){console.warn("okolie areálu",e)}}
 for(const a of arcs)label(a.d+" m",a.pos,"arc");
 function placeLabels(){for(const l of labels){const p=l.v.clone().project(camera);const vis=p.z<1&&Math.abs(p.x)<1.1&&Math.abs(p.y)<1.1;
   l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=((p.x+1)/2*innerWidth)+"px";l.el.style.top=((1-p.y)/2*innerHeight)+"px"}}}
