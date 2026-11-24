@@ -13,7 +13,7 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
   const M = (o) => new THREE.MeshStandardMaterial(Object.assign({ roughness: .85 }, o));
   const cv = (w, h, f) => { const c = document.createElement("canvas"); c.width = w; c.height = h; f(c.getContext("2d"), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t };
   // fasáda: svetlá omietka, 2 rady okien s bielymi rámami, sokel
-  const wallTex = cv(128, 128, (g, w, h) => { g.fillStyle = "#f3e3a2"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - 12, w, 12);
+  const wallTex = cv(128, 128, (g, w, h) => { g.fillStyle = "#faeca8"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - 12, w, 12);
     for (const y of [22, 72]) { g.fillStyle = "#f8f6f0"; g.fillRect(40, y - 3, 48, 40); g.fillStyle = "#3d4a52"; g.fillRect(44, y, 40, 34); g.fillStyle = "#f8f6f0"; g.fillRect(62, y, 4, 34); g.fillRect(44, y + 14, 40, 3) } });
   const roofTex = cv(64, 64, (g, w, h) => { g.fillStyle = "#d9692f"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 6) { g.fillStyle = "rgba(120,40,10,.35)"; g.fillRect(0, y, w, 1.5) } for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? "255,170,110" : "150,60,25"},.25)`; g.fillRect(Math.random() * w, Math.random() * h, 6, 3) } });
   const glassTex = cv(64, 64, (g, w, h) => { g.fillStyle = "#9fb9c4"; g.fillRect(0, 0, w, h); g.fillStyle = "rgba(255,255,255,.25)"; g.fillRect(0, 0, w, h / 2); g.fillStyle = "#f4f4f0"; for (let x = 0; x < w; x += 16) g.fillRect(x, 0, 3, h); g.fillRect(0, 0, w, 3); g.fillRect(0, h / 2, w, 3) });
@@ -41,8 +41,32 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
   wing(0, ww, 0, C.L, E, H);                                   // hlavné krídlo (SZ fasáda k ihrisku, terasa)
   wing(ww - .01, C.wing, C.L - ww, C.L, E, H);                 // severné krídlo
   wing(ww - .01, C.wing, 0, ww, E, H);                         // južné krídlo
-  wing(ww, ww + 4, ww, C.L - ww, 3.6, .25, mWall, mFlat);      // nízka spojovacia časť v nádvorí (plochá sivá strecha)
-  wing(ww + 4, ww + 13, C.L / 2 - 6, C.L / 2 + 6, 5.2, 3.2, mGlass, mRoofB);   // presklená budova v nádvorí (reštaurácia, podľa fotky z dronu) s červenou strechou
+  // nádvorie podľa fotky (Martin 24.11.): pri vnútornej fasáde hlavného krídla nízka prístavba cez celú šírku s tmavou pultovou strechou,
+  // pred ňou presklená reštaurácia so špicatým (lomeným) čelom a červenou valbovou strechou so strešnými oknami; dlažba, trávniky, živé ploty, 2 smreky
+  const P3 = (a, b, h) => pos(...at(a, b), base + h);
+  const mesh = (tris, mat, uvs) => { const g = new THREE.BufferGeometry(), arr = []; for (const t of tris) for (const q of t) { const v3 = P3(...q); arr.push(v3.x, v3.y, v3.z) }
+    g.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3)); if (uvs) g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2)); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, mat); m.material.side = THREE.DoubleSide; m.castShadow = m.receiveShadow = true; G.add(m); hits.push(m); return m };
+  const walls = (poly, h0, h1, mat, rep = 3.2) => { const T = [], U = []; for (let i = 0; i < poly.length - 1; i++) { const [a, b] = [poly[i], poly[i + 1]], L = Math.hypot(b[0] - a[0], b[1] - a[1]) / rep;
+      T.push([[a[0], a[1], h0], [b[0], b[1], h0], [b[0], b[1], h1]], [[a[0], a[1], h0], [b[0], b[1], h1], [a[0], a[1], h1]]); U.push(0, 0, L, 0, L, (h1 - h0) / 3.6, 0, 0, L, (h1 - h0) / 3.6, 0, (h1 - h0) / 3.6) } return mesh(T, mat, U) };
+  const c = C.L / 2, b0 = ww, b1 = C.L - ww, d = 6.5, hl = 3.9, hh = 5.6;     // prístavba: hĺbka d, výška pri krajoch hl, pri fasáde hh
+  walls([[ww, b0], [ww + d, b0], [ww + d, b1], [ww, b1]], 0, hl, mWall);
+  mesh([[[ww, b0, hh], [ww + d, b0, hl], [ww + d, b1, hl]], [[ww, b0, hh], [ww + d, b1, hl], [ww, b1, hh]]], mFlat);
+  const gw = 6.2, gH = 4.4, gR = 6.6, u0 = ww + 2, u1 = ww + d + 3, u2 = ww + d + 6.5;   // presklená časť: šírka 2·gw, bočné steny po u1, špic u2
+  walls([[u0, c - gw], [u1, c - gw], [u2, c], [u1, c + gw], [u0, c + gw]], 0, gH, mGlass, 2.2);
+  const R0 = [u0, c, gR], R1 = [u1 - .5, c, gR], A = [u0, c - gw - .3, gH], B = [u1 + .2, c - gw - .3, gH], Pk = [u2 + .45, c, gH], D = [u1 + .2, c + gw + .3, gH], F = [u0, c + gw + .3, gH];
+  const roofUV = []; const rt = [[A, B, R1], [A, R1, R0], [B, Pk, R1], [Pk, D, R1], [D, F, R0], [D, R0, R1]]; for (const t of rt) for (const q of t) roofUV.push(q[0] / 3, q[1] / 3 + q[2] / 3);
+  mesh(rt, mRoofB, roofUV);
+  for (const s of [-1, 1]) for (const k of [0, 1]) { const sk = new THREE.Mesh(new THREE.BoxGeometry(.06, .9, 1.3), mGlass); const p = P3(u0 + 2.2 + k * 1.8, c + s * 3.2, gR - 1.2 - k * .55); sk.position.copy(p); sk.rotation.y = RU; G.add(sk) }   // strešné okná
+  // dlažba a trávniky na nádvorí (tenká plocha nad terénom), živé ploty; dva smreky stoja PRED budovou, mimo nádvoria (Martin 24.11.)
+  { const cvC = cv(128, 128, (g, w, h) => { g.fillStyle = "#b9b6ad"; g.fillRect(0, 0, w, h); g.fillStyle = "#6f9a46"; g.fillRect(8, 30, 40, 86); g.fillRect(80, 30, 40, 86); g.fillStyle = "#c9c6bd"; g.fillRect(56, 0, 16, h) });
+    cvC.wrapS = cvC.wrapT = THREE.ClampToEdgeWrapping; const U0 = ww + d, U1 = C.wing, uv = [], T = [[[U0, b0, .06], [U1, b0, .06], [U1, b1, .06]], [[U0, b0, .06], [U1, b1, .06], [U0, b1, .06]]];
+    for (const t of T) for (const q of t) uv.push((q[1] - b0) / (b1 - b0), 1 - (q[0] - U0) / (U1 - U0));
+    mesh(T, M({ map: cvC, roughness: .95 }), uv);
+    const mHedge = M({ color: 0x3f6a2c }); for (const s of [-1, 1]) { const hg = new THREE.Mesh(new THREE.BoxGeometry(C.wing - U0 - 4, .9, .7), mHedge); hg.position.copy(P3((U0 + C.wing) / 2 + 2, c + s * (b1 - b0) * .47, .45)); hg.rotation.y = RU; G.add(hg) }
+    const mSpr = M({ color: 0x2c4a2a, flatShading: true }), mTr = M({ color: 0x5a3f28 });
+    for (const s of [-1, 1]) { const p = P3(C.wing + 4, c + s * 4.5, 0); const tr = new THREE.Mesh(new THREE.CylinderGeometry(.18, .25, 2, 5), mTr); tr.position.set(p.x, p.y + 1, p.z); G.add(tr);
+      for (let i = 0; i < 3; i++) { const cn = new THREE.Mesh(new THREE.ConeGeometry(2.4 - i * .6, 4.2 - i * .6, 8), mSpr); cn.position.set(p.x, p.y + 3 + i * 2.6, p.z); cn.castShadow = true; G.add(cn) } } }
   // terasa: biele stany (pyramídy)
   for (const [e, n] of C.tents || []) { const p = pos(e, n, ground(e, n)); const t = new THREE.Mesh(new THREE.ConeGeometry(2.3, 1.4, 4, 1, true), mWhite); t.position.set(p.x, p.y + 3.1, p.z); t.rotation.y = RU + Math.PI / 4; G.add(t);
     for (const [dx, dz] of [[-1.5, -1.5], [1.5, -1.5], [1.5, 1.5], [-1.5, 1.5]]) { const s = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, 2.4, 4), mPole); s.position.set(p.x + dx, p.y + 1.2, p.z + dz); G.add(s) } }
