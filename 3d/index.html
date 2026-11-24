@@ -310,6 +310,10 @@ const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
   path(G);g2.lineWidth=3*ppx;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill();
   g2.save();path(G);g2.clip();inM(gc,d);for(let u=-30;u<30;u+=1.2){g2.fillStyle=(Math.round(u/1.2)&1)?"rgba(255,255,220,.075)":"rgba(20,70,10,.06)";g2.fillRect(u,-30,1.2,60)}g2.restore();
   pd.forEach(([x,y])=>{g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppx,0,7);g2.fillStyle="#8fd062";g2.fill();g2.lineWidth=.5*ppx;g2.strokeStyle="#5d9a3c";g2.stroke()})})}
+// clubhouse okolie: spevnené plochy (terasa, parkovisko) a cvičné greeny pred clubhousom (DATA.paved, DATA.practice – apex.json)
+for(const Q2 of (DATA.paved||[])){const P=Q2.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;path(P);g2.fillStyle=Q2.t==="parking"?"#8d8c86":"#bdb6a6";g2.fill();g2.lineWidth=.4*ppm;g2.strokeStyle="#77746a";g2.stroke()}
+for(const PG of ((DATA.practice&&DATA.practice.greens)||[])){const P=PG.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
+  g2.lineJoin="round";path(P);g2.lineWidth=6*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();path(P);g2.lineWidth=2*ppm;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill()}
 // greeny: lem (fringe) + plocha
 // farby trávnika okolo greenu (detail v jemnej textúre nižšie)
 g2.lineJoin="round";path(green);g2.lineWidth=8*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
@@ -1889,6 +1893,15 @@ function repTick(){if(!popR||$3("pop3").hidden)return;const p=popR.v.clone().pro
 const labels=[];
 function label(text,v,cls=""){const el=document.createElement("div");el.className="lab "+cls;el.textContent=text;document.body.appendChild(el);labels.push({el,v})}
 label("Green · "+cP+" m",W(...PIN,hP+3.6));
+// clubhouse (Kaštieľ Báč) – ak je v zábere jamky; klik na budovu alebo štítok = menu reštaurácie
+let CLUB=null;
+if(DATA.clubhouse){const C=DATA.clubhouse,[cx,cy]=loc(C.o);const cc=loc([C.o[0]+C.v[1]*C.wing/2+C.v[0]*C.L/2,C.o[1]-C.v[0]*C.wing/2+C.v[1]*C.L/2]);if(cc[0]>X0+30&&cc[0]<X1-30&&cc[1]>Y0+30&&cc[1]<Y1-30){const{buildClubhouse,clubMenu}=await import("./lib/clubhouse.js");
+  CLUB=buildClubhouse(THREE,C,(e,n,h)=>{const[x,y]=loc([e,n]);return W(x,y,h)},(e,n)=>hL(...loc([e,n])));
+  if(CLUB){scene.add(CLUB.group);const[lx,ly]=loc(CLUB.center);label("🍽 "+C.name,W(lx,ly,CLUB.top+3),"club");const el=labels[labels.length-1].el;el.style.pointerEvents="auto";el.style.cursor="pointer";el.onclick=e=>{e.stopPropagation();clubMenu(C)};
+    const rc=new THREE.Raycaster(),mv=new THREE.Vector2();let dn=null;
+    renderer.domElement.addEventListener("pointerdown",e=>{dn=[e.clientX,e.clientY]});
+    renderer.domElement.addEventListener("pointerup",e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>8||game)return;
+      mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(mv,camera);if(rc.intersectObjects(CLUB.hits,false).length)clubMenu(C)})}}}
 for(const a of arcs)label(a.d+" m",a.pos,"arc");
 function placeLabels(){for(const l of labels){const p=l.v.clone().project(camera);const vis=p.z<1&&Math.abs(p.x)<1.1&&Math.abs(p.y)<1.1;
   l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=((p.x+1)/2*innerWidth)+"px";l.el.style.top=((1-p.y)/2*innerHeight)+"px"}}}
