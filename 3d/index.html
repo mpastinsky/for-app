@@ -1151,6 +1151,15 @@ function spBuild(){const m=new THREE.Matrix4(),q=new THREE.Quaternion(),Y=new TH
     [W1,L1].forEach(o=>{o.instanceMatrix.needsUpdate=true;if(o.instanceColor)o.instanceColor.needsUpdate=true;o.computeBoundingSphere();o.castShadow=!PMOB;o.receiveShadow=!PMOB;scene.add(o)})}}
 DATA.trees.forEach(([e,n,r,h,g,kc],k)=>{const[x,y]=loc([e,n]);if(SPC&&kc)spAdd(x,y,r,h,kc,k);else if(PROC[k])procTree(x,y,PROC[k]);else if(HQ&&PT&&!g){const kd=nPick(k,NKINDS),sc=procClone(x,y,kd,h,k*2.39);if(sc)NP[k]={kd,s:sc}}else if(g)bush(x,y,r,h,k);else tree(x,y,r,h,k)});
 // objekty z leteckých záberov (DATA.objects: [{t:"shade",p:[e,n],r}] – slnečník/prístrešok pri odpalisku)
+// hut: {t:"hut",p,L,W,a(° os L od východu),h(odkvap),roof:"light"|"dark",open:1 = len stĺpy} – kôlňa/prístrešok (jamka 9)
+for(const O of (DATA.objects||[])){if(O.t!=="hut")continue;const[x,y]=loc(O.p),ar=O.a*Math.PI/180,[x2,y2]=loc([O.p[0]+Math.cos(ar),O.p[1]+Math.sin(ar)]),R=Math.atan2(y2-y,x2-x),z=hL(x,y)-.1,L=O.L,Wd=O.W,H=O.h||2.4,rh=Math.min(1.6,Wd*.3),g=new THREE.Group();
+  const mW=new THREE.MeshLambertMaterial({color:O.open?0x7a6048:0xe8e2d2}),mR=new THREE.MeshLambertMaterial({color:O.roof==="dark"?0x4b4f55:0xdfe2e2,side:THREE.DoubleSide,flatShading:true});
+  if(O.open){for(const sx of[-1,0,1])for(const sz of[-1,1]){const c=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,H,6),mW);c.position.set(sx*(L/2-.3),H/2,sz*(Wd/2-.3));c.castShadow=true;g.add(c)}
+    const b=new THREE.Mesh(new THREE.BoxGeometry(L*.6,.45,.4),mW);b.position.set(0,.23,-Wd/4);g.add(b)}
+  else{const b=new THREE.Mesh(new THREE.BoxGeometry(L,H,Wd),mW);b.position.y=H/2;b.castShadow=b.receiveShadow=true;g.add(b);
+    const dr=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2),new THREE.MeshLambertMaterial({color:0x5d5245}));dr.position.set(0,1,Wd/2+.01);g.add(dr)}
+  const sh=new THREE.Shape([new THREE.Vector2(-Wd/2-.35,0),new THREE.Vector2(Wd/2+.35,0),new THREE.Vector2(0,rh)]),rg=new THREE.ExtrudeGeometry(sh,{depth:L+.5,bevelEnabled:false});rg.translate(0,0,-(L+.5)/2);rg.rotateY(Math.PI/2);
+  const rf=new THREE.Mesh(rg,mR);rf.position.y=H;rf.castShadow=true;g.add(rf);g.rotation.y=R;g.position.copy(W(x,y,z));scene.add(g)}
 for(const O of (DATA.objects||[])){if(O.t!=="shade")continue;const[x,y]=loc(O.p),z=hL(x,y),r=O.r||3,H=2.7,g=new THREE.Group();
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,H,8),new THREE.MeshLambertMaterial({color:0x8a7a62}));pole.position.y=H/2;g.add(pole);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(r,1.1,16,1,true),new THREE.MeshLambertMaterial({color:0xf1eadb,side:THREE.DoubleSide,flatShading:true}));roof.position.y=H+.45;roof.castShadow=true;g.add(roof);
