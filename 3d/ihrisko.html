@@ -156,7 +156,9 @@ if(DATA.clubhouse){const C=DATA.clubhouse,{buildClubhouse,clubMenu}=await import
   const st=document.createElement("style");st.textContent=".clubl{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:4px 8px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.4);text-decoration:none;z-index:3}";document.head.appendChild(st);
   const rc=new THREE.Raycaster(),mv=new THREE.Vector2();let dn=null;
   renderer.domElement.addEventListener("pointerdown",e=>{dn=[e.clientX,e.clientY]});
-  renderer.domElement.addEventListener("pointerup",e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>8)return;mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(mv,camera);if(rc.intersectObjects(CL.hits,false).length)clubMenu(C)})}}
+  renderer.domElement.addEventListener("pointerup",e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>8)return;mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(mv,camera);if(rc.intersectObjects(CL.hits,false).length)clubMenu(C)})
+  // z mapy areálu v hlavnom menu (?club=1): kamera rovno nad clubhouse a otvorené menu
+  if(Q.has("club")){const[ce,cn]=CL.center,h=hAt(ce,cn);controls.target.copy(W(ce,cn,h));camera.position.copy(W(ce+60,cn-170,h+130));camera.lookAt(controls.target);controls.update();clubMenu(C)}}}
 // ================= MOJA POLOHA (Martin 21.11.): 📍 Ja – modrá značka na celom ihrisku + jamka a vzdialenosť do greenu =================
 {const LA0=DATA.origin[0],LO0=DATA.origin[1],MLON=111320*Math.cos(LA0*Math.PI/180),toEN=(la,lo)=>[(lo-LO0)*MLON,(la-LA0)*111200];
  const cv=document.createElement("canvas");cv.width=cv.height=96;const x=cv.getContext("2d");x.fillStyle="rgba(26,124,255,.28)";x.beginPath();x.arc(48,48,46,0,7);x.fill();x.fillStyle="#fff";x.beginPath();x.arc(48,48,25,0,7);x.fill();x.fillStyle="#1a7cff";x.beginPath();x.arc(48,48,18,0,7);x.fill();
