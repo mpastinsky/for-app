@@ -1,5 +1,5 @@
 // Fairway Live: jednoduchá offline vyrovnávacia pamäť pre samotnú appku (mapové dlaždice sa necachujú).
-const CACHE = "for-v208";
+const CACHE = "for-v209";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-192.png",
   "leaflet/leaflet.css",
   "leaflet/leaflet.js"];
