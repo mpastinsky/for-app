@@ -979,7 +979,8 @@ function renderCourses(){
 }
 $("st-search").oninput=renderCourses;
 const stStep=id=>{["st-1","st-l","st-2"].forEach(x=>$(x).hidden=x!==id);$("start").scrollTop=0;if(id==="st-l")renderAreal()};
-$("st-list").onclick=e=>{const b=e.target.closest("button[data-c]");if(b)stStep("st-l")};
+// klik na Apex Golf Club -> rovno 3D prehľad celého areálu (18-ka + akadémia + clubhouse), Martin 24.11.
+$("st-list").onclick=e=>{const b=e.target.closest("button[data-c]");if(!b)return;try{localStorage.setItem("for.layout","full")}catch(_){}location.href="3d/ihrisko.html?t="+apexTee()};
 /* ---------- mapa celého areálu Apex Báč (Martin 24.11.): 18-ka, akadémia, clubhouse, cesty – z dát 3D (3d/apex.json, 3d/akademia.json) ---------- */
 let arealDone=false;
 async function renderAreal(){if(arealDone)return;arealDone=true;const svg=$("ar-svg");
