@@ -165,15 +165,16 @@ export async function buildAreal(THREE, o) {
         cl = new THREE.InstancedMesh(new THREE.PlaneGeometry(.75, .5), new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide }), N), m = new THREE.Matrix4(), c = new THREE.Color();
       Fs.forEach(([e, n, col], k) => { const z = hA(e, n); m.makeTranslation(e, z + 1.05, -n); pole.setMatrixAt(k, m); m.makeTranslation(e + .38, z + 1.8, -n); cl.setMatrixAt(k, m); cl.setColorAt(k, c.setHex(col)) });
       G.add(pole, cl) } }
-  // --- driving range: strecha nad časťou línie, búdka (tvar ako v prehľade areálu)
-  if (AP.range && AP.range.roof && near(AP.range.roof.a[0], AP.range.roof.a[1])) { const Rg = AP.range, [a, b] = [Rg.roof.a, Rg.roof.b], Ln = Math.hypot(b[0] - a[0], b[1] - a[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-    const rg = new THREE.Group(); rg.position.copy(V(mid[0], mid[1], hA(...mid))); rg.rotation.y = ang;
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(Ln, .18, Rg.roof.w), new THREE.MeshStandardMaterial({ color: 0xa5432f, roughness: .8 })); roof.position.y = Rg.roof.h; roof.rotation.x = -.1; rg.add(roof);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(Ln, Rg.roof.h * .55, .1), new THREE.MeshStandardMaterial({ color: 0x6b5a45 })); back.position.set(0, Rg.roof.h * .72, Rg.roof.w / 2 - .1); rg.add(back);
-    const pm = new THREE.MeshStandardMaterial({ color: 0x5a4a3a }), pg = new THREE.CylinderGeometry(.09, .09, Rg.roof.h, 5);
-    for (let k = 0; k <= 6; k++) for (const z of [-1, 1]) { const po = new THREE.Mesh(pg, pm); po.position.set(-Ln / 2 + k * Ln / 6, Rg.roof.h / 2, z * (Rg.roof.w / 2 - .2)); rg.add(po) }
-    if (Rg.hut) { const hut = new THREE.Mesh(new THREE.BoxGeometry(3, 2.4, 2.2), new THREE.MeshStandardMaterial({ color: 0x8a8478 })), hp = V(Rg.hut[0], Rg.hut[1], hA(...Rg.hut) + 1.2); const hg = new THREE.Group(); hg.position.copy(hp); hg.rotation.y = ang; hg.add(hut); G.add(hg) }
-    G.add(rg) }
+  // --- driving range: búdka pri línii (strechu Martin zrušil v217 – podľa 3D záberov 2023 už nie je); strecha len ak je v dátach
+  const Rg = AP.range;
+  if (Rg && Rg.tee && near(Rg.tee[0][0], Rg.tee[0][1])) { const a = Rg.tee[0], b = Rg.tee[Rg.tee.length - 1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    if (Rg.roof) { const [ra, rb] = [Rg.roof.a, Rg.roof.b], Ln = Math.hypot(rb[0] - ra[0], rb[1] - ra[1]), mid = [(ra[0] + rb[0]) / 2, (ra[1] + rb[1]) / 2], an2 = Math.atan2(rb[1] - ra[1], rb[0] - ra[0]);
+      const rg = new THREE.Group(); rg.position.copy(V(mid[0], mid[1], hA(...mid))); rg.rotation.y = an2;
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(Ln, .18, Rg.roof.w), new THREE.MeshStandardMaterial({ color: 0xa5432f, roughness: .8 })); roof.position.y = Rg.roof.h; roof.rotation.x = -.1; rg.add(roof);
+      const pm = new THREE.MeshStandardMaterial({ color: 0x5a4a3a }), pg = new THREE.CylinderGeometry(.09, .09, Rg.roof.h, 5);
+      for (let k = 0; k <= 6; k++) for (const z of [-1, 1]) { const po = new THREE.Mesh(pg, pm); po.position.set(-Ln / 2 + k * Ln / 6, Rg.roof.h / 2, z * (Rg.roof.w / 2 - .2)); rg.add(po) }
+      G.add(rg) }
+    if (Rg.hut) { const hut = new THREE.Mesh(new THREE.BoxGeometry(3, 2.4, 2.2), new THREE.MeshStandardMaterial({ color: 0x8a8478 })); hut.position.copy(V(Rg.hut[0], Rg.hut[1], hA(...Rg.hut) + 1.2)); hut.rotation.y = ang; G.add(hut) } }
   // --- clubhouse (ak ho nekreslí jamka): zjednodušený na pár zlúčených objektov
   let CLB = null;
   if (!o.club && AP.clubhouse && near(AP.clubhouse.o[0], AP.clubhouse.o[1])) { const { buildClubhouse } = await import("./clubhouse.js");
