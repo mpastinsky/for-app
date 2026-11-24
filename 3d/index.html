@@ -284,6 +284,12 @@ else{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8))
 const waterL=(DATA.water||[]).map(P=>P.map(loc));
 for(const P of waterL){g2.save();path(P);g2.lineWidth=2.5*ppm;g2.strokeStyle="#6f9a4a";g2.stroke();g2.fillStyle="#3d7397";g2.fill();g2.clip();
   g2.fillStyle="rgba(255,255,255,.07)";for(let k=0;k<40;k++){g2.beginPath();g2.ellipse(rnd()*TEX,rnd()*TEX,(8+rnd()*20)*ppm,1.2*ppm,0,0,7);g2.fill()}g2.restore()}
+// okraje jazier (DATA.shores: [{t:"stone"|"gravel",w,p:[[e,n],…]}] – kamenný/štrkový lem podľa 3D záberov mapy.com, jamka 5)
+for(const S of (DATA.shores||[])){let sq=31;const sr=()=>(sq=(sq*16807)%2147483647)/2147483647;const P=S.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;const w=S.w||1.6,gv=S.t==="gravel";
+  g2.lineCap=g2.lineJoin="round";g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));g2.lineWidth=w*ppm;g2.strokeStyle=gv?"#a9a185":"#7f7a6c";g2.stroke();
+  for(let i=1;i<P.length;i++){const[x1,y1]=P[i-1],[x2,y2]=P[i],L=Math.hypot(x2-x1,y2-y1),nx=-(y2-y1)/(L||1),ny=(x2-x1)/(L||1);
+    for(let k=0;k<L*7;k++){const t=sr(),o=(sr()-.5)*w,x=x1+(x2-x1)*t+nx*o,y=y1+(y2-y1)*t+ny*o,r=(.12+sr()*.28)*ppm,v=sr();
+      g2.fillStyle=gv?(v<.5?"#cfc6a8":"#8f8770"):(v<.4?"#b5ad9c":v<.75?"#6a665c":"#958e7e");g2.beginPath();g2.ellipse(tx(x),ty(y),r*1.3,r,t*6,0,7);g2.fill()}}}
 // cesty pre vozíky (z leteckých záberov; DATA.paths: [{w,p:[[e,n],…]}])
 for(const Pp of (DATA.paths||[])){const P=Pp.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
   g2.lineCap=g2.lineJoin="round";g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));
@@ -1122,6 +1128,17 @@ for(const O of (DATA.objects||[])){if(O.t!=="shade")continue;const[x,y]=loc(O.p)
   const roof=new THREE.Mesh(new THREE.ConeGeometry(r,1.1,16,1,true),new THREE.MeshLambertMaterial({color:0xf1eadb,side:THREE.DoubleSide,flatShading:true}));roof.position.y=H+.45;roof.castShadow=true;g.add(roof);
   const rim=new THREE.Mesh(new THREE.TorusGeometry(r,.05,4,16),new THREE.MeshLambertMaterial({color:0xcfc6b2}));rim.rotation.x=Math.PI/2;rim.position.y=H-.1;g.add(rim);
   g.position.set(x,z,-y);scene.add(g)}
+// kamene na okraji jazier (3D, nízke) a trstina (DATA.reeds: [[e,n,r]]) – podľa 3D záberov mapy.com (jamka 5)
+{let sd=99;const rr=()=>(sd=(sd*16807)%2147483647)/2147483647;const R=[],C=[];
+ for(const S of (DATA.shores||[])){const w=S.w||1.6,gv=S.t==="gravel";for(let i=1;i<S.p.length;i++){const[x1,y1]=loc(S.p[i-1]),[x2,y2]=loc(S.p[i]),L=Math.hypot(x2-x1,y2-y1),nx=-(y2-y1)/(L||1),ny=(x2-x1)/(L||1);
+   for(let k=0;k<L*(gv?.8:1.8);k++){const t=rr(),o=(rr()-.5)*w,x=x1+(x2-x1)*t+nx*o,y=y1+(y2-y1)*t+ny*o;if(!inside(x,y))continue;R.push([x,y,(gv?.12:.18)+rr()*(gv?.15:.3),rr()*6]);const v=.75+rr()*.4;C.push(gv?[.8*v,.76*v,.66*v]:[.58*v,.56*v,.51*v])}}}
+ if(R.length){const m=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}),R.length),o=new THREE.Object3D(),col=new THREE.Color();
+  R.forEach(([x,y,s,a],i)=>{o.position.copy(W(x,y,hL(x,y)+s*.15));o.rotation.set(a,a*1.7,a*.6);o.scale.set(s*1.3,s*.55,s);o.updateMatrix();m.setMatrixAt(i,o.matrix);m.setColorAt(i,col.setRGB(...C[i]))});
+  m.receiveShadow=true;scene.add(m)}
+ const B=[];for(const[e,n,r]of (DATA.reeds||[])){const[cx,cy]=loc([e,n]);if(!inside(cx,cy))continue;for(let k=0;k<r*r*30;k++){const a=rr()*7,d=Math.sqrt(rr())*r;B.push([cx+Math.cos(a)*d,cy+Math.sin(a)*d,1.1+rr()*.9,rr()*6,(rr()-.5)*.35])}}
+ if(B.length){const g=new THREE.ConeGeometry(.05,1,4);g.translate(0,.5,0);const m=new THREE.InstancedMesh(g,new THREE.MeshLambertMaterial({color:0xffffff}),B.length),o=new THREE.Object3D(),col=new THREE.Color();
+  B.forEach(([x,y,h,a,tl],i)=>{o.position.copy(W(x,y,hL(x,y)-.05));o.rotation.set(tl,a,tl*.6);o.scale.set(1,h,1);o.updateMatrix();m.setMatrixAt(i,o.matrix);const v=rr();m.setColorAt(i,v<.45?col.setRGB(.62,.58,.36):v<.8?col.setRGB(.5,.55,.3):col.setRGB(.72,.66,.45))});
+  m.castShadow=true;scene.add(m)}}
 // --- živý plot z tují (DATA.hedges: [{p:[[východ,sever],…], h:výška m, w:šírka m}]) – napr. pri odpalisku 3 podľa Martinovej fotky a satelitu
 const HEDGES=(DATA.hedges||[]);
 function hSegD(e,n,a,b){const vx=b[0]-a[0],vy=b[1]-a[1],l=vx*vx+vy*vy,t=Math.max(0,Math.min(1,((e-a[0])*vx+(n-a[1])*vy)/l));return Math.hypot(e-a[0]-t*vx,n-a[1]-t*vy)}
