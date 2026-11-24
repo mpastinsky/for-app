@@ -2195,7 +2195,7 @@ function startPlay(){
     aimG.setDrawRange(0,n);aimG.attributes.position.needsUpdate=true;aimL.computeLineDistances();aimL.visible=false;if(cl.a)puttM.visible=false;else{S.pDirty=1;putPrep();if(S.pFar&&S.pFarK!==pvKey){S.pFarK=pvKey;msg("Patovačkou to k jamke nedotlačíš – tráva loptičku zabrzdí");setTimeout(()=>{if($("p-msg").textContent.startsWith("Patovačkou"))msg("")},2600)}}   // čiara patu sa prepočíta v slučke (najviac raz za 2 snímky)
     const ex=S.x+dx*L,ey=S.y+dy*L;TG.x=ex;TG.y=ey;TG.L=L;ring.visible=!!cl.a;ring.position.set(ex,gS(ex,ey)+.07,-ey)}
   let hint=0;
-  function prepare(){S.sandCam=0;S.zoom=0;S.pan=[0,0];S.yaw=0;S.zd=1;orbOff();if(!hint++&&!Q.has("dbg")){setTimeout(()=>{if(S.mode==="aim"&&!$("p-msg").textContent){msg("Ťukni na ihrisko alebo ťahaj prstom: do strán smer, hore/dole vzdialenosť");setTimeout(()=>{if($("p-msg").textContent.startsWith("Ťukni"))msg("")},3500)}},1200)}S.mode="aim";S.vx=S.vy=S.vz=0;S.lie=S.tee?SURF.fair:surf(S.x,S.y);setAim();pickClub();info();drawAim();$("p-hit").disabled=false;
+  function prepare(){S.sandCam=0;S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;orbOff();if(!hint++&&!Q.has("dbg")){setTimeout(()=>{if(S.mode==="aim"&&!$("p-msg").textContent){msg("Ťukni na ihrisko alebo ťahaj prstom: do strán smer, hore/dole vzdialenosť");setTimeout(()=>{if($("p-msg").textContent.startsWith("Ťukni"))msg("")},3500)}},1200)}S.mode="aim";S.vx=S.vy=S.vz=0;S.lie=S.tee?SURF.fair:surf(S.x,S.y);setAim();pickClub();info();drawAim();$("p-hit").disabled=false;
     $("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";place();
     if(S.lie===SURF.sand&&!S.tee)setTimeout(()=>{if(S.mode==="aim"){msg("Bunker: užší zelený stred a rýchlejšie kyvadlo");setTimeout(()=>{if($("p-msg").textContent.startsWith("Bunker"))msg("")},2600)}},1000)}
   const rotAx=new THREE.Vector3();let lastBX=null,lastBY=0;
@@ -2463,7 +2463,8 @@ function startPlay(){
   function camGoal(){const g=camGoal0();if(!(S.zoom>0&&S.mode==="aim"))return g;const A=S.aim+(S.yaw||0),dx=Math.sin(A),dy=Math.cos(A),k=S.zoom*S.zoom*(3-2*S.zoom),zd=S.zd||1,pn=S.pan||[0,0];let l;
     if(!CLUBS[S.club].a){const L=Math.max(2,toPin()),b=(2.2+L*.5+L/2)*zd,hz=Math.max(gS(S.x,S.y),gS(PIN[0],PIN[1]));if(k>.35)S.low=0;
       const fx=(S.x+PIN[0])/2+pn[0],fy=(S.y+PIN[1])/2+pn[1];l=[[fx-dx*b,fy-dy*b,hz+(1.4+L*.55)*zd],[fx,fy,gS(fx,fy)]]}
-    else{const L=TG.L||tgtL(),b=Math.min(16,6+L*.07)*zd,fx=TG.x+pn[0],fy=TG.y+pn[1],hz=gS(fx,fy);l=[[fx-dx*b,fy-dy*b,hz+b*.75],[fx+dx*2,fy+dy*2,gS(fx+dx*2,fy+dy*2)]]}
+    else{const C=S.ca,L=C?C[3]:TG.L||tgtL(),b=Math.min(16,6+L*.07)*zd,fx=(C?C[0]:TG.x)+pn[0],fy=(C?C[1]:TG.y)+pn[1],hz=gS(fx,fy);let ex=dx,ey=dy;if(C){ex=Math.sin(C[2]+(S.yaw||0));ey=Math.cos(C[2]+(S.yaw||0))}   // S.ca = kotva: po chytení/ťuknutí cieľa ostane kamera stáť (inak ide za kruhom a ten uteká spod prsta/kurzora)
+      l=[[fx-ex*b,fy-ey*b,hz+b*.75],[fx+ex*2,fy+ey*2,gS(fx+ex*2,fy+ey*2)]]}
     return g.map((p,i)=>p.map((v,j)=>v+(l[i][j]-v)*k))}
   // pat: nízky záber za loptičkou; ak by jamka nebola na obrazovke (ďaleko / mierené inam), kamera vystúpi vyššie a dozadu, kým jamku neuvidí
   const _pc=new THREE.PerspectiveCamera(),_pv=new THREE.Vector3(),PCH=[.58,1,1.6,2.4,3.4,4.8,6.5,9];
@@ -2547,13 +2548,13 @@ function startPlay(){
   // oprava pitchmarku: len keď hráč sám chce (tlačidlo sa ukáže, kým na greene nejaký je); oprava = posledný (vlastný) pitchmark zmizne
   $("p-fix").onclick=e=>{e.stopPropagation();const m=MARKS.pop();if(!m)return;S.pDirty=1;pvKey="";let t=0;const g=m.mesh;(function an(){t+=.06;g.scale.setScalar(Math.max(.01,1-t));if(t<1)requestAnimationFrame(an);else scene.remove(g)})();
     msg("Pitchmark opravený ✓");setTimeout(()=>{if($("p-msg").textContent.startsWith("Pitchmark"))msg("")},1500);fixVis();if(S.mode==="aim"){S.lm=markAt(S.x,S.y);info()}};
-  $("p-z").onclick=()=>{if(S.mode!=="aim")return;if(S.orb){orbOff();S.zoom=0;S.pan=[0,0];S.yaw=0;S.zd=1;info();msg("Pohľad za loptičkou");setTimeout(()=>{if($("p-msg").textContent==="Pohľad za loptičkou")msg("")},1300);return}S.zoom=S.zoom>.5?0:1;S.pan=[0,0];S.yaw=0;S.zd=1;info();
+  $("p-z").onclick=()=>{if(S.mode!=="aim")return;if(S.orb){orbOff();S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;info();msg("Pohľad za loptičkou");setTimeout(()=>{if($("p-msg").textContent==="Pohľad za loptičkou")msg("")},1300);return}S.zoom=S.zoom>.5?0:1;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;info();
     msg(S.zoom?(CLUBS[S.club].a?"Pohľad na dopad · ťahaj = posun, 2 prsty = otočiť a priblížiť, ťuk = cieľ":"Pohľad na jamku · ťahaj = posun, 2 prsty = otočiť a priblížiť"):"Pohľad za loptičkou");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1800)};
   // VOĽNÝ ZOOM PRI MIERENÍ (Martin 23.11., 2×: „zoom ide len po žltej osi“): koliesko / touchpad na PC a dva prsty na mobile prepnú kameru
   // na OrbitControls – presne to isté ovládanie ako prehľad Akadémie (lib/pcnav.js: zoom ku kurzoru, otáčanie, posun), na oboch okruhoch, pri údere aj pate.
   // Mierenie ostáva: ťuk = nový cieľ, dopadovú zónu sa dá chytiť a ťahať, ◀ ▶ otáča smer. ↩ alebo ďalší úder = späť za loptičku.
   // Mimo voľného režimu je OrbitControls zapnutý len „nastražený“ (bez posunu/otáčania/zoomu), aby zachytil začiatok gesta dvoch prstov.
-  function orbOn(){if(S.orb||S.mode!=="aim"||SW)return;S.orb=1;S.zoom=0;S.pan=[0,0];S.yaw=0;S.zd=1;camera.position.copy(camP);controls.target.copy(camT);
+  function orbOn(){if(S.orb||S.mode!=="aim"||SW)return;S.orb=1;S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;camera.position.copy(camP);controls.target.copy(camT);
     controls.minDistance=.8;controls.maxDistance=CRS==="apex"?400:650;controls.enabled=true;controls.enableZoom=controls.enablePan=controls.enableRotate=true;controls.update();info()}
   function orbOff(){if(!S.orb)return;S.orb=0;controls.enableZoom=controls.enablePan=controls.enableRotate=false;info()}
   function orbSync(){const on=S.mode==="aim"&&!SW&&!ringDrag;controls.enabled=on;const o=!!S.orb&&on;controls.enableZoom=controls.enablePan=controls.enableRotate=o}
@@ -2566,18 +2567,22 @@ function startPlay(){
     S.zoom=0;msg({0:putt?"Pohľad zblízka":"Pohľad za loptičkou",1:"Prehľad zhora",2:"Pohľad zhora na jamku"}[S.view]);const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1300)};
   // potiahnutie prstom po scéne = mierenie
   let drag=null,tap=null,dY=null;const tRay=new THREE.Raycaster(),tV=new THREE.Vector2();
-  let dragT=false;const tgtHit=(cx,cy)=>{tV.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);tRay.setFromCamera(tV,camera);return tRay.intersectObject(ground)[0]};
+  let dragT=false;const tgtHit=(cx,cy)=>{tV.set(cx/innerWidth*2-1,-(cy/innerHeight)*2+1);tRay.setFromCamera(tV,camera);const h=tRay.intersectObject(ground)[0];if(!h)return h;
+    // dopasovať na povrch hry gS (kruh sa kreslí na gS; sieť terénu je pri greene o pár dm inde → kruh by nebol presne pod kurzorom)
+    const o=tRay.ray.origin,d=tRay.ray.direction;let t=h.distance;if(d.y<-.02)for(let i=0;i<5;i++){const x=o.x+d.x*t,z=o.z+d.z*t;t+=(o.y+d.y*t-gS(x,-z))/-d.y}
+    if(t>0&&Math.abs(t-h.distance)<30)h.point.copy(o).addScaledVector(d,t);return h};
   // dva prsty: roztiahnutie = priblížiť na miesto dopadu, zovretie = späť za loptičku (ako zoom fotky v telefóne)
   const PT2=new Map();let pz=null;const pDist=()=>{const[a,b]=[...PT2.values()];return Math.hypot(a[0]-b[0],a[1]-b[1])},pAng=()=>{const[a,b]=[...PT2.values()];return Math.atan2(b[1]-a[1],b[0]-a[0])};
   renderer.domElement.addEventListener("pointerdown",e=>{PT2.set(e.pointerId,[e.clientX,e.clientY]);if(PT2.size===2&&S.mode==="aim"&&!SW){ringDrag=false;drag=null;tap=null;dragT=false;dY=null;pz=1;orbOn();orbSync()}},true);   // druhý prst: voľná kamera (OrbitControls spracuje gesto hneď od začiatku)
   addEventListener("pointermove",e=>{if(PT2.has(e.pointerId))PT2.set(e.pointerId,[e.clientX,e.clientY])},true);
   for(const ev of["pointerup","pointercancel"])addEventListener(ev,e=>{PT2.delete(e.pointerId);if(pz&&PT2.size<2){pz=null;tap=null;drag=null;dragT=false}},true);
   // chytenie dopadovej zóny prstom: vždy (aj po priblížení) sa dá ťahať – cieľ ide presne pod prst, bez prepínania pohľadu
+  const camAnchor=()=>{if(S.zoom>0&&!S.ca&&CLUBS[S.club].a)S.ca=[TG.x,TG.y,S.aim,TG.L||tgtL()]};
   let ringDrag=false;const nearRing=(cx,cy)=>{if(!CLUBS[S.club].a||!ring.visible)return false;tv.set(TG.x,gS(TG.x,TG.y),-TG.y).project(camera);
     const px=(tv.x+1)/2*innerWidth,py=(1-tv.y)/2*innerHeight;if(Math.hypot(cx-px,cy-py)<48)return true;const h=tgtHit(cx,cy);return!!h&&Math.hypot(h.point.x-TG.x,-h.point.z-TG.y)<2*ring.scale.x+1};
   addEventListener("pointermove",e=>{if(!ringDrag||pz||S.mode!=="aim"||SW)return;const h=tgtHit(e.clientX,e.clientY);if(h)setTarget(h.point.x,-h.point.z)},true);
   addEventListener("pointerup",()=>{if(ringDrag){ringDrag=false;tap=null;drag=null;dragT=false}},true);
-  renderer.domElement.addEventListener("pointerdown",e=>{if(pz)return;ringDrag=S.mode==="aim"&&!SW&&(S.zoom>.5||S.orb)&&nearRing(e.clientX,e.clientY);if(ringDrag)controls.enabled=false;   // bez priblíženia funguje ťahanie ako doteraz (do strán smer, hore/dole dĺžka)
+  renderer.domElement.addEventListener("pointerdown",e=>{if(pz)return;ringDrag=S.mode==="aim"&&!SW&&(S.zoom>.5||S.orb)&&nearRing(e.clientX,e.clientY);if(ringDrag)controls.enabled=false;if(ringDrag)camAnchor();   // bez priblíženia funguje ťahanie ako doteraz (do strán smer, hore/dole dĺžka)
     drag=e.clientX;tap=[e.clientX,e.clientY,performance.now(),S.aim];dragT=false;
     if(S.mode==="aim"&&!SW)dragT=true},true);   // (capture: pred OrbitControls, aby chytenie zóny vypnulo kameru) ťahanie kdekoľvek: do strán = smer, hore/dole = vzdialenosť dopadu
   addEventListener("pointermove",e=>{if(!dragT||S.mode!=="aim"||SW||S.zoom>.5||S.orb||ringDrag)return;if(dY==null){dY=e.clientY;return}
@@ -2587,12 +2592,12 @@ function startPlay(){
   renderer.domElement.addEventListener("pointerup",e=>{const t=tap;tap=null;if(!t||S.mode!=="aim"||SW)return;
     if(Math.hypot(e.clientX-t[0],e.clientY-t[1])>8||performance.now()-t[2]>500)return;
     const h=tgtHit(e.clientX,e.clientY);
-    if(h){S.aim=t[3];setTarget(h.point.x,-h.point.z)}});
+    if(h){S.aim=t[3];camAnchor();setTarget(h.point.x,-h.point.z)}});
   // ťahanie prstom do strán = smer (rýchlejšie a so zrýchlením pri švihu, aby sa dalo plynule namieriť aj úplne inam, napr. opačne od jamky);
   // pri priblížení (🔍 / dva prsty) ťahanie jedným prstom posúva pohľad ako mapu – kamera nie je viazaná na žltú čiaru
   let dragY=null;addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim"||SW)return;const d=e.clientX-drag;drag=e.clientX;
     if(S.orb||ringDrag)return;   // voľná kamera: ťahanie = OrbitControls (otáčanie / posun ako v prehľade)
-    if(S.zoom>.5&&CLUBS[S.club].a){const yy=dragY==null?e.clientY:dragY;dragY=e.clientY;const dv=e.clientY-yy,A=S.aim+(S.yaw||0),kk=camera.position.distanceTo(camT)/innerHeight*1.6,pn=S.pan||(S.pan=[0,0]);
+    if(S.zoom>.5&&CLUBS[S.club].a){const yy=dragY==null?e.clientY:dragY;dragY=e.clientY;const dv=e.clientY-yy,A=(S.ca?S.ca[2]:S.aim)+(S.yaw||0),kk=camera.position.distanceTo(camT)/innerHeight*1.6,pn=S.pan||(S.pan=[0,0]);
       pn[0]+=-Math.cos(A)*d*kk+Math.sin(A)*dv*kk;pn[1]+=Math.sin(A)*d*kk+Math.cos(A)*dv*kk;return}
     S.aim+=d*(.0016+Math.min(.004,Math.abs(d)*.00022))*aimK();drawAim()});
   addEventListener("pointerup",()=>{dragY=null});
@@ -2625,7 +2630,7 @@ function startPlay(){
   prepare();{const[p,t]=camGoal();camP.copy(W(...p));camT.copy(W(...t))}camUpd(0,true);
   // spustené z už otvorenej jamky: kamera plynulo priletí z aktuálneho pohľadu za loptičku (nie skok)
   if(window.__from){camP.copy(window.__from.p);camT.copy(window.__from.t);camera.position.copy(camP);camera.lookAt(camT);window.__from=null}
-  if(Q.has("dbg"))window.__g={TG,rollD,showRes,scoreCard,WIND,flySim,vFor,MARKS,addMark,clearMarks,turnSet:v=>{turn=v},upd:dt=>game.update(dt),sandBurst,cupHit,putSim,puttLine,putNeed,drawAim,info,S,step,ring,setTarget,tgtL,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R,ball,camera,renderer,scene,leafBurst,OBST,TRUNKS,splash,pinHit,pin,PINW};
+  if(Q.has("dbg"))window.__g={tgtHit,TG,rollD,showRes,scoreCard,WIND,flySim,vFor,MARKS,addMark,clearMarks,turnSet:v=>{turn=v},upd:dt=>game.update(dt),sandBurst,cupHit,putSim,puttLine,putNeed,drawAim,info,S,step,ring,setTarget,tgtL,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R,ball,camera,renderer,scene,leafBurst,OBST,TRUNKS,splash,pinHit,pin,PINW};
 }
 
 // iOS Safari ignoruje user-scalable=no: zablokuj priblíženie stránky (pinch a dvojťuk); 3D kamera používa vlastné dotyky na canvase
