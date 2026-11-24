@@ -2166,7 +2166,7 @@ function startPlay(){
   const carry=()=>CLUBS[S.club].c*S.lie.m,tgtL=()=>S.tl?Math.min(S.tl,carry()):carry();
   // ťuknutie na ihrisko = miesto dopadu: smer aj dĺžka, palica sa vyberie podľa vzdialenosti
   function setTarget(x,y){const d=Math.hypot(x-S.x,y-S.y);if(d<1)return;S.aim=Math.atan2(x-S.x,y-S.y);
-    if(CLUBS[S.club].a){const NP=CLUBS.length-1,mx=CLUBS[S.tee?0:Math.min(CLUBS[0].k==="D"?1:0,NP-1)].c*S.lie.m;pickClub(Math.min(d,mx));S.tl=Math.max(3,Math.min(d,carry()));
+    if(CLUBS[S.club].a){const NP=CLUBS.length-1;let mx=CLUBS[S.tee?0:Math.min(CLUBS[0].k==="D"?1:0,NP-1)].c*S.lie.m;if(!S.man)pickClub(Math.min(d,mx));else if(CLUBS[S.club].a)mx=carry();S.tl=Math.max(3,Math.min(d,carry()));   // palicu vybranú hráčom (‹ › / šípky) cieľ už neprepína (Martin 24.11.)
       if(d>mx+2){msg("Tak ďaleko to nedoletí – max "+Math.round(mx)+" m");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1600)}}
     drawAim()}
   const bendAim=()=>BL&&Math.hypot(BL[0]-S.x,BL[1]-S.y)>45&&(S.x*BL[0]+S.y*BL[1])/Math.hypot(...BL)<Math.hypot(...BL)-30;
@@ -2195,7 +2195,7 @@ function startPlay(){
     aimG.setDrawRange(0,n);aimG.attributes.position.needsUpdate=true;aimL.computeLineDistances();aimL.visible=false;if(cl.a)puttM.visible=false;else{S.pDirty=1;putPrep();if(S.pFar&&S.pFarK!==pvKey){S.pFarK=pvKey;msg("Patovačkou to k jamke nedotlačíš – tráva loptičku zabrzdí");setTimeout(()=>{if($("p-msg").textContent.startsWith("Patovačkou"))msg("")},2600)}}   // čiara patu sa prepočíta v slučke (najviac raz za 2 snímky)
     const ex=S.x+dx*L,ey=S.y+dy*L;TG.x=ex;TG.y=ey;TG.L=L;ring.visible=!!cl.a;ring.position.set(ex,gS(ex,ey)+.07,-ey)}
   let hint=0;
-  function prepare(){S.sandCam=0;S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;orbOff();if(!hint++&&!Q.has("dbg")){setTimeout(()=>{if(S.mode==="aim"&&!$("p-msg").textContent){msg("Ťukni na ihrisko alebo ťahaj prstom: do strán smer, hore/dole vzdialenosť");setTimeout(()=>{if($("p-msg").textContent.startsWith("Ťukni"))msg("")},3500)}},1200)}S.mode="aim";S.vx=S.vy=S.vz=0;S.lie=S.tee?SURF.fair:surf(S.x,S.y);setAim();pickClub();info();drawAim();$("p-hit").disabled=false;
+  function prepare(){S.sandCam=0;S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;orbOff();if(!hint++&&!Q.has("dbg")){setTimeout(()=>{if(S.mode==="aim"&&!$("p-msg").textContent){msg(matchMedia("(pointer:fine)").matches?"Ťahaj myšou: do strán smer, hore/dole vzdialenosť · šípky ↑↓ = palica":"Ťukni na ihrisko alebo ťahaj prstom: do strán smer, hore/dole vzdialenosť");setTimeout(()=>{if(/^Ťukni|^Ťahaj m/.test($("p-msg").textContent))msg("")},3500)}},1200)}S.mode="aim";S.vx=S.vy=S.vz=0;S.lie=S.tee?SURF.fair:surf(S.x,S.y);S.man=0;setAim();pickClub();info();drawAim();$("p-hit").disabled=false;
     $("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";place();
     if(S.lie===SURF.sand&&!S.tee)setTimeout(()=>{if(S.mode==="aim"){msg("Bunker: užší zelený stred a rýchlejšie kyvadlo");setTimeout(()=>{if($("p-msg").textContent.startsWith("Bunker"))msg("")},2600)}},1000)}
   const rotAx=new THREE.Vector3();let lastBX=null,lastBY=0;
@@ -2542,9 +2542,12 @@ function startPlay(){
   addEventListener("keydown",e=>{if(e.code!=="Space"||e.repeat||$("p-res").hidden===false)return;e.preventDefault();if(SW&&SW.ph===2)swHit();else if(SW&&SW.ph===1&&SW.tap)lock();else{zLast=-1;zones(0);swDown()}});
   addEventListener("keyup",e=>{if(e.code==="Space"){e.preventDefault();swUp()}});
   for(const[id,dv]of[["p-l",-1],["p-r",1]]){const b=$(id);b.addEventListener("pointerdown",e=>{e.preventDefault();turn=dv});for(const ev of["pointerup","pointerleave","pointercancel"])b.addEventListener(ev,()=>{turn=0})}
-  const clubTo=i=>{if(S.mode!=="aim")return;S.club=i;if(S.tl&&S.tl>=carry()-.5)S.tl=0;info();drawAim()};
+  const clubTo=i=>{if(S.mode!=="aim")return;S.club=i;S.man=1;if(S.tl&&S.tl>=carry()-.5)S.tl=0;info();drawAim()};
   $("p-cp").onclick=()=>clubTo((S.club+1)%CLUBS.length);
   $("p-cm").onclick=()=>clubTo((S.club+CLUBS.length-1)%CLUBS.length);
+  // PC: šípky hore/dole = palica (hore dlhšia, dole kratšia), cyklicky ako ‹ › (Martin 24.11.); kameru šípky neovládajú
+  addEventListener("keydown",e=>{if(e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;if(e.target.closest&&e.target.closest("input,textarea,select")||S.mode!=="aim"||SW||$("p-res").hidden===false)return;e.preventDefault();
+    clubTo(e.key==="ArrowUp"?(S.club+CLUBS.length-1)%CLUBS.length:(S.club+1)%CLUBS.length)});
   // oprava pitchmarku: len keď hráč sám chce (tlačidlo sa ukáže, kým na greene nejaký je); oprava = posledný (vlastný) pitchmark zmizne
   $("p-fix").onclick=e=>{e.stopPropagation();const m=MARKS.pop();if(!m)return;S.pDirty=1;pvKey="";let t=0;const g=m.mesh;(function an(){t+=.06;g.scale.setScalar(Math.max(.01,1-t));if(t<1)requestAnimationFrame(an);else scene.remove(g)})();
     msg("Pitchmark opravený ✓");setTimeout(()=>{if($("p-msg").textContent.startsWith("Pitchmark"))msg("")},1500);fixVis();if(S.mode==="aim"){S.lm=markAt(S.x,S.y);info()}};
@@ -2590,6 +2593,7 @@ function startPlay(){
   addEventListener("pointerup",()=>{dY=null});
   addEventListener("pointerup",()=>{dragT=false});
   renderer.domElement.addEventListener("pointerup",e=>{const t=tap;tap=null;if(!t||S.mode!=="aim"||SW)return;
+    if(e.pointerType==="mouse")return;   // PC (Martin 24.11.): klik myšou cieľ nemení, zameriavač sa len ťahá; na mobile ťuk ostáva
     if(Math.hypot(e.clientX-t[0],e.clientY-t[1])>8||performance.now()-t[2]>500)return;
     const h=tgtHit(e.clientX,e.clientY);
     if(h){S.aim=t[3];camAnchor();setTarget(h.point.x,-h.point.z)}});
