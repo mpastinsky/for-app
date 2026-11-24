@@ -13,10 +13,12 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
   const M = (o) => new THREE.MeshStandardMaterial(Object.assign({ roughness: .85 }, o));
   const cv = (w, h, f) => { const c = document.createElement("canvas"); c.width = w; c.height = h; f(c.getContext("2d"), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t };
   // fasáda: svetlá omietka, 2 rady okien s bielymi rámami, sokel
-  const wallTex = cv(128, 128, (g, w, h) => { g.fillStyle = "#ece3cf"; g.fillRect(0, 0, w, h); g.fillStyle = "#cdbf9f"; g.fillRect(0, h - 14, w, 14);
+  const wallTex = cv(128, 128, (g, w, h) => { g.fillStyle = "#f3e3a2"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - 12, w, 12);
     for (const y of [22, 72]) { g.fillStyle = "#f8f6f0"; g.fillRect(40, y - 3, 48, 40); g.fillStyle = "#3d4a52"; g.fillRect(44, y, 40, 34); g.fillStyle = "#f8f6f0"; g.fillRect(62, y, 4, 34); g.fillRect(44, y + 14, 40, 3) } });
   const roofTex = cv(64, 64, (g, w, h) => { g.fillStyle = "#d9692f"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 6) { g.fillStyle = "rgba(120,40,10,.35)"; g.fillRect(0, y, w, 1.5) } for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? "255,170,110" : "150,60,25"},.25)`; g.fillRect(Math.random() * w, Math.random() * h, 6, 3) } });
-  const mWall = M({ map: wallTex }), mRoof = M({ map: roofTex, roughness: .9 }), mRoofB = M({ color: 0x9a5a3a }), mFlat = M({ color: 0x8f969b, roughness: .7 }), mCream = M({ color: 0xf1ead8, side: THREE.DoubleSide }), mPole = M({ color: 0x8a8a86 }), mWood = M({ color: 0x8a6a48 }), mDark = M({ color: 0x4b4f55 }), mWhite = M({ color: 0xfafafa, side: THREE.DoubleSide });
+  const glassTex = cv(64, 64, (g, w, h) => { g.fillStyle = "#9fb9c4"; g.fillRect(0, 0, w, h); g.fillStyle = "rgba(255,255,255,.25)"; g.fillRect(0, 0, w, h / 2); g.fillStyle = "#f4f4f0"; for (let x = 0; x < w; x += 16) g.fillRect(x, 0, 3, h); g.fillRect(0, 0, w, 3); g.fillRect(0, h / 2, w, 3) });
+  const mGlass = M({ map: glassTex, roughness: .25, metalness: .2 });
+  const mWall = M({ map: wallTex }), mRoof = M({ map: roofTex, roughness: .9 }), mRoofB = M({ map: roofTex, roughness: .9 }), mFlat = M({ color: 0x4d535b, roughness: .6 }), mCream = M({ color: 0xf1ead8, side: THREE.DoubleSide }), mPole = M({ color: 0x8a8a86 }), mWood = M({ color: 0x8a6a48 }), mDark = M({ color: 0x5b4a3c }), mWhite = M({ color: 0xfafafa, side: THREE.DoubleSide });
   // valbová strecha nad obdĺžnikom a×b (a pozdĺž lokálneho x), výška hr
   function hipRoof(a, b, hr, mat) {
     const r = Math.min(a, b) / 2, P = [[-a / 2, 0, -b / 2], [a / 2, 0, -b / 2], [a / 2, 0, b / 2], [-a / 2, 0, b / 2]];
@@ -40,7 +42,7 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
   wing(ww - .01, C.wing, C.L - ww, C.L, E, H);                 // severné krídlo
   wing(ww - .01, C.wing, 0, ww, E, H);                         // južné krídlo
   wing(ww, ww + 4, ww, C.L - ww, 3.6, .25, mWall, mFlat);      // nízka spojovacia časť v nádvorí (plochá sivá strecha)
-  wing(ww + 4, ww + 13, C.L / 2 - 6, C.L / 2 + 6, 5.2, 3.2, mWall, mRoofB);   // budova v nádvorí s hnedou strechou
+  wing(ww + 4, ww + 13, C.L / 2 - 6, C.L / 2 + 6, 5.2, 3.2, mGlass, mRoofB);   // presklená budova v nádvorí (reštaurácia, podľa fotky z dronu) s červenou strechou
   // terasa: biele stany (pyramídy)
   for (const [e, n] of C.tents || []) { const p = pos(e, n, ground(e, n)); const t = new THREE.Mesh(new THREE.ConeGeometry(2.3, 1.4, 4, 1, true), mWhite); t.position.set(p.x, p.y + 3.1, p.z); t.rotation.y = RU + Math.PI / 4; G.add(t);
     for (const [dx, dz] of [[-1.5, -1.5], [1.5, -1.5], [1.5, 1.5], [-1.5, 1.5]]) { const s = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, 2.4, 4), mPole); s.position.set(p.x + dx, p.y + 1.2, p.z + dz); G.add(s) } }
@@ -50,13 +52,14 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.12, .15, top, 6), mPole); pole.position.set(p.x, p.y + top / 2, p.z); G.add(pole);
     const ribs = new THREE.Mesh(new THREE.ConeGeometry(r * 1.01, top - rim, seg, 1, true), new THREE.MeshBasicMaterial({ color: 0xb9ae95, wireframe: true })); ribs.position.copy(um.position); G.add(ribs) }
   // prístrešky so stolmi (štvorcové plachty na stĺpikoch)
-  for (const [e, n, s] of C.pergolas || []) { const p = pos(e, n, ground(e, n)), h = 2.7, R = RU;
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(s, .12, s), mCream); roof.position.set(p.x, p.y + h, p.z); roof.rotation.y = R; roof.castShadow = true; G.add(roof);
+  for (const [e, n, s] of C.pergolas || []) { const p = pos(e, n, ground(e, n)), h = 1.5, R = RU;
+    const ag = new THREE.CylinderGeometry(s * .45, s * .45, s, 14, 1, true, -Math.PI / 2, Math.PI); ag.rotateX(-Math.PI / 2);
+    const arc = new THREE.Mesh(ag, mCream); arc.scale.y = .62; arc.rotation.y = R; arc.position.set(p.x, p.y + 1.5, p.z); arc.castShadow = true; G.add(arc);
     const q = new THREE.Vector3(); for (const [dx, dz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { q.set(dx * s * .45, 0, dz * s * .45).applyAxisAngle(new THREE.Vector3(0, 1, 0), R); const c = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, h, 5), mWood); c.position.set(p.x + q.x, p.y + h / 2, p.z + q.z); G.add(c) }
     const tb = new THREE.Mesh(new THREE.BoxGeometry(s * .5, .75, s * .3), mWood); tb.position.set(p.x, p.y + .38, p.z); tb.rotation.y = R; G.add(tb) }
   // menšie budovy s tmavou sedlovou strechou
   for (const S of C.sheds || []) { const [e, n] = S.c, p = pos(e, n, ground(e, n)), eh = 3.4, rh = 2.6, R = ang(e, n, Math.cos(S.a), Math.sin(S.a));
-    const body = new THREE.Mesh(new THREE.BoxGeometry(S.L, eh, S.W), M({ color: 0xe8e2d2 })); body.position.set(p.x, p.y + eh / 2, p.z); body.rotation.y = R; G.add(body); hits.push(body);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(S.L, eh, S.W), M({ color: 0xf4f0e4 })); body.position.set(p.x, p.y + eh / 2, p.z); body.rotation.y = R; G.add(body); hits.push(body);
     const sh = new THREE.Shape([new THREE.Vector2(-S.W / 2 - .4, 0), new THREE.Vector2(S.W / 2 + .4, 0), new THREE.Vector2(0, rh)]);
     const rg = new THREE.ExtrudeGeometry(sh, { depth: S.L + .6, bevelEnabled: false }); rg.translate(0, 0, -(S.L + .6) / 2); rg.rotateY(Math.PI / 2);
     const roof = new THREE.Mesh(rg, mDark); roof.position.set(p.x, p.y + eh, p.z); roof.rotation.y = R; roof.castShadow = true; G.add(roof) }
