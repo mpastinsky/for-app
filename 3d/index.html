@@ -1981,6 +1981,8 @@ const curve=new THREE.CatmullRomCurve3(BL?[views.tee.pos.clone(),W(BL[0]*.5,BL[1
 renderer.domElement.addEventListener("pointerdown",()=>{if(fly){fly=null;setOn("")}});
 // ================= HRA: 3-jamková akadémia (skúšobná verzia) =================
 let PLAY=Q.get("play")==="1",ONE=Q.get("one")==="1";
+// „Späť na prehľad“ po jamke: 18-ka → prehľad celého areálu; akadémia otvorená zo štítka A1–A3 v prehľade 18-ky (ov=odpalisko 18-ky) → späť tam
+const OVV=Q.get("ov"),OVQ=OVV!=null&&/^\d$/.test(OVV)?"&ov="+OVV:"",OVH=CRS==="apex"?"ihrisko.html?t="+tIdx:OVQ?"ihrisko.html?t="+OVV:"?h="+READY[0]+"&t="+tIdx+"&v=all";
 let SC=(Q.get("sc")||"").split("-").filter(x=>x!=="").map(Number).slice(0,hNum-1);
 // údery kola: držia sa aj v prehliadači (pre ihrisko), aby scorekarta ukázala všetky odohrané jamky – aj po návrate do prehľadu,
 // výbere jamky alebo „Vyskúšať jamku“ (predtým len z adresy, ktorá sa pri týchto prechodoch stratila → videlo sa len posledné skóre)
@@ -2434,8 +2436,8 @@ function startPlay(){
   function showRes(n){RS[hNum]=n;rsSave(RS);SCA=READY.map(h=>RS[h]??null);
     if(ONE){const d=n-PAR,nxt=READY[READY.indexOf(hNum)+1];
       $("p-res").innerHTML=`<h2>Jamka ${hNum} dohraná</h2><div>${n} ${n===1?"úder":n<5?"údery":"úderov"} · ${d===0?"na par":d>0?"+"+d+" nad par":d+" pod par"}</div>
-      ${nxt?`<a class="go" href="?${CQ}h=${nxt}&t=${tIdx}&play=1&one=1">Ďalšia jamka ${nxt} ›</a>`:`<a class="go" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1">Hrať znova</a>`}
-      <a class="go alt" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="?${CQ}h=${READY[0]}&t=${tIdx}${CRS==="apex"?"":"&v=all"}">Späť na prehľad</a>`;$("p-res").hidden=false;return}
+      ${nxt?`<a class="go" href="?${CQ}h=${nxt}&t=${tIdx}&play=1&one=1${OVQ}">Ďalšia jamka ${nxt} ›</a>`:`<a class="go" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1${OVQ}">Hrať znova</a>`}
+      <a class="go alt" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="${OVH}">Späť na prehľad</a>`;$("p-res").hidden=false;return}
     const all=SCA,tot=all.reduce((a,b)=>a+(b||0),0),par=all.reduce((a,x,i)=>x==null?a:a+(PARS[READY[i]-1]||3),0),dd=tot-par;
     const last=hNum===LASTH;const nx=`?${CQ}h=${READY[READY.indexOf(hNum)+1]}&t=${tIdx}&play=1&sc=${READY.slice(0,READY.indexOf(hNum)+1).map(h=>RS[h]||0).join("-")}`;
     $("p-res").innerHTML=`<h2>${last?"Koniec kola":"Jamka "+hNum+" dohraná"}</h2><div>${last?"Spolu "+tot+" úderov · "+(dd===0?"na par":dd>0?"+"+dd+" nad par":dd+" pod par"):"Zatiaľ "+tot+" · "+(dd===0?"na par":dd>0?"+"+dd:dd)}</div>
@@ -2795,7 +2797,7 @@ window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(s
 
 window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}};
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
-  if(CRS==="apex")snapGo("ihrisko.html?t="+tIdx);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!PLAY){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
+  if(CRS==="apex"||OVQ)snapGo(OVH);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!PLAY){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
 document.querySelectorAll("#holes a").forEach(a=>a.addEventListener("click",ev=>{if(ev.metaKey||ev.ctrlKey)return;ev.preventDefault();snapGo(a.href)}));
 function loop(now){if(window.__stopped)return;const rdt=lastT?(now-lastT)/1000:0,dt=Math.min(.05,rdt);lastT=now;if(rdt<1)qTick(rdt);if(FPS)FPS(rdt,now);
   if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
