@@ -1169,48 +1169,92 @@ if(WOODI)woodsBuild();   // pri živom plote nič veľké; woods_clear = miesta,
  (DATA.shrubs||[]).forEach(([e,nn,s])=>{const[x,y]=loc([e,nn]);if(!inside(x,y))return;n++;const z=hL(x,y),S=s||1,h=S*(.8+r()*.5);
    const m=HQ?new THREE.Mesh(CARDS.bush[n%4],leafHQ(n+2)):new THREE.Mesh(SHR[n%5],shrM);m.scale.set(S,h*.85,S);m.rotation.y=r()*6.28;m.position.copy(W(x,y,z+h*.6));m.castShadow=true;scene.add(m)})}
 
-// --- bažant (akadémia): občas vybehne z kríkov vľavo od greenu 2, chvíľu zobe a zmizne späť (v203)
-// ľahký: 1 skupina ~12 malých meshov, animácia len keď je kamera do 160 m; ?bazant=1 = častejšie (test)
+// --- bažant (akadémia, v203–v204): sedí schovaný v kríkoch vpravo od greenu 2; vybehne, len keď tam dopadne loptička.
+// Zásah loptičkou = oblak peria a zmizne. ?bazant=1 = vybieha aj sám (test). Animuje sa len keď je kamera do 160 m.
 let PHEAS=null;
-if(CRS!=="apex"){const BUSH=[[31.15,53.65],[30.55,54.25],[31.75,53.05],[30.9,52.9]].map(loc).filter(([x,y])=>inside(x,y));
- if(BUSH.length){const TEST=Q.has("bazant"),G=new THREE.Group(),mm=c=>new THREE.MeshStandardMaterial({color:c,roughness:.8,flatShading:true});
-  const mBody=mm(0x9a5426),mDark=mm(0x5b3418),mHead=mm(0x1f4a3a),mRed=mm(0xc0281e),mWh=mm(0xeeeeea),mLeg=mm(0x8a7a62),mBk=mm(0xd8c79a);
-  const add=(geo,mat,x,y,z,sx,sy,sz,par)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;(par||G).add(m);return m};
-  const sph=new THREE.SphereGeometry(1,8,6),cyl=new THREE.CylinderGeometry(1,1,1,5),cone=new THREE.ConeGeometry(1,1,5);
-  add(sph,mBody,0,.21,0,.25,.11,.1);                          // trup (model smeruje na +X)
-  add(sph,mDark,-.07,.235,0,.15,.075,.105);                      // tmavší chrbát/krídla
-  const tail=new THREE.Group();tail.position.set(-.2,.24,0);G.add(tail);
-  {const t=add(cone,mDark,-.27,0,0,.03,.56,.018,tail);t.rotation.z=Math.PI/2;t.rotation.order="ZYX";} // dlhý chvost
-  const neck=new THREE.Group();neck.position.set(.19,.25,0);G.add(neck);
-  {const n=add(cyl,mHead,.04,.08,0,.045,.18,.045,neck);n.rotation.z=-.5}
-  add(cyl,mWh,.015,.02,0,.052,.02,.052,neck);                 // biely golier
-  add(sph,mHead,.1,.17,0,.06,.05,.05,neck);                   // hlava (tmavozelená)
-  add(sph,mRed,.11,.17,0,.035,.035,.052,neck);                // červené líca
-  {const b=add(cone,mBk,.17,.165,0,.012,.05,.012,neck);b.rotation.z=-Math.PI/2}
-  const legs=[-1,1].map(s=>{const l=new THREE.Group();l.position.set(.03,.13,s*.04);G.add(l);add(cyl,mLeg,0,-.065,0,.009,.13,.009,l);return l});
+if(CRS!=="apex"&&DATA.pheasant){const ZONE=DATA.pheasant.zone.map(loc),zc=ZONE.reduce((a,p)=>[a[0]+p[0]/ZONE.length,a[1]+p[1]/ZONE.length],[0,0]);
+ if(inside(...zc)){const TEST=Q.has("bazant"),G=new THREE.Group(),body=new THREE.Group();G.add(body);
+  // textúry kreslené na canvas (perie podľa fotky: medené telo s čiernymi kvapkami, svetlé šupiny na chrbte, pruhovaný chvost)
+  const cv=(w,h,f)=>{const c=document.createElement("canvas");c.width=w;c.height=h;f(c.getContext("2d"),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t};
+  let sd=4242;const rn=()=>((sd=(sd*16807)%2147483647)/2147483647);
+  const bodyTex=cv(256,128,(g,w,h)=>{   // x = okolo trupu (0 a w = chrbát, w/2 = brucho), y = spredu (hruď) dozadu
+    const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,"#7a2a22");gr.addColorStop(.3,"#9c3d1e");gr.addColorStop(.45,"#c4661f");gr.addColorStop(.75,"#b25a22");gr.addColorStop(.88,"#7a3324");gr.addColorStop(1,"#5c2a22");g.fillStyle=gr;g.fillRect(0,0,w,h);
+    const bl=g.createLinearGradient(0,0,w,0);bl.addColorStop(.32,"rgba(40,18,10,0)");bl.addColorStop(.5,"rgba(40,18,10,.85)");bl.addColorStop(.68,"rgba(40,18,10,0)");g.fillStyle=bl;g.fillRect(0,0,w,h);
+    for(let i=0;i<520;i++){const x=rn()*w,y=rn()*h,back=Math.min(x,w-x)/w;   // čierne kvapky / šípky na bokoch a hrudi
+      if(back<.08&&y>h*.3&&y<h*.8){g.fillStyle=rn()<.5?"rgba(245,232,200,.85)":"rgba(60,40,25,.8)";g.beginPath();g.ellipse(x,y,2.2,1.4,0,0,7);g.fill();continue}
+      g.fillStyle="rgba(20,10,6,.75)";g.beginPath();g.moveTo(x,y-2.6);g.lineTo(x+1.6,y+1.2);g.lineTo(x-1.6,y+1.2);g.fill()}
+    for(let i=0;i<160;i++){const x=rn()*w,y=rn()*h*.3;g.strokeStyle="rgba(30,10,20,.55)";g.lineWidth=1;g.beginPath();g.arc(x,y,2.4,.2,2.9);g.stroke()}});   // šupiny na hrudi
+  const wingTex=cv(64,64,(g,w,h)=>{g.fillStyle="#a8774a";g.fillRect(0,0,w,h);for(let i=0;i<9;i++){g.fillStyle=i%2?"rgba(90,45,25,.5)":"rgba(215,185,140,.4)";g.fillRect(0,i*7+rn()*3,w,3)}
+    for(let i=0;i<60;i++){g.fillStyle="rgba(60,40,28,.6)";g.fillRect(rn()*w,rn()*h,3,1.5)}});
+  const tailTex=cv(32,256,(g,w,h)=>{g.fillStyle="#b9956a";g.fillRect(0,0,w,h);for(let y=6;y<h;y+=13){g.fillStyle="#2a1a10";g.fillRect(0,y,w,3.5)}
+    const e=g.createLinearGradient(0,0,w,0);e.addColorStop(0,"rgba(120,70,40,.7)");e.addColorStop(.35,"rgba(0,0,0,0)");e.addColorStop(.65,"rgba(0,0,0,0)");e.addColorStop(1,"rgba(120,70,40,.7)");g.fillStyle=e;g.fillRect(0,0,w,h)});
+  const M=(o)=>new THREE.MeshStandardMaterial(Object.assign({roughness:.8},o));
+  const mBody=M({map:bodyTex}),mWing=M({map:wingTex}),mTail=M({map:tailTex,side:THREE.DoubleSide}),mNeck=M({color:0x1f5f78,metalness:.5,roughness:.35}),
+    mHead=M({color:0x124234,metalness:.45,roughness:.38}),mRed=M({color:0xd8201a,roughness:.6,emissive:0x400000}),mWh=M({color:0xf2f0e8}),mBk=M({color:0xe2d6b2}),mEye=M({color:0xe8b830}),mLeg=M({color:0x9c8a7c});
+  const sph=new THREE.SphereGeometry(1,14,10).rotateZ(-Math.PI/2),sph6=new THREE.SphereGeometry(1,8,6),cyl=new THREE.CylinderGeometry(1,1,1,6),cone=new THREE.ConeGeometry(1,1,6);
+  const add=(geo,mat,par,p,s,r)=>{const m=new THREE.Mesh(geo,mat);m.position.set(...p);m.scale.set(...s);if(r)m.rotation.set(...r);m.castShadow=true;par.add(m);return m};
+  // trup (model smeruje na +X, pôvod medzi nohami na zemi)
+  add(sph,mBody,body,[0,.235,0],[.2,.1,.085],[0,0,.12]);
+  [-1,1].forEach(s=>add(sph6,mWing,body,[-.04,.255,s*.06],[.12,.065,.035],[s*.1,0,.08]));
+  // chvost: 3 dlhé pruhované perá, mierne zdvihnuté a roztvorené
+  const tail=new THREE.Group();tail.position.set(-.17,.27,0);body.add(tail);
+  const fGeo=(L,W)=>{const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute([0,-W,0,0,W,0,-L,W*.15,0,-L,-W*.15,0],3));g.setAttribute("uv",new THREE.Float32BufferAttribute([0,1,1,1,1,0,0,0],2));g.setIndex([0,1,2,0,2,3]);g.computeVertexNormals();return g};
+  [[.58,.024,0,0,.5],[.46,.022,.012,.1,-.6],[.46,.022,-.012,-.1,.6],[.34,.02,.02,.2,-.9],[.34,.02,-.02,-.2,.9]].forEach(([L,Wd,z,a,rx])=>add(fGeo(L,Wd),mTail,tail,[0,0,z],[1,1,1],[rx,a,0]));
+  // krk, golier, hlava
+  const neck=new THREE.Group();neck.position.set(.14,.3,0);body.add(neck);
+  add(new THREE.CylinderGeometry(.026,.04,.14,8),mNeck,neck,[.03,.06,0],[1,1,1],[0,0,-.38]);
+  add(new THREE.TorusGeometry(.037,.008,5,12),mWh,neck,[.005,.012,0],[1,1,1],[Math.PI/2,.0,0]).rotation.y=0;
+  const head=new THREE.Group();head.position.set(.065,.135,0);neck.add(head);
+  add(sph6,mHead,head,[0,0,0],[.05,.038,.034]);
+  [-1,1].forEach(s=>{add(sph6,mRed,head,[.014,-.004,s*.024],[.026,.03,.012]);add(sph6,mEye,head,[.02,.006,s*.033],[.006,.006,.004]);
+    add(cone,mHead,head,[-.012,.036,s*.012],[.008,.035,.008],[s*.25,0,.55])});   // červené líca, oko, „uško“
+  add(cone,mBk,head,[.055,-.006,0],[.011,.034,.01],[0,0,-Math.PI/2-.25]);
+  // nohy (kolená schované v perí)
+  const legs=[-1,1].map(s=>{const l=new THREE.Group();l.position.set(.015,.155,s*.035);G.add(l);add(cyl,mLeg,l,[0,-.078,0],[.012,.155,.012]);
+    [-.5,0,.5].forEach(a=>add(cyl,mLeg,l,[.02*Math.cos(a),-.153,.02*Math.sin(a)],[.004,.045,.004],[a,0,-Math.PI/2]));return l});
   G.visible=false;scene.add(G);
-  if(Q.has("dbg"))window.__PH={G,ST:null};
-  // stav: 0 skrytý, 1 vybieha, 2 zobe/obzerá sa, 3 uteká späť
-  const ST={s:0,t:0,wait:TEST?2:12+Math.random()*25,a:[0,0],b:[0,0],p:[0,0],dir:0,dur:0,peck:0};
-  if(window.__PH)window.__PH.ST=ST;const goal=loc([51,42.4]); // smerom ku greenu 2
-  const start=()=>{const a=BUSH[Math.random()*BUSH.length|0];const base=Math.atan2(goal[1]-a[1],goal[0]-a[0])+(Math.random()-.5)*1.6,d=3+Math.random()*4;
-    ST.a=[a[0],a[1]];ST.b=[a[0]+Math.cos(base)*d,a[1]+Math.sin(base)*d];ST.s=1;ST.t=0;ST.dur=d/1.4;G.visible=true};
-  const face=(f,t)=>Math.atan2(t[1]-f[1],t[0]-f[0]);
-  PHEAS=(dt,now)=>{const cp=camera.position;const[bx,by]=BUSH[0];if(Math.hypot(cp.x-bx,-cp.z-by)>160){if(ST.s)ST.s=0,G.visible=false;return}
-    ST.t+=dt;let gait=0,head=0;
-    if(ST.s===0){if(ST.t>ST.wait)start();return}
-    if(ST.s===1||ST.s===3){const k=Math.min(1,ST.t/ST.dur),e=k*k*(3-2*k),f=ST.s===1?ST.a:ST.b,to=ST.s===1?ST.b:ST.a;
-      ST.p=[f[0]+(to[0]-f[0])*e,f[1]+(to[1]-f[1])*e];ST.dir=face(f,to);gait=ST.s===3?16:11;
-      if(k>=1){if(ST.s===1){ST.s=2;ST.t=0;ST.dur=TEST?3:3+Math.random()*5;ST.peck=0}else{ST.s=0;ST.t=0;ST.wait=TEST?4:25+Math.random()*50;G.visible=false;return}}}
-    else{ // zobe a otáča sa
-      const ph=(ST.t*1.3)%1;head=ph<.35?Math.sin(ph/.35*Math.PI):0;if(ph<.02)ST.dir+=(Math.random()-.5)*.8;
-      if(ST.t>ST.dur){ST.s=3;ST.t=0;ST.dur=Math.hypot(ST.b[0]-ST.a[0],ST.b[1]-ST.a[1])/2.6}}
-    const[x,y]=ST.p,z=hL(x,y);G.position.copy(W(x,y,z));G.rotation.y=ST.dir;
-    const w=now/1000*gait;legs[0].rotation.z=gait?Math.sin(w)*.6:0;legs[1].rotation.z=gait?-Math.sin(w)*.6:0;
-    G.position.y+=gait?Math.abs(Math.sin(w))*.02:0;
-    neck.rotation.z=gait?Math.sin(w*2)*.12-(ST.s===3?.35:0):-head*1.5;G.rotation.z=-head*.25;neck.position.x=.19+(gait?Math.sin(w*2)*.02:0);
-    tail.rotation.z=ST.s===3?-.3:-.1-Math.sin(now/600)*.03}}}
-
+  // perie po zásahu
+  const FEA={m:null,P:[]},fq=new THREE.Quaternion(),fe=new THREE.Euler(),fs=new THREE.Vector3(),fp=new THREE.Vector3(),fm=new THREE.Matrix4();
+  const featherTex=cv(32,64,(g,w,h)=>{g.fillStyle="#fff";g.beginPath();g.moveTo(w/2,2);g.quadraticCurveTo(w-2,h*.35,w/2+2,h-4);g.lineTo(w/2-2,h-4);g.quadraticCurveTo(2,h*.35,w/2,2);g.fill();
+    g.strokeStyle="rgba(0,0,0,.35)";g.lineWidth=1.5;g.beginPath();g.moveTo(w/2,4);g.lineTo(w/2,h-2);g.stroke();for(let y=10;y<h-8;y+=9){g.fillStyle="rgba(0,0,0,.25)";g.fillRect(4,y,w-8,2)}});
+  const FCOL=[0xb8601e,0xc87a30,0x8a3a20,0xb09070,0xd8c8a8,0x3a2418,0x1c4a3a,0xa04a24].map(c=>new THREE.Color(c));
+  function feathers(x,y,z){if(!FEA.m){FEA.m=new THREE.InstancedMesh(new THREE.PlaneGeometry(.07,.14),new THREE.MeshLambertMaterial({map:featherTex,alphaTest:.4,side:THREE.DoubleSide}),46);FEA.m.frustumCulled=false;scene.add(FEA.m)}
+    FEA.P=[];for(let i=0;i<46;i++){const a=rn()*6.28,v=.6+rn()*1.8;FEA.P.push({x,y,z:z+rn()*.2,vx:Math.cos(a)*v,vy:Math.sin(a)*v,vz:1.2+rn()*2.2,ph:rn()*6,sp:1.5+rn()*2.5,t:0,s:.6+rn()*.9});FEA.m.setColorAt(i,FCOL[i%FCOL.length])}
+    FEA.m.instanceColor.needsUpdate=true;FEA.m.count=46;FEA.m.visible=true}
+  function featherTick(dt){if(!FEA.P.length)return;let alive=0;
+    FEA.P.forEach((f,i)=>{f.t+=dt;const gz=hL(f.x,f.y)+.01;if(f.z>gz){f.vx*=Math.exp(-2.2*dt);f.vy*=Math.exp(-2.2*dt);f.vz=Math.max(f.vz-6*dt,-.45-.25*Math.sin(f.t*f.sp+f.ph));
+        f.x+=(f.vx+Math.sin(f.t*f.sp+f.ph)*.35)*dt;f.y+=(f.vy+Math.cos(f.t*f.sp*.8+f.ph)*.3)*dt;f.z=Math.max(gz,f.z+f.vz*dt)}
+      const k=Math.max(0,Math.min(1,(9-f.t)/2));if(k>0)alive++;
+      fe.set(Math.sin(f.t*3+f.ph)*1.1,f.ph+f.t*.9,f.z>gz?Math.cos(f.t*2.4+f.ph)*.9:Math.PI/2);fq.setFromEuler(fe);fs.setScalar(f.s*k+1e-4);fp.set(f.x,f.z,-f.y);fm.compose(fp,fq,fs);FEA.m.setMatrixAt(i,fm)});
+    FEA.m.instanceMatrix.needsUpdate=true;if(!alive){FEA.P=[];FEA.m.visible=false}}
+  // správanie: 0 schovaný, 1 vybieha, 2 zobe/obzerá sa, 3 ide späť do kríkov
+  const ST={s:0,t:0,wait:0,a:[0,0],b:[0,0],p:[0,0],dir:0,dur:0,arm:true,trig:-1,last:null,next:TEST?3:1e9};
+  const DBG=Q.has("dbg")?window.__PH={G,ST,ZONE,feathers}:null;
+  const inZone=(x,y)=>inPoly([x,y],ZONE);
+  const edge=(x,y)=>{let best=null,bd=1e9;for(let i=0,j=ZONE.length-1;i<ZONE.length;j=i++){const[a,b]=ZONE[j],[c,d]=ZONE[i],vx=c-a,vy=d-b,l=vx*vx+vy*vy,t=Math.max(0,Math.min(1,((x-a)*vx+(y-b)*vy)/l)),px=a+vx*t,py=b+vy*t,dd=Math.hypot(x-px,y-py);if(dd<bd){bd=dd;best=[px,py]}}return best};
+  const OUT=loc(DATA.pheasant.out);   // smer, kam vybieha (na trávu, preč z kríkov)
+  function start(from,run){const e=edge(...from),a0=Math.atan2(OUT[1]-e[1],OUT[0]-e[0])+(rn()-.5)*1.1,d=4+rn()*4;
+    ST.a=[e[0]+(e[0]-zc[0])*-.15,e[1]+(e[1]-zc[1])*-.15];ST.b=[e[0]+Math.cos(a0)*d,e[1]+Math.sin(a0)*d];ST.s=1;ST.t=0;ST.sp=run?3.2:1.6;ST.dur=d/ST.sp;G.visible=true}
+  function hit(){const p=G.position;feathers(ST.p[0],ST.p[1],p.y+.25);G.visible=false;ST.s=0;ST.t=0;ST.next=TEST?6:1e9;if(window.__gmsg)window.__gmsg("Zásah! Bažant zmizol v oblaku peria 🪶")}
+  if(DBG)Object.assign(DBG,{start,hit});const _bp=new THREE.Vector3();
+  PHEAS=(dt,now)=>{featherTick(dt);const cp=camera.position;if(Math.hypot(cp.x-zc[0],-cp.z-zc[1])>160){if(ST.s){ST.s=0;G.visible=false}return}
+    // loptička: dopad do kríkov → o chvíľu vybehne; zásah počas behu → perie
+    const bp=(DBG&&DBG.fakeBall)||game&&game.ballPos;if(bp){const bx=bp.x,by=-bp.z,low=bp.y-hL(bx,by)<2.5,mv=ST.last?Math.hypot(bx-ST.last[0],by-ST.last[1],bp.y-ST.last[2]):0;ST.last=[bx,by,bp.y];
+      const iz=inZone(bx,by);if(!iz)ST.arm=true;else if(low&&ST.arm&&ST.s===0){ST.arm=false;ST.trig=.5+rn()*.5;ST.from=[bx,by]}
+      if(G.visible&&mv>.004){_bp.set(G.position.x,G.position.y+.25,G.position.z);if(_bp.distanceTo(bp)<.4){hit();return}}}
+    if(ST.trig>=0){ST.trig-=dt;if(ST.trig<0)start(ST.from,true)}
+    ST.t+=dt;let gait=0,pk=0;
+    if(ST.s===0){if(TEST&&ST.t>ST.next){start(zc,false);ST.next=12+rn()*10}return}
+    if(ST.s===1||ST.s===3){const k=Math.min(1,ST.t/ST.dur),e=ST.s===1?1-(1-k)*(1-k):k*k*(3-2*k),f=ST.s===1?ST.a:ST.b,to=ST.s===1?ST.b:ST.a;
+      ST.p=[f[0]+(to[0]-f[0])*e,f[1]+(to[1]-f[1])*e];ST.dir=Math.atan2(to[1]-f[1],to[0]-f[0]);gait=ST.sp>2?17:10;
+      if(k>=1){if(ST.s===1){ST.s=2;ST.t=0;ST.dur=3+rn()*4}else{ST.s=0;ST.t=0;G.visible=false;return}}}
+    else{const ph=(ST.t*1.1)%1;pk=ph<.3?Math.sin(ph/.3*Math.PI):0;if(ph>.5&&ph<.52)ST.dir+=(rn()-.5)*.9;
+      if(ST.t>ST.dur){ST.s=3;ST.t=0;ST.sp=1.8;ST.dur=Math.hypot(ST.b[0]-ST.a[0],ST.b[1]-ST.a[1])/ST.sp}}
+    const[x,y]=ST.p;G.position.copy(W(x,y,hL(x,y)));G.rotation.y=ST.dir;
+    const w=now/1000*gait,run=gait>12;legs[0].rotation.z=gait?Math.sin(w)*(run?.8:.55):0;legs[1].rotation.z=gait?-Math.sin(w)*(run?.8:.55):0;
+    body.position.y=gait?Math.abs(Math.sin(w))*.012:0;body.rotation.z=run?-.18:-pk*.22;
+    neck.rotation.z=gait?Math.sin(w*2)*.1-(run?.35:.05):-pk*1.45+Math.sin(now/700)*.04;head.rotation.z=gait?0:pk*.5;
+    tail.rotation.z=run?.12:-.12-Math.sin(now/650)*.03}}}
 // --- vlajka, značky odpaliska
 // jamka (10,8 cm), tyčka 2,1 m, viajúca vlajka (akadémia: tmavomodrá Golden Golf Tour, biela tyčka; 18-ka: červená)
 const hP=hL(...PIN)+.08;
@@ -2137,6 +2181,7 @@ function startPlay(){
   document.head.appendChild(st);
   controls.enabled=false;labels.length=0;document.querySelectorAll(".lab").forEach(e=>e.remove());
   const msg=t=>{$("p-msg").textContent=t};
+  window.__gmsg=t=>{msg(t);setTimeout(()=>{if($("p-msg").textContent===t)msg("")},2500)};
   // swing meter: u ∈ [-1,1] po oblúku (−1 vľavo, 0 hore = stred, 1 vpravo)
   const arcPt=(u,r)=>[120+r*Math.sin(u*Math.PI/2),120-r*Math.cos(u*Math.PI/2)];
   const arcD=(u0,u1,r)=>{const[a,b]=arcPt(u0,r),[c,d]=arcPt(u1,r);return`M${a.toFixed(1)} ${b.toFixed(1)}A${r} ${r} 0 0 1 ${c.toFixed(1)} ${d.toFixed(1)}`};
