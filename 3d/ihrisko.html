@@ -165,13 +165,8 @@ const AKTR=[];if(AKD){const pip=(P,x,y)=>{let c=false;for(let i=0,j=P.length-1;i
  let sd2=7;const r2=()=>((sd2=(sd2*16807)%2147483647)/2147483647);
  for(const P of [...(AKD.woods||[]),...(AKD.groves||[]).map(G=>G.p)]){const xs=P.map(p=>p[0]),ys=P.map(p=>p[1]);
    for(let x=Math.min(...xs);x<Math.max(...xs);x+=8)for(let y=Math.min(...ys);y<Math.max(...ys);y+=8){const px=x+(r2()-.5)*6,py=y+(r2()-.5)*6;if(pip(P,px,py)){const[e,n]=akp([px,py]);AKTR.push([e,n,3+r2()*1.5,9+r2()*4])}}}}
-{const tr=[...DATA.trees,...AKTR].filter(([e,n])=>e>e0&&e<e1&&n>n0&&n<n1),N=tr.length;
- const crown=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),new THREE.MeshLambertMaterial({color:0x3d7a33,flatShading:true}),N);
- const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.25,1,5),new THREE.MeshLambertMaterial({color:0x5a3f28}),N);
- const m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
- tr.forEach(([e,n,r,h],k)=>{const z=hAt(e,n);m.compose(W(e,n,z+h*.62),q,new THREE.Vector3(r*1.1,r*1.25,r*1.1));crown.setMatrixAt(k,m);
-   c.setHSL(.29+((k*37)%10)/200,.45,.24+((k*53)%10)/120);crown.setColorAt(k,c);m.compose(W(e,n,z+h*.3),q,new THREE.Vector3(1,h*.6,1));trunk.setMatrixAt(k,m)});
- scene.add(crown,trunk)}
+{const tr=[...DATA.trees,...AKTR].filter(([e,n])=>e>e0&&e<e1&&n>n0&&n<n1).map(t=>[t[0],t[1],t[2],t[3],t[5]]);   // druh = trees[k][5]
+ const{lowTrees}=await import("./lib/treeshapes.js");for(const I of lowTrees(THREE,tr,W,hAt,{lambert:true}))scene.add(I)}
 // čiary odpalisko → zlom → green a čísla jamiek
 const labels=[];
 for(const h of READY){const t=DATA.pads[h][tIdx],b=DATA.bend&&DATA.bend[h],gc=DATA.gc[h-1],pts=b?[t,b,gc]:[t,gc];const arr=[];
