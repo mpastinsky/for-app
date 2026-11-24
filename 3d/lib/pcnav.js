@@ -23,8 +23,8 @@ export function pcNav(controls,camera,dom){
   // dotyk: 1 prst = posun po ihrisku (dopredu, dozadu, do strán), 2 prsty = sklon hore/dole, otáčanie a priblíženie
   controls.touches={ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_ROTATE};controls.screenSpacePanning=false;controls.panXFactor=.6;
   // na telefóne pôvodná rýchlosť, s myšou na počítači pomalšie
-  // zoom kolieskom/touchpadom (Martin 23.11.: bol príliš pomalý) – OrbitControls delí krok kolieska celým devicePixelRatio, na Retina Macu bol zoom polovičný; vyrovnáme to
-  const ZW=2.8*Math.max(1,window.devicePixelRatio|0);
+  // zoom kolieskom/touchpadom (Martin 23.11. aj 24.11.: bol príliš pomalý; v200 2.8→7) – OrbitControls delí krok kolieska celým devicePixelRatio, na Retina Macu bol zoom polovičný; vyrovnáme to
+  const ZW=7*Math.max(1,window.devicePixelRatio|0);
   if(fine){controls.rotateSpeed=.45;controls.panSpeed=1.1;controls.zoomSpeed=ZW}
   dom.addEventListener("pointerdown",e=>{const m=e.pointerType==="mouse";controls.rotateSpeed=m?.45:1;controls.panSpeed=m?1.1:2.6;controls.zoomSpeed=m?ZW:1},{capture:true});
   // koliesko/touchpad bez predchádzajúceho kliknutia (napr. pero/dotyk predtým nastavil 1) – pred zoomom vždy rýchlosť pre koliesko
