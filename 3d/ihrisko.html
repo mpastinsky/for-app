@@ -345,6 +345,8 @@ const v=new THREE.Vector3();
 let snapDone=false;
 window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
 // pred prechodom na inú 3D obrazovku: posledný záber ostane ako obrázok a 3D scéna sa hneď uvoľní (na mobile naraz len jedna 3D scéna v pamäti – inak sa iPhone zasekol)
+// posledný záber (malý JPEG) pre ďalšiu stránku: po prelete na odpalisko ostane viditeľný, kým sa hra nevykreslí (predtým na sekundu zelená obrazovka)
+window.__snap=()=>{if(window.__stopped)return null;renderer.render(scene,camera);const D=renderer.domElement,k=Math.min(1,700/Math.max(D.width,D.height)),cv=document.createElement("canvas");cv.width=D.width*k|0;cv.height=D.height*k|0;cv.getContext("2d").drawImage(D,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",.75)};
 window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(scene,camera);u=renderer.domElement.toDataURL("image/jpeg",.85)}catch(e){}
  document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
  const done=()=>{document.body.appendChild(i);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
