@@ -1877,11 +1877,11 @@ function startPlay(){
     {n:"PW",k:"PW",c:102,a:40},{n:"SW",k:"SW",c:72,a:50},{n:"Patovačka",k:"P",c:22,a:0}];
   // povrchy: odskok, zachovaná rýchlosť po dopade, trenie pri kotúľaní (m/s²), vplyv na dĺžku úderu
   // g = ako povrch „chytí“ spätnú rotáciu pri prvom dopade (rough menej – tráva medzi loptičkou a palicou). Trenie f: green najmenšie (kotúľa najďalej), fairway, rough, piesok skoro hneď stojí.
-  const SURF={green:{n:"green",r:.18,k:.62,f:.56,m:1,g:1},collar:{n:"lem greenu",r:.2,k:.62,f:1.2,m:1,g:1},cut:{n:"prvý kos",r:.22,k:.6,f:1.6,m:.97,g:1},
-    fair:{n:"fairway",r:.25,k:.62,f:1.6,m:1,g:1},rough:{n:"rough",r:.12,k:.4,f:3.8,m:.88,g:.8},sand:{n:"bunker",r:.02,k:.12,f:12,m:.72,g:1}};
+  const SURF={green:{n:"green",r:.18,k:.62,f:.56,m:1,g:1},collar:{n:"lem greenu",r:.2,k:.62,f:1.2,m:1,g:1},cut:{n:"prvý kos",r:.22,k:.62,f:1.25,m:.97,g:1},
+    fair:{n:"fairway",r:.25,k:.66,f:1.1,m:1,g:1},rough:{n:"rough",r:.12,k:.4,f:3.8,m:.88,g:.8},sand:{n:"bunker",r:.02,k:.12,f:12,m:.72,g:1}};
   // dopad plného úderu (Martin 23.11.: loptička sa kotúľala príliš dlho). Fyzika: náraz do svahu (kolmá a pozdĺžna zložka voči terénu),
   // odskok r, strata rýchlosti v tráve k a pri prvom dopade spätná rotácia – čím viac loftu a rýchlejší úder, tým viac sa loptička „zabrzdí“.
-  // Výsledok na rovine (plný úder): driver ~35 m kotúľania na fairway, 7 železo ~9 m, SW ~2,5 m (v196: Martin chcel trochu viac); na greene ďalej, v roughu kratšie.
+  // Výsledok na rovine (plný úder): driver ~35 m kotúľania na fairway, 7 železo ~9 m, SW ~2,5 m (v196: Martin chcel trochu viac); v200 (24.11.: „dopad na fairway ide krátko“) fairway trenie 1.6→1.1, k .66 – kotúľanie po fairway ~1,5× dlhšie; na greene ďalej, v roughu kratšie.
   function bounceV(sf,x,y,vx,vy,vz,n){const vh=Math.hypot(vx,vy);if(vh<1e-4)return[0,0,-vz*sf.r];const ux=vx/vh,uy=vy/vh,[gx,gy]=grad(x,y),sl=Math.max(-.5,Math.min(.5,gx*ux+gy*uy));
     const cs=1/Math.sqrt(1+sl*sl),vn=(-vz+vh*sl)*cs,vt=(vh+vz*sl)*cs;   // do kopca: viac nárazu, menej rýchlosti dopredu; z kopca naopak
     const sp=n===0?Math.min(.95,.52+CLUBS[S.club].a*.007)*Math.min(1,Math.sqrt(Math.hypot(vh,vz)/30))*sf.g:0;
@@ -2294,7 +2294,7 @@ function startPlay(){
   function showRes(n){RS[hNum]=n;rsSave(RS);SCA=READY.map(h=>RS[h]??null);
     if(ONE){const d=n-PAR,nxt=READY[READY.indexOf(hNum)+1];
       $("p-res").innerHTML=`<h2>Jamka ${hNum} dohraná</h2><div>${n} ${n===1?"úder":n<5?"údery":"úderov"} · ${d===0?"na par":d>0?"+"+d+" nad par":d+" pod par"}</div>
-      <a class="go" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1">Hrať znova</a>${nxt?`<a class="go alt" href="?${CQ}h=${nxt}&t=${tIdx}&play=1&one=1">Jamka ${nxt} ›</a>`:""}
+      ${nxt?`<a class="go" href="?${CQ}h=${nxt}&t=${tIdx}&play=1&one=1">Ďalšia jamka ${nxt} ›</a>`:`<a class="go" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1">Hrať znova</a>`}
       <a class="go alt" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="?${CQ}h=${READY[0]}&t=${tIdx}${CRS==="apex"?"":"&v=all"}">Späť na prehľad</a>`;$("p-res").hidden=false;return}
     const all=SCA,tot=all.reduce((a,b)=>a+(b||0),0),par=all.reduce((a,x,i)=>x==null?a:a+(PARS[READY[i]-1]||3),0),dd=tot-par;
     const last=hNum===LASTH;const nx=`?${CQ}h=${READY[READY.indexOf(hNum)+1]}&t=${tIdx}&play=1&sc=${READY.slice(0,READY.indexOf(hNum)+1).map(h=>RS[h]||0).join("-")}`;
