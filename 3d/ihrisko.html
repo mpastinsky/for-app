@@ -74,7 +74,7 @@ const READY=DATA.ready;
 // hranice: všetky jamky + okraj
 let e0=1e9,e1=-1e9,n0=1e9,n1=-1e9;for(const h of READY)for(const[e,n]of[...DATA.pads[h],DATA.gc[h-1],...DATA.greens[h-1]]){e0=Math.min(e0,e);e1=Math.max(e1,e);n0=Math.min(n0,n);n1=Math.max(n1,n)}
 // clubhouse a cvičné plochy pri ňom patria do prehľadu
-{const C=DATA.clubhouse,ext=[...(C?[C.o,...(C.umbrellas||[]),...(C.pergolas||[]),...(C.sheds||[]).map(S=>S.c)]:[]),...((DATA.practice&&DATA.practice.greens)||[]).flat(),...(DATA.paved||[]).flatMap(Q=>Q.p)];
+{const C=DATA.clubhouse,ext=[...(C?[C.o,...(C.umbrellas||[]),...(C.pergolas||[]),...(C.sheds||[]).map(S=>S.c)]:[]),...((DATA.practice&&DATA.practice.greens)||[]).flat(),...(DATA.paved||[]).flatMap(Q=>Q.p),...(DATA.range?[...DATA.range.fan,...DATA.range.grassTee,...DATA.range.targets]:[])];
  for(const[e,n]of ext){e0=Math.min(e0,e);e1=Math.max(e1,e);n0=Math.min(n0,n);n1=Math.max(n1,n)}}
 if(AKD)for(const[e,n]of[...AKD.greens.flat(),...Object.values(AKD.pads).flat(),...(AKD.woods||[]).flat()].map(akp)){e0=Math.min(e0,e);e1=Math.max(e1,e);n0=Math.min(n0,n);n1=Math.max(n1,n)}
 const M=70;e0-=M;e1+=M;n0-=M;n1+=M;
@@ -100,6 +100,32 @@ for(const P of DATA.water){path(P);g.fillStyle="#3d7397";g.fill();g.lineWidth=2*
 for(const h of READY){const P=DATA.greens[h-1];path(P);g.lineJoin="round";g.lineWidth=7*PPM;g.strokeStyle="#7cba4b";g.stroke();g.fillStyle="#9fd95e";g.fill()}
 for(const Q of (DATA.paved||[])){path(Q.p);g.fillStyle=Q.t==="parking"?"#8d8c86":"#bdb6a6";g.fill()}
 for(const P of ((DATA.practice&&DATA.practice.greens)||[])){path(P);g.lineJoin="round";g.lineWidth=5*PPM;g.strokeStyle="#7cba4b";g.stroke();g.fillStyle="#9fd95e";g.fill()}
+// driving range (apex.json range): kosené pásy, odpalisková línia z umelej trávy, kruhová plocha, cieľové greeny na lúke, trávové odpalisko
+const RG=DATA.range;
+function drawRange(g,tx,ty,S,fine){const R=RG,pth=P=>{g.beginPath();P.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.closePath()},
+  line=P=>{g.beginPath();P.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)))};
+ if(!fine){for(const t of R.targets){g.beginPath();g.ellipse(tx(t[0]),ty(t[1]),t[2]*S,t[3]*S,0,0,7);g.fillStyle="#7fb653";g.fill()}
+ for(const r of R.rings){g.beginPath();g.arc(tx(r[0]),ty(r[1]),1.6*S,0,7);g.lineWidth=Math.max(1,.35*S);g.strokeStyle="#e8efe0";g.stroke()}
+ pth(R.grassTee);g.fillStyle="#7cb84e";g.fill();line(R.grassTeeLine);g.lineCap=g.lineJoin="round";g.lineWidth=2*S;g.strokeStyle="#9a9f86";g.stroke()}
+ // kosené pásy rovnobežne s odpaliskovou líniou (strana k lúke)
+ const T=R.tee,mc=R.fan.reduce((a,p)=>[a[0]+p[0]/R.fan.length,a[1]+p[1]/R.fan.length],[0,0]);
+ const nrm=T.map((p,i)=>{const a=T[Math.max(0,i-1)],b=T[Math.min(T.length-1,i+1)],L=Math.hypot(b[0]-a[0],b[1]-a[1]);let n=[-(b[1]-a[1])/L,(b[0]-a[0])/L];
+   const m=T[T.length>>1];if((mc[0]-m[0])*n[0]+(mc[1]-m[1])*n[1]<0)n=[-n[0],-n[1]];return n});
+ g.save();pth(R.fan);g.fillStyle="#6fab45";g.fill();g.clip();g.lineCap="butt";
+ for(let k=0;k<12;k++){const d=2+k*6+3;line(T.map((p,i)=>[p[0]+nrm[i][0]*d,p[1]+nrm[i][1]*d]));g.lineWidth=6*S;g.strokeStyle=k%2?"#6aa443":"#80bd52";g.stroke()}
+ if(fine){let sd=3;const rr=()=>((sd=(sd*16807)%2147483647)/2147483647);g.fillStyle="rgba(150,120,80,.35)";   // výseky (divoty) tesne pred líniou
+  for(let k=0;k<900;k++){const i=Math.floor(rr()*(T.length-1)),f=rr(),d=2.5+rr()*7,e=T[i][0]+(T[i+1][0]-T[i][0])*f+nrm[i][0]*d,n=T[i][1]+(T[i+1][1]-T[i][1])*f+nrm[i][1]*d;g.fillRect(tx(e),ty(n),.25*S,.12*S)}}
+ g.restore();
+ // odpalisková línia: umelá tráva, podložky a deliace čiary
+ line(T);g.lineJoin="round";g.lineCap="butt";g.lineWidth=R.teeW*S;g.strokeStyle="#4f9a82";g.stroke();
+ if(fine){const cum=[0];for(let i=1;i<T.length;i++)cum.push(cum[i-1]+Math.hypot(T[i][0]-T[i-1][0],T[i][1]-T[i-1][1]));const L=cum[cum.length-1];
+  const at=s=>{let i=1;while(i<T.length-1&&cum[i]<s)i++;const f=(s-cum[i-1])/(cum[i]-cum[i-1]);return [T[i-1][0]+(T[i][0]-T[i-1][0])*f,T[i-1][1]+(T[i][1]-T[i-1][1])*f,nrm[Math.min(i,nrm.length-1)]]};
+  for(let k=0;k<R.mats;k++){const s=(k+.5)*L/R.mats,[e,n,nn]=at(s),ang=Math.atan2(-nn[1],nn[0]);g.save();g.translate(tx(e+nn[0]*.4),ty(n+nn[1]*.4));g.rotate(ang);
+   g.fillStyle="#2f6f56";g.fillRect(-.8*S,-.75*S,1.6*S,1.5*S);g.fillStyle="#f2f2ea";g.beginPath();g.arc(-1.3*S,0,.25*S,0,7);g.fill();g.restore();
+   const[e2,n2,n3]=at(k*L/R.mats);g.beginPath();g.moveTo(tx(e2-n3[0]*R.teeW/2),ty(n2-n3[1]*R.teeW/2));g.lineTo(tx(e2+n3[0]*R.teeW/2),ty(n2+n3[1]*R.teeW/2));g.lineWidth=.12*S;g.strokeStyle="rgba(255,255,255,.75)";g.stroke()}}
+ const c=R.circle;g.beginPath();g.arc(tx(c[0]),ty(c[1]),c[2]*S,0,7);g.fillStyle="#efede4";g.fill();
+ if(fine){g.beginPath();g.arc(tx(c[0]),ty(c[1]),c[2]*.35*S,0,7);g.strokeStyle="#c9c5b6";g.lineWidth=.2*S;g.stroke()}}
+if(RG)drawRange(g,tx,ty,PPM,false);
 // cesty pre vozíky a chodníky
 for(const Pp of (DATA.paths||[])){g.lineCap=g.lineJoin="round";g.beginPath();Pp.p.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.lineWidth=Math.max(1.5,Pp.w*PPM);g.strokeStyle="#cfcbbd";g.stroke()}
 // hlavná cesta a príjazd ku clubhousu (apex.json area.roads)
@@ -180,6 +206,41 @@ const flyTo=(h,url,TG)=>{const t=TG?TG.t:DATA.pads[h][tIdx],gc=TG?TG.gc:DATA.gc[
     controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else{controls.enabled=true;labels.forEach(l=>l.el.style.visibility="");forNav(url)}};requestAnimationFrame(st)};
 document.getElementById("b-go").onclick=()=>flyTo(READY[0],"./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1");
 for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();if(l.akAll){forNav(l.el.href);return}flyTo(l.ak?0:+l.el.textContent,l.el.href,l.ak)};
+// driving range: ostrejšia textúra (8 px/m) len nad range a cvičnými greenmi pri ňom, strecha nad časťou línie, búdka, vlajky terčov
+if(RG){const R=RG,pts=[...R.fan,...R.tee,...((DATA.practice&&DATA.practice.rangeGreens)||[]).flat(),...(DATA.rangeBunkers||[]).flat(),[R.circle[0]-4,R.circle[1]-4],[R.circle[0]+4,R.circle[1]+4]];
+ const a0=Math.min(...pts.map(p=>p[0]))-3,a1=Math.max(...pts.map(p=>p[0]))+3,b0=Math.min(...pts.map(p=>p[1]))-3,b1=Math.max(...pts.map(p=>p[1]))+3,S=Math.min(8,2048/Math.max(a1-a0,b1-b0));
+ const c2=document.createElement("canvas");c2.width=Math.round((a1-a0)*S);c2.height=Math.round((b1-b0)*S);const x2=c2.getContext("2d"),tx2=e=>(e-a0)*S,ty2=n=>(b1-n)*S;
+ for(const P of ((DATA.practice&&DATA.practice.rangeGreens)||[])){x2.beginPath();P.forEach(([e,n],i)=>i?x2.lineTo(tx2(e),ty2(n)):x2.moveTo(tx2(e),ty2(n)));x2.closePath();x2.lineJoin="round";x2.lineWidth=4*S;x2.strokeStyle="#7cba4b";x2.stroke();x2.fillStyle="#9fd95e";x2.fill()}
+ drawRange(x2,tx2,ty2,S,true);
+ for(const P of (DATA.rangeBunkers||[])){x2.beginPath();P.forEach(([e,n],i)=>i?x2.lineTo(tx2(e),ty2(n)):x2.moveTo(tx2(e),ty2(n)));x2.closePath();x2.fillStyle="#eadcae";x2.fill()}
+ // priehľadné mimo nakreslených prvkov: maska = len pixely, ktoré sme kreslili (plátno je inak prázdne)
+ const NXr=Math.ceil((a1-a0)/2),NYr=Math.ceil((b1-b0)/2),geo=new THREE.PlaneGeometry(a1-a0,b1-b0,NXr,NYr);geo.rotateX(-Math.PI/2);const p=geo.attributes.position;
+ for(let k=0;k<p.count;k++){const e=p.getX(k)+(a0+a1)/2,n=-p.getZ(k)+(b0+b1)/2;p.setXYZ(k,e,hAt(e,n)+.15,-n)}
+ const tex=new THREE.CanvasTexture(c2);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+ const dm=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({map:tex,transparent:true,alphaTest:.5,polygonOffset:true,polygonOffsetFactor:-2}));scene.add(dm);
+ // strecha (pult) nad zastrešenou časťou línie, stĺpiky vzadu, mierny sklon k lúke
+ const[A,B]=[R.roof.a,R.roof.b],L=Math.hypot(B[0]-A[0],B[1]-A[1]),mid=[(A[0]+B[0])/2,(A[1]+B[1])/2],ang=Math.atan2(B[1]-A[1],B[0]-A[0]),hm=hAt(...mid);
+ const rg=new THREE.Group();rg.position.copy(W(mid[0],mid[1],hm));rg.rotation.y=ang;
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(L,.18,R.roof.w),new THREE.MeshLambertMaterial({color:0xa5432f}));roof.position.y=R.roof.h;roof.rotation.x=-.1;rg.add(roof);
+ const back=new THREE.Mesh(new THREE.BoxGeometry(L,R.roof.h*.55,.1),new THREE.MeshLambertMaterial({color:0x6b5a45}));back.position.set(0,R.roof.h*.72,R.roof.w/2-.1);rg.add(back);
+ const pm=new THREE.MeshLambertMaterial({color:0x5a4a3a}),pg=new THREE.CylinderGeometry(.09,.09,R.roof.h,5);
+ for(let k=0;k<=6;k++)for(const z of [-1,1]){const po=new THREE.Mesh(pg,pm);po.position.set(-L/2+k*L/6,R.roof.h/2,z*(R.roof.w/2-.2));rg.add(po)}
+ scene.add(rg);
+ const hut=new THREE.Mesh(new THREE.BoxGeometry(3,2.4,2.2),new THREE.MeshLambertMaterial({color:0x8a8478}));hut.position.copy(W(R.hut[0],R.hut[1],hAt(...R.hut)+1.2));hut.rotation.y=ang;scene.add(hut);
+ // vlajky v cieľových greenoch (2 inštancie: žrď + látka)
+ const N=R.targets.length,pole=new THREE.InstancedMesh(new THREE.CylinderGeometry(.06,.06,3,4),new THREE.MeshLambertMaterial({color:0xf4f4f0}),N),
+  fl=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.1,.7),new THREE.MeshBasicMaterial({color:0xe0412b,side:THREE.DoubleSide}),N),m=new THREE.Matrix4();
+ R.targets.forEach((t,k)=>{const z=hAt(t[0],t[1]);m.makeTranslation(t[0],z+1.5,-t[1]);pole.setMatrixAt(k,m);m.makeTranslation(t[0]+.55,z+2.65,-t[1]);fl.setMatrixAt(k,m)});scene.add(pole,fl);
+ const el=document.createElement("a");el.href="#";el.className="rngl";el.textContent="🏌️ Driving range";document.body.appendChild(el);const lc=R.tee[R.tee.length>>1];
+ const st=document.createElement("style");st.textContent=".rngl{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:4px 8px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.4);text-decoration:none;z-index:3}";document.head.appendChild(st);
+ // klik: prelet nad odpaliskovú líniu s pohľadom na lúku (aj ?range=1)
+ const nn=(()=>{const a=R.tee[0],b=R.tee[R.tee.length-1];let n=[-(b[1]-a[1]),b[0]-a[0]];const L=Math.hypot(...n);n=[n[0]/L,n[1]/L];const mc=R.fan.reduce((s,p)=>[s[0]+p[0],s[1]+p[1]],[0,0]).map(v=>v/R.fan.length);if((mc[0]-lc[0])*n[0]+(mc[1]-lc[1])*n[1]<0)n=[-n[0],-n[1]];return n})();
+ const view=()=>({p:W(lc[0]-nn[0]*70,lc[1]-nn[1]*70,hAt(...lc)+55),t:W(lc[0]+nn[0]*70,lc[1]+nn[1]*70,hAt(...lc))});
+ const go=()=>{const v=view(),p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2000;controls.enabled=false;
+  const st2=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,v.p,e);controls.target.lerpVectors(t0,v.t,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st2);else{controls.enabled=true;controls.update()}};requestAnimationFrame(st2)};
+ const ll=[lc[0]+nn[0]*55,lc[1]+nn[1]*55];labels.push({el,v:W(ll[0],ll[1],hAt(...ll)+3)});
+ el.onclick=ev=>{ev.preventDefault();go()};
+ if(Q.has("range")){const v=view();camera.position.copy(v.p);controls.target.copy(v.t);camera.lookAt(v.t);controls.update()}}
 // clubhouse Kaštieľ Báč: 3D budova, štítok a klik = menu reštaurácie
 if(DATA.clubhouse){const C=DATA.clubhouse,{buildClubhouse,clubMenu}=await import("./lib/clubhouse.js");
  const CL=buildClubhouse(THREE,C,(e,n,h)=>W(e,n,h),hAt);
