@@ -132,11 +132,13 @@ export async function buildAreal(THREE, o) {
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   // --- zem: mriežka 6 m, trojuholníky celé v okne jamky vynecháme; okraj klesne k rovine okolia
   { const NX = Math.round((e1 - e0) / ST) + 1, NY = Math.round((n1 - n0) / ST) + 1, P = new Float32Array(NX * NY * 3), UV = new Float32Array(NX * NY * 2), IN = new Uint8Array(NX * NY), farA = o.farY + H0;
-    for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const k = j * NX + i, e = e0 + i * ST, n = n0 + j * ST, edge = i === 0 || j === 0 || i === NX - 1 || j === NY - 1;
-      P[k * 3] = e; P[k * 3 + 1] = edge ? farA : hT(e, n); P[k * 3 + 2] = -n; UV[k * 2] = (e - e0) / (e1 - e0); UV[k * 2 + 1] = (n - n0) / (n1 - n0); const [x, y] = L(e, n); IN[k] = inWin(x, y, -.5) ? 1 : 0 }
+    for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const k = j * NX + i, e = e0 + i * ST, n = n0 + j * ST, ed = Math.min(i, j, NX - 1 - i, NY - 1 - j), ramp = Math.min(1, ed / 5);
+      P[k * 3] = e; P[k * 3 + 1] = farA + (hT(e, n) - farA) * ramp * ramp * (3 - 2 * ramp); P[k * 3 + 2] = -n; UV[k * 2] = (e - e0) / (e1 - e0); UV[k * 2 + 1] = (n - n0) / (n1 - n0); const [x, y] = L(e, n); IN[k] = inWin(x, y, -.5) ? 1 : 0 }
     const idx = []; for (let j = 0; j < NY - 1; j++) for (let i = 0; i < NX - 1; i++) { const a = j * NX + i, b = a + 1, c = a + NX, d = c + 1; if (IN[a] && IN[b] && IN[c] && IN[d]) continue; idx.push(a, c, b, b, c, d) }
     const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(P, 3)); geo.setAttribute("uv", new THREE.BufferAttribute(UV, 2));
     geo.setIndex(NX * NY > 65535 ? new THREE.Uint32BufferAttribute(idx, 1) : new THREE.Uint16BufferAttribute(idx, 1)); geo.computeVertexNormals();
+    // okraj (posledných 5 riadkov) plynulo klesá k rovine okolia; normály tam smerom hore, inak by svah vyšiel ako tmavý pás na obzore (Martin 24.11.)
+    { const Nn = geo.attributes.normal; for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) if (Math.min(i, j, NX - 1 - i, NY - 1 - j) < 6) Nn.setXYZ(j * NX + i, 0, 1, 0) }
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 1, fog: o.groundFog !== false });
     mat.onBeforeCompile = sh => { sh.uniforms.uWin = { value: new THREE.Vector4(X0 + .3, Y0 + .3, X1 - .3, Y1 - .3) };
       sh.vertexShader = "varying vec3 vAw;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvAw=(modelMatrix*vec4(transformed,1.)).xyz;");
