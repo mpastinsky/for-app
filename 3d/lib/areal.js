@@ -146,18 +146,15 @@ export async function buildAreal(THREE, o) {
     const m = new THREE.Mesh(geo, mat); m.receiveShadow = !mobile; m.frustumCulled = false; G.add(m) }
   // --- stromy: jednoduché koruny (2 inštancované objekty pre všetky); vlastné stromy v okne už kreslí jamka
   const own = A.CRS, TR = [];
-  const addT = (e, n, r, h, mine) => { if (!near(e, n)) return; const [x, y] = L(e, n); if (mine && inWin(x, y, 2)) return; TR.push([e, n, r, h]) };
-  for (const t of AP.trees || []) addT(t[0], t[1], t[2] || 3, t[3] || 10, own === "apex");
+  const addT = (e, n, r, h, mine, kc) => { if (!near(e, n)) return; const [x, y] = L(e, n); if (mine && inWin(x, y, 2)) return; TR.push([e, n, r, h, kc]) };
+  for (const t of AP.trees || []) addT(t[0], t[1], t[2] || 3, t[3] || 10, own === "apex", t[5]);
   if (AK) { for (const t of AK.trees || []) { const [e, n] = akp(t); addT(e, n, t[2] || 3.5, t[3] || 10, own !== "apex") }
     for (const t of AK.row || []) { const [e, n] = akp(t); addT(e, n, 2.6, 8, own !== "apex") }
     let s2 = 7; const r2 = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647), pip = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++)if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c };
     for (const P of [...(AK.woods || []), ...(AK.groves || []).map(G => G.p)]) { const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
       for (let x = Math.min(...xs); x < Math.max(...xs); x += 8) for (let y = Math.min(...ys); y < Math.max(...ys); y += 8) { const px = x + (r2() - .5) * 6, py = y + (r2() - .5) * 6; if (pip(P, px, py)) { const [e, n] = akp([px, py]); addT(e, n, 3 + r2() * 1.5, 9 + r2() * 4, own !== "apex") } } } }
-  if (TR.length) { const N = TR.length, crown = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .95, flatShading: true }), N),
-      trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(.18, .26, 1, 5), new THREE.MeshStandardMaterial({ color: 0x5a3f28, roughness: 1 }), N), m = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color(), s = new THREE.Vector3();
-    TR.forEach(([e, n, r, h], k) => { const z = hA(e, n), ch = Math.max(r * 1.1, h * .42); m.compose(V(e, n, z + h - ch), q, s.set(r * 1.05, ch, r * 1.05)); crown.setMatrixAt(k, m);
-      c.setHSL(.27 + ((k * 37) % 10) / 220, .42, .2 + ((k * 53) % 10) / 160); crown.setColorAt(k, c); m.compose(V(e, n, z + (h - ch) / 2 + .3), q, s.set(1, h - ch + .6, 1)); trunk.setMatrixAt(k, m) });
-    crown.castShadow = trunk.castShadow = false; G.add(crown, trunk) }
+  if (TR.length) { const { lowTrees } = await import("./treeshapes.js");   // tvar a farba podľa druhu (apex.json trees[k][5])
+    for (const I of lowTrees(THREE, TR, V, hA)) G.add(I) }
   // --- vlajky na ostatných greenoch (18-ka červené, akadémia tmavomodré), aktuálna jamka má svoju
   { const F = []; for (const h of READY) if (AP.gc[h - 1] && !(own === "apex" && h === o.hNum)) F.push([...AP.gc[h - 1], 0xd8262a]);
     if (AK) AK.gc.forEach((p, i) => { if (!(own !== "apex" && i + 1 === o.hNum)) F.push([...akp(p), 0x16285a]) });
