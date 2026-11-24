@@ -1114,6 +1114,12 @@ function procClone(x,y,kind,h,rot,lv){if(!inside(x,y))return null;const P=PT.PAR
   TRUNKS.push([x,y,P.rad0*1.2*s,z+P.len[0]*s]);
   FADE.push({m:[g.children[1],g.children[0]],c:g.localToWorld(new THREE.Vector3(P.cx,P.cy,P.cz)),b:W(x,y,z+P.len[0]*.6*s),r:Math.max(P.rx,P.rz)*s,op:1});return s}
 DATA.trees.forEach(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(PROC[k])procTree(x,y,PROC[k]);else if(HQ&&PT&&!g){const kd=nPick(k,NKINDS),sc=procClone(x,y,kd,h,k*2.39);if(sc)NP[k]={kd,s:sc}}else if(g)bush(x,y,r,h,k);else tree(x,y,r,h,k)});
+// objekty z leteckých záberov (DATA.objects: [{t:"shade",p:[e,n],r}] – slnečník/prístrešok pri odpalisku)
+for(const O of (DATA.objects||[])){if(O.t!=="shade")continue;const[x,y]=loc(O.p),z=hL(x,y),r=O.r||3,H=2.7,g=new THREE.Group();
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,H,8),new THREE.MeshLambertMaterial({color:0x8a7a62}));pole.position.y=H/2;g.add(pole);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(r,1.1,16,1,true),new THREE.MeshLambertMaterial({color:0xf1eadb,side:THREE.DoubleSide,flatShading:true}));roof.position.y=H+.45;roof.castShadow=true;g.add(roof);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(r,.05,4,16),new THREE.MeshLambertMaterial({color:0xcfc6b2}));rim.rotation.x=Math.PI/2;rim.position.y=H-.1;g.add(rim);
+  g.position.set(x,z,-y);scene.add(g)}
 // --- živý plot z tují (DATA.hedges: [{p:[[východ,sever],…], h:výška m, w:šírka m}]) – napr. pri odpalisku 3 podľa Martinovej fotky a satelitu
 const HEDGES=(DATA.hedges||[]);
 function hSegD(e,n,a,b){const vx=b[0]-a[0],vy=b[1]-a[1],l=vx*vx+vy*vy,t=Math.max(0,Math.min(1,((e-a[0])*vx+(n-a[1])*vy)/l));return Math.hypot(e-a[0]-t*vx,n-a[1]-t*vy)}
