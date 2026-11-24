@@ -58,14 +58,14 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
   const roofUV = []; const rt = [[A, B, R1], [A, R1, R0], [B, Pk, R1], [Pk, D, R1], [D, F, R0], [D, R0, R1]]; for (const t of rt) for (const q of t) roofUV.push(q[0] / 3, q[1] / 3 + q[2] / 3);
   mesh(rt, mRoofB, roofUV);
   for (const s of [-1, 1]) for (const k of [0, 1]) { const sk = new THREE.Mesh(new THREE.BoxGeometry(.06, .9, 1.3), mGlass); const p = P3(u0 + 2.2 + k * 1.8, c + s * 3.2, gR - 1.2 - k * .55); sk.position.copy(p); sk.rotation.y = RU; G.add(sk) }   // strešné okná
-  // dlažba a trávniky na nádvorí (tenká plocha nad terénom), živé ploty a dva smreky
+  // dlažba a trávniky na nádvorí (tenká plocha nad terénom), živé ploty; dva smreky stoja PRED budovou, mimo nádvoria (Martin 24.11.)
   { const cvC = cv(128, 128, (g, w, h) => { g.fillStyle = "#b9b6ad"; g.fillRect(0, 0, w, h); g.fillStyle = "#6f9a46"; g.fillRect(8, 30, 40, 86); g.fillRect(80, 30, 40, 86); g.fillStyle = "#c9c6bd"; g.fillRect(56, 0, 16, h) });
     cvC.wrapS = cvC.wrapT = THREE.ClampToEdgeWrapping; const U0 = ww + d, U1 = C.wing, uv = [], T = [[[U0, b0, .06], [U1, b0, .06], [U1, b1, .06]], [[U0, b0, .06], [U1, b1, .06], [U0, b1, .06]]];
     for (const t of T) for (const q of t) uv.push((q[1] - b0) / (b1 - b0), 1 - (q[0] - U0) / (U1 - U0));
     mesh(T, M({ map: cvC, roughness: .95 }), uv);
     const mHedge = M({ color: 0x3f6a2c }); for (const s of [-1, 1]) { const hg = new THREE.Mesh(new THREE.BoxGeometry(C.wing - U0 - 4, .9, .7), mHedge); hg.position.copy(P3((U0 + C.wing) / 2 + 2, c + s * (b1 - b0) * .47, .45)); hg.rotation.y = RU; G.add(hg) }
     const mSpr = M({ color: 0x2c4a2a, flatShading: true }), mTr = M({ color: 0x5a3f28 });
-    for (const s of [-1, 1]) { const p = P3(C.wing - 3.5, c + s * 3.8, 0); const tr = new THREE.Mesh(new THREE.CylinderGeometry(.18, .25, 2, 5), mTr); tr.position.set(p.x, p.y + 1, p.z); G.add(tr);
+    for (const s of [-1, 1]) { const p = P3(C.wing + 4, c + s * 4.5, 0); const tr = new THREE.Mesh(new THREE.CylinderGeometry(.18, .25, 2, 5), mTr); tr.position.set(p.x, p.y + 1, p.z); G.add(tr);
       for (let i = 0; i < 3; i++) { const cn = new THREE.Mesh(new THREE.ConeGeometry(2.4 - i * .6, 4.2 - i * .6, 8), mSpr); cn.position.set(p.x, p.y + 3 + i * 2.6, p.z); cn.castShadow = true; G.add(cn) } } }
   // terasa: biele stany (pyramídy)
   for (const [e, n] of C.tents || []) { const p = pos(e, n, ground(e, n)); const t = new THREE.Mesh(new THREE.ConeGeometry(2.3, 1.4, 4, 1, true), mWhite); t.position.set(p.x, p.y + 3.1, p.z); t.rotation.y = RU + Math.PI / 4; G.add(t);
