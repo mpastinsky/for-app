@@ -132,7 +132,7 @@ if(RG)drawRange(g,tx,ty,PPM,false);
 // cesty pre vozíky a chodníky
 for(const Pp of (DATA.paths||[])){g.lineCap=g.lineJoin="round";g.beginPath();Pp.p.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.lineWidth=Math.max(1.5,Pp.w*PPM);g.strokeStyle="#cfcbbd";g.stroke()}
 // hlavná cesta a príjazd ku clubhousu (apex.json area.roads)
-for(const r of ((DATA.area&&DATA.area.roads)||[])){g.lineCap=g.lineJoin="round";g.beginPath();r.p.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.lineWidth=r.w*PPM;g.strokeStyle=r.t==="main"?"#7d7f80":"#a9a291";g.stroke()}
+for(const r of ((DATA.area&&DATA.area.roads)||[])){g.lineCap=g.lineJoin="round";g.beginPath();r.p.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.lineWidth=r.w*PPM;g.strokeStyle=r.t==="main"?"#7d7f80":r.t==="ramp"?"#c4b8ae":"#a9a291";g.stroke()}
 // akadémia: lesy, fairwaye, odpaliská, greeny, bunkre
 if(AKD){const ap=P=>path(P.map(akp));
  for(const P of [...(AKD.woods||[]),...(AKD.groves||[]).map(G=>G.p)]){ap(P);g.fillStyle="#3f6a2c";g.fill()}
@@ -245,6 +245,8 @@ if(RG){const R=RG,pts=[...R.fan,...R.tee,...((DATA.practice&&DATA.practice.range
  el.onclick=ev=>{ev.preventDefault();go()};
  if(Q.has("range")){const v=view();camera.position.copy(v.p);controls.target.copy(v.t);camera.lookAt(v.t);controls.update()}}
 // clubhouse Kaštieľ Báč: 3D budova, štítok a klik = menu reštaurácie
+// portály tunela pod hlavnou cestou (k jamke 11)
+if((DATA.objects||[]).some(O=>O.t==="portal")){const{buildPortal}=await import("./lib/areal.js");for(const O of DATA.objects)if(O.t==="portal")scene.add(buildPortal(THREE,O,W,hAt))}
 if(DATA.clubhouse){const C=DATA.clubhouse,{buildClubhouse,clubMenu}=await import("./lib/clubhouse.js");
  const CL=buildClubhouse(THREE,C,(e,n,h)=>W(e,n,h),hAt);
  if(CL){scene.add(CL.group);if(Q.has("dbg"))window.__cl={CL,camera,controls,renderer,scene,W,hAt};const el=document.createElement("a");el.href="#";el.className="clubl";el.textContent="🍽 "+C.name;el.onclick=ev=>{ev.preventDefault();clubMenu(C)};
