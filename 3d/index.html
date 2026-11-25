@@ -57,7 +57,7 @@ addEventListener("error",e=>{try{if(window.__3dok)return;let d=document.getEleme
  window.forNav=function(url){if(window.__preF&&window.__preF.f){window.__preF.f.remove();window.__preF=null}if(!in3d(url)){snap(url);(EMB?top:window).location.href=abs(url);return}
    if(window.__playHere&&window.__playHere(abs(url)))return;   // tá istá jamka → hra sa spustí hneď, bez nového načítania scény
    if(window.__freeze)window.__freeze();if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
- // v255 (Martin 25.11.: „načítaj pri 10. jamke aj 11-tu“): ďalšia jamka sa postaví skryto v rámci už počas výsledku jamky (bez vykresľovania),
+ // v256 (Martin 25.11.: „načítaj pri 10. jamke aj 11-tu“): ďalšia jamka sa postaví skryto v rámci už počas výsledku jamky (bez vykresľovania),
  // pri prelete podchodom sa len odkryje – bez zastavenia a bez čakania. Rámec sa zaradí medzi bežné (forReady ho ukáže a starú scénu zastaví).
  window.__preFrame=function(u,cu){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");f.setAttribute("aria-hidden","true");
    f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;pointer-events:none;background:transparent";f.__url=cu;f.__pre=1;document.body.appendChild(f);frames.push(f);return f};
@@ -90,7 +90,7 @@ import {pcNav} from "./lib/pcnav.js";
 // Akadémia Apex Golf, Báč. Terén z DMR 5.0 (ÚGKK SR, CC BY 4.0), greeny/bunkre/stromy obkreslené zo satelitu
 // a zarovnané na terén. Dáta: akademia.json (ENU metre od greenu 1, x = východ, y = sever).
 const Q=new URLSearchParams(location.search);
-// v255: ?pre=1 = jamka sa stavia skryto v rámci počas výsledku predošlej jamky; nevykresľuje sa, kým ju predošlá jamka v podchode neodkryje (__tgo)
+// v256: ?pre=1 = jamka sa stavia skryto v rámci počas výsledku predošlej jamky; nevykresľuje sa, kým ju predošlá jamka v podchode neodkryje (__tgo)
 const PRE=Q.get("pre")==="1"&&window.parent!==window;let PREgo=!PRE;if(PRE)window.__hold=true;
 // ihrisko: ?c=apex = 18-jamkové Apex Báč (apex.json), inak akadémia
 const CRS=Q.get("c")==="apex"?"apex":"akademia",CQ=CRS==="apex"?"c=apex&":"";
@@ -158,7 +158,7 @@ const TEEPL=CRS==="apex"?(()=>{const out=[],src=[...(DATA.teeboxes||[]).map(T=>T
   for(const P of src){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
     if(x1<-400||x0>400||y1<-120||y0>c+150)continue;const hs=[];for(let x=x0;x<=x1;x+=.7)for(let y=y0;y<=y1;y+=.7)if(inPoly([x,y],P))hs.push(raw(x,y));if(!hs.length)continue;
     hs.sort((a,b)=>a-b);out.push({P,bb:[x0-3,x1+3,y0-3,y1+3],z:hs[Math.floor(hs.length*.8)]+.3})}return out})():[];
-// v255: chodníky – terén pod nimi zarovnaný na vyhladený profil (lib/areal.js pathLevel, zdieľaný s okolím); odpalisko má prednosť
+// v256: chodníky – terén pod nimi zarovnaný na vyhladený profil (lib/areal.js pathLevel, zdieľaný s okolím); odpalisko má prednosť
 const PLV=AR&&AR.A.lev,PLO=AR?AR.A.off:[0,0];
 hBump=(x,y)=>{const M=9;let h=0,tee=0;
   for(const T of TEEPL){const bb=T.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,T.P);if(d>3)continue;const w=d<=0?1:1-sstep(d/3);h+=w*(T.z-raw(x,y));tee=1;break}
@@ -2582,7 +2582,7 @@ function startPlay(){
       ${last?`<a class="go" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="?${CQ}h=${READY[0]}&t=${tIdx}&play=1">Hrať znova</a>`:`<a class="go" href="${nx}">Ďalšia jamka ›</a><a class="go alt" href="#" data-scard>📋 Scorekarta</a>`}
       <a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}">Ukončiť hru</a>`;
     $("p-res").hidden=false;if(last)setTimeout(()=>{if(!$("sc-ov"))scoreCard(all)},400);else setTimeout(preNext,700)}
-  // v255: ďalšia jamka za podchodom sa začne stavať skryto hneď, ako sa ukáže výsledok (hráč číta skóre) – v podchode je potom hotová
+  // v256: ďalšia jamka za podchodom sa začne stavať skryto hneď, ako sa ukáže výsledok (hráč číta skóre) – v podchode je potom hotová
   function preNext(){try{if(window.__preF||!window.__preFrame)return;const a=[...document.querySelectorAll("#p-res a.go[href]")].find(a=>{try{const U=new URL(a.href);return U.searchParams.get("play")==="1"&&+U.searchParams.get("h")!==hNum}catch(e){return false}});
     if(!a)return;const U=new URL(a.href),nx=+U.searchParams.get("h");if(!tunFor(nx))return;const cu=U.href;U.searchParams.set("pre","1");if(Q.has("dbg"))U.searchParams.set("dbg","1");if(Q.has("tfslow"))U.searchParams.set("tfslow",Q.get("tfslow"));
     window.__preF={f:window.__preFrame(U.href,cu),nx}}catch(e){}}
@@ -2942,7 +2942,7 @@ function startPlay(){
   // v248: príchod preletom cez podchod z predošlej jamky → kamera dokončí let za loptičku
   {const Tg=camT.clone(),P=camP.clone(),tIn=F=>{$("p-hit").disabled=true;
      tunnelIn(F,P,Tg,()=>{camP.copy(camera.position);camT.copy(Tg);if(S.mode==="aim")$("p-hit").disabled=false})};
-   // v255: vopred postavená jamka – prelet prevezme priamo od predošlej jamky (správa forTgo), hneď sa vykresľuje
+   // v256: vopred postavená jamka – prelet prevezme priamo od predošlej jamky (správa forTgo), hneď sa vykresľuje
    if(PRE)addEventListener("message",e=>{const F=e.data&&e.data.forTgo;if(!F||PREgo||e.source!==parent)return;PREgo=true;tIn(F);window.__hold=false});
    else{let F=null;try{F=JSON.parse(sessionStorage.getItem("for.tfly")||"null");sessionStorage.removeItem("for.tfly")}catch(e){}
    if(F&&F.to===hNum&&Date.now()-F.ts<120000&&F.p&&F.t)tIn(F)}}
@@ -3013,7 +3013,7 @@ function tunnelGo(href,nx,T,hN){const{O,g,tp}=T,a=O.a*Math.PI/180;let d=[Math.co
   runFly(pts,look,D,trap(.2,.3),p=>{const lk=look(1,1,p);
     TFLY=()=>{};   // kamera ostane v strede podchodu (hra nepreberie kameru)
     const F={to:nx,ts:Date.now(),v:0,p:[...enu(p.x,-p.z),p.y+H0],t:[...enu(lk.x,-lk.z),lk.y+H0],w:rest,fa:fl+H0};
-    // v255: jamka 11 už stojí skryto (postavená počas výsledku) → let pokračuje v nej hneď, bez zastavenia a bez načítavania
+    // v256: jamka 11 už stojí skryto (postavená počas výsledku) → let pokračuje v nej hneď, bez zastavenia a bez načítavania
     const PF=window.__preF,pf=PF&&PF.nx===nx&&PF.f&&PF.f.isConnected?PF.f:null;let w=null;const t0=performance.now();
     const fall=()=>{if(pf)pf.remove();window.__preF=null;try{sessionStorage.setItem("for.tfly",JSON.stringify(F))}catch(e){}
       window.__hold=true;if(!w){w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w)}forNav(href)};
@@ -3076,7 +3076,7 @@ function preAll(fade){if(window.__stopped)return null;const hid=[];scene.travers
     p=renderer.compileAsync?renderer.compileAsync(scene,camera):(renderer.compile(scene,camera),null)}catch(e){for(const M of fm){M.transparent=false;M.depthWrite=true;M.needsUpdate=true}}for(const o of hid)o.visible=false;
   if(p&&p.catch)p.catch(()=>{});return p}
 setTimeout(()=>{const pr=preAll(true);
-  // v255: skrytá jamka: všetky textúry a geometria sa nahrajú do GPU (jeden neviditeľný záber), potom ohlási pripravenosť
+  // v256: skrytá jamka: všetky textúry a geometria sa nahrajú do GPU (jeden neviditeľný záber), potom ohlási pripravenosť
   if(PRE){const rd=()=>{if(window.__stopped)return;try{scene.traverse(o=>{const M=o.material;if(M)for(const k in M){const v=M[k];if(v&&v.isTexture&&renderer.initTexture)renderer.initTexture(v)}});renderer.render(scene,camera)}catch(e){}parent.postMessage({forPre:1},"*")};
     if(pr&&pr.then)pr.then(rd,rd);else rd()}},400);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
