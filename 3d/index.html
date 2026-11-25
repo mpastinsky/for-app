@@ -68,9 +68,14 @@ addEventListener("error",e=>{try{if(window.__3dok)return;let d=document.getEleme
 })();</script>
 <script>/* plynulý prechod: posledný záber predchádzajúcej obrazovky ostane viditeľný, kým sa nová scéna nevykreslí */
 try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.decoding="sync";i.src=s;
- i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:50;pointer-events:none;transition:opacity .35s";document.body.appendChild(i);
+ i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:50;pointer-events:none;transition:opacity .35s";
+ /* v254: príchod preletom podchodom – čaká sa v tmavom strede tunela; záber je stmavený a pomaly „plachtí“ vpred (žiadny zamrznutý obraz) */
+ let TD=0;try{const F=JSON.parse(sessionStorage.getItem("for.tfly")||"null");TD=F&&F.dk&&Date.now()-F.ts<20000?+F.dk:0}catch(e){}
+ if(TD){i.style.filter="brightness("+(1-TD).toFixed(2)+")";i.style.transformOrigin="50% 45%";i.animate&&i.animate([{transform:"scale(1)"},{transform:"scale(1.07)"}],{duration:6000,easing:"cubic-bezier(.2,.6,.4,1)",fill:"forwards"});window.__tdk=1}
+ document.body.appendChild(i);
  /* záber prekrýva aj lišty a tlačidlá (kým sa nenačítajú, menili sa – preblikávalo); kým sa čaká, beží „Načítavam…“ */
- const w=document.createElement("div");w.id="snappill";w.innerHTML='<i></i>Načítavam…';w.style.cssText="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:51;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none;transition:opacity .35s";i.__pill=w;document.body.appendChild(w)}}catch(e){}</script>
+ const w=document.createElement("div");w.id="snappill";w.innerHTML='<i></i>Načítavam…';w.style.cssText="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:51;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none;transition:opacity .35s";
+ if(window.__tdk&&w.animate){w.style.opacity="0";w.animate([{opacity:0},{opacity:1}],{duration:400,delay:2500,fill:"forwards"})}i.__pill=w;document.body.appendChild(w)}}catch(e){}</script>
 <div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div></div>
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
@@ -2316,7 +2321,8 @@ function startPlay(){
    #p-res h2{margin:.1em 0 .2em;font-size:1.6rem}#p-res table{width:100%;border-collapse:collapse;margin:12px 0;font-size:1rem}
    #p-res td,#p-res th{border-bottom:1px solid #e3e8e5;padding:6px}#p-res .go{display:block;width:100%;min-height:50px;margin-top:8px;border:0;border-radius:12px;font:700 1rem var(--font);background:#0f6b4a;color:#fff;text-decoration:none;line-height:50px}
    #p-res .go.alt{background:#eef3f0;color:#14211a}
-   body.tfly *{visibility:hidden!important}body.tfly canvas:not(#p-map),body.tfly #ldpill,body.tfly #ldpill *{visibility:visible!important}
+   body.tfly *{visibility:hidden!important}body.tfly canvas:not(#p-map),body.tfly #ldpill,body.tfly #ldpill *,body.tfly #tdk{visibility:visible!important}
+   #tdk{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:2}#ldpill.tdl{opacity:0;animation:tdl .4s 1.6s forwards}@keyframes tdl{to{opacity:1}}
    #p-res .lnk{display:inline-block;margin-top:10px;color:#4b5d55;font-size:.9rem;text-decoration:underline}
    #sc-ov{position:fixed;inset:0;z-index:40;background:rgba(8,20,14,.55);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom))}
    #sc-ov .sc{background:#f3f4ea;color:#14211a;border-radius:16px;width:min(720px,100%);max-height:100%;overflow:auto;padding:16px 12px 14px;box-shadow:0 10px 40px rgba(0,0,0,.45);text-align:center}
@@ -2993,9 +2999,14 @@ function tunnelGo(href,nx,T,hN){const{O,g,tp}=T,a=O.a*Math.PI/180;let d=[Math.co
     return q2.copy(t0).lerp(q,sstp(0,.22,k))};
   const D=Math.max(4500,Math.min(9000,L/15*1000*1.25));
   document.body.classList.add("tfly");const pr=document.getElementById("p-res");if(pr)pr.hidden=true;
-  runFly(pts,look,D,trap(.2,.3),p=>{const lk=look(1,1,p);
-    try{sessionStorage.setItem("for.tfly",JSON.stringify({to:nx,ts:Date.now(),v:0,p:[...enu(p.x,-p.z),p.y+H0],t:[...enu(lk.x,-lk.z),lk.y+H0],w:rest,fa:fl+H0}))}catch(e){}
-    window.__hold=true;const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);forNav(href)})}
+  // v254 (Martin 25.11.: „v podchode to aj tak stopne a načítava“): jamka 11 je samostatná stránka, jej scéna sa musí postaviť po príchode
+  // (dve plné 3D scény naraz iPhone nezvládal – v140). Čakanie sa preto skryje do tmy v strede podchodu: posledných ~14 m pred stredom
+  // obraz stmavne (ako pri vjazde do tunela), na novej stránke záber tmavý pomaly plachtí vpred a jamka 11 sa rozsvieti pri výjazde.
+  const dk=document.createElement("div");dk.id="tdk";document.body.appendChild(dk);const DK=.82;
+  const lookD=(u,k,p,t)=>{dk.style.opacity=(DK*(1-sstp(0,14,(1-u)*L))).toFixed(3);return look(u,k,p,t)};
+  runFly(pts,lookD,D,trap(.2,.3),p=>{const lk=look(1,1,p);dk.style.opacity=DK;
+    try{sessionStorage.setItem("for.tfly",JSON.stringify({to:nx,ts:Date.now(),v:0,p:[...enu(p.x,-p.z),p.y+H0],t:[...enu(lk.x,-lk.z),lk.y+H0],w:rest,fa:fl+H0,dk:DK}))}catch(e){}
+    window.__hold=true;const w=document.createElement("div");w.id="ldpill";w.className="tdl";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);forNav(href)})}
 // ďalšia jamka: pokračovanie z pokoja (záber nad stromami) rovno dole za loptičku na odpalisku (P, Tg v scéne) – plynulý rozjazd aj dobrzdenie
 function tunnelIn(F,P,Tg,done){if(F.w&&F.w.length)return tunnelIn2(F,P,Tg,done);const p0=W(...loc(F.p),F.p[2]-H0),t0=W(...loc(F.t),F.t[2]-H0),p1=p0.clone().lerp(P,.5);p1.y=Math.max(p1.y,p0.y*.55+P.y*.45);
   const L=new THREE.CatmullRomCurve3([p0,p1,P],false,"centripetal").getLength(),D=L<8?600+L*120:Math.max(2600,Math.min(5500,L/9*1000*1.4)),q=new THREE.Vector3();   // v251: prelet už končí za loptičkou – len jemné doladenie
@@ -3013,7 +3024,10 @@ function tunnelIn2(F,P,Tg,done){
     q.lerp(Tg,sstp(.5,1,u));return q2.copy(t0).lerp(q,sstp(0,.15,k))};
   const D=Math.max(4500,Math.min(9000,L/15*1000*1.3));
   camera.position.copy(p0);camera.lookAt(t0);document.body.classList.add("tfly");
-  runFly(pts,look,D,trap(.3,.32),()=>{document.body.classList.remove("tfly");done()})}
+  // v254: z tmy stredu podchodu sa obraz rozsvieti, kým kamera vyjde z tunela (nadväzuje na stmavený záber z jamky 10)
+  let dk=null,DK=+F.dk||0;if(DK){dk=document.createElement("div");dk.id="tdk";dk.style.opacity=DK;document.body.appendChild(dk)}
+  const lookD=(u,k,p,t)=>{if(dk)dk.style.opacity=(DK*(1-sstp(1.5,13,u*L))).toFixed(3);return look(u,k,p,t)};
+  runFly(pts,lookD,D,trap(.3,.32),()=>{if(dk)dk.remove();document.body.classList.remove("tfly");done()})}
 document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("#p-res a.go[href]");if(!a||!game)return;let U;try{U=new URL(a.href)}catch(_){return}
   const nx=parseInt(U.searchParams.get("h"));if(!nx||nx===hNum||U.searchParams.get("play")!=="1")return;
   if(tunnelOut(a.getAttribute("href"),nx)){e.preventDefault();e.stopImmediatePropagation()}},true);
