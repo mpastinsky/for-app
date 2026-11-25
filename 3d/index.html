@@ -143,7 +143,14 @@ const BUMPS=[[3.5,4,4.2,.13],[-4,-3,3.6,-.09],[-3,4.5,3.2,.08],[4,-5,3,-.06]];
 // green: terén pod ním vyrovnáme do mierne sklonenej roviny (max ~2 %), pri jamke ešte rovnejšie – ako na skutočnom greene
 const raw=(x,y)=>hENU(...enu(x,y))-H0;
 const GP=(()=>{const e=5,h0=raw(gcx,gcy);let sx=(raw(gcx+e,gcy)-raw(gcx-e,gcy))/(2*e),sy=(raw(gcx,gcy+e)-raw(gcx,gcy-e))/(2*e)+.011;const m=Math.hypot(sx,sy),mx=.015;if(m>mx){sx*=mx/m;sy*=mx/m}return{h0,sx,sy}})();
+// odpaliská 18-ky: rovná, mierne vyvýšená plošina (DMR pod nimi býva naklonený / pri jazere zapadnutý) s mäkkým svahom 3 m
+const TEEPL=CRS==="apex"?(()=>{const out=[],src=[...(DATA.teeboxes||[]).map(T=>T.p.map(loc))];
+  const pd=(DATA.pads[hNum]||[]).map(loc);for(const[px,py]of pd)if(!src.some(P=>inPoly([px,py],P)))src.push([...Array(12)].map((_,i)=>[px+3.2*Math.cos(i*Math.PI/6),py+3.2*Math.sin(i*Math.PI/6)]));
+  for(const P of src){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+    if(x1<-400||x0>400||y1<-120||y0>c+150)continue;const hs=[];for(let x=x0;x<=x1;x+=.7)for(let y=y0;y<=y1;y+=.7)if(inPoly([x,y],P))hs.push(raw(x,y));if(!hs.length)continue;
+    hs.sort((a,b)=>a-b);out.push({P,bb:[x0-3,x1+3,y0-3,y1+3],z:hs[Math.floor(hs.length*.8)]+.3})}return out})():[];
 hBump=(x,y)=>{const M=9;let h=0;
+  for(const T of TEEPL){const bb=T.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,T.P);if(d>3)continue;const w=d<=0?1:1-sstep(d/3);h+=w*(T.z-raw(x,y));break}
   for(const B of myBunkers){const bb=B.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,B);if(d>4)continue;
     if(d>=0){h+=.2*Math.exp(-(((d-.9)/.8)**2))*(B.gd<6?1:.5)}else{h-=.14*sstep(-d/1.5)}}
   if(x<GB.x0-M||x>GB.x1+M||y<GB.y0-M||y>GB.y1+M)return h;
