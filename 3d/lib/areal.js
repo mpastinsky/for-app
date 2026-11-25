@@ -70,7 +70,11 @@ export function paintRoads(g, roads, tx, ty, S) {
 function mergeStatic(THREE, G) {
   G.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(G.matrixWorld).invert(), by = new Map(), m = new THREE.Matrix4();
   G.traverse(o => { if (!o.isMesh || o.isInstancedMesh) return; let gg = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); m.multiplyMatrices(inv, o.matrixWorld); gg.applyMatrix4(m);
-    if (!gg.attributes.normal) gg.computeVertexNormals(); const k = o.material.uuid; if (!by.has(k)) by.set(k, { mat: o.material, g: [] }); by.get(k).g.push(gg) });
+    if (!gg.attributes.normal) gg.computeVertexNormals();
+    const put = (mat, x) => { const k = mat.uuid; if (!by.has(k)) by.set(k, { mat, g: [] }); by.get(k).g.push(x) };
+    if (!Array.isArray(o.material)) return put(o.material, gg);
+    for (const gr of gg.groups) { const x = new THREE.BufferGeometry(); for (const nm of ["position", "normal", "uv"]) { const a = gg.attributes[nm]; if (a) x.setAttribute(nm, new THREE.BufferAttribute(a.array.slice(gr.start * a.itemSize, (gr.start + gr.count) * a.itemSize), a.itemSize)) } put(o.material[gr.materialIndex], x) }
+    gg.dispose() });
   const out = new THREE.Group();
   for (const { mat, g } of by.values()) { let n = 0; for (const x of g) n += x.attributes.position.count; const P = new Float32Array(n * 3), N = new Float32Array(n * 3), U = new Float32Array(n * 2); let o = 0;
     for (const x of g) { const c = x.attributes.position.count; P.set(x.attributes.position.array.subarray(0, c * 3), o * 3); N.set(x.attributes.normal.array.subarray(0, c * 3), o * 3); if (x.attributes.uv) U.set(x.attributes.uv.array.subarray(0, c * 2), o * 2); o += c; x.dispose() }
@@ -123,7 +127,7 @@ export async function buildAreal(THREE, o) {
   const grn = P => { path(P); g.lineJoin = "round"; g.lineWidth = 6 * PPM; g.strokeStyle = "#7cba4b"; g.stroke(); g.fillStyle = "#98c552"; g.fill() };
   for (const h of READY) if (AP.greens[h - 1]) grn(AP.greens[h - 1]);
   if (AK) for (const P of AK.greens) grn(P.map(akp));
-  for (const Q of AP.paved || []) fl(Q.p, Q.t === "parking" ? "#8d8c86" : "#bdb6a6");
+  for (const Q of AP.paved || []) fl(Q.p, Q.t === "parking" ? "#8d8c86" : "#d6ccb5");
   for (const P of (AP.practice && AP.practice.greens) || []) grn(P);
   if (AP.range) paintRange(g, AP.range, tx, ty, PPM, false);
   for (const P of [...AP.bunkers, ...(AK ? AK.bunkers.map(B => B.map(akp)) : [])]) fl(P, "#eadcae");

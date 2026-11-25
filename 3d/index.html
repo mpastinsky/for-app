@@ -329,7 +329,7 @@ const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
   g2.save();path(G);g2.clip();inM(gc,d);for(let u=-30;u<30;u+=1.2){g2.fillStyle=(Math.round(u/1.2)&1)?"rgba(255,255,220,.075)":"rgba(20,70,10,.06)";g2.fillRect(u,-30,1.2,60)}g2.restore();
   pd.forEach(([x,y])=>{g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppx,0,7);g2.fillStyle="#8fd062";g2.fill();g2.lineWidth=.5*ppx;g2.strokeStyle="#5d9a3c";g2.stroke()})})}
 // clubhouse okolie: spevnené plochy (terasa, parkovisko) a cvičné greeny pred clubhousom (DATA.paved, DATA.practice – apex.json)
-for(const Q2 of (DATA.paved||[])){const P=Q2.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;path(P);g2.fillStyle=Q2.t==="parking"?"#8d8c86":"#bdb6a6";g2.fill();g2.lineWidth=.4*ppm;g2.strokeStyle="#77746a";g2.stroke()}
+for(const Q2 of (DATA.paved||[])){const P=Q2.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;path(P);g2.fillStyle=Q2.t==="parking"?"#8d8c86":"#d6ccb5";g2.fill();g2.lineWidth=.4*ppm;g2.strokeStyle="#77746a";g2.stroke()}
 for(const PG of ((DATA.practice&&DATA.practice.greens)||[])){const P=PG.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
   g2.lineJoin="round";path(P);g2.lineWidth=6*ppm;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();path(P);g2.lineWidth=2*ppm;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill()}
 // driving range (apex.json range), ak zasahuje do okna jamky – rovnaký vzhľad ako v prehľade areálu
