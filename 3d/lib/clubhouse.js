@@ -106,7 +106,8 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
     const curve = new THREE.CatmullRomCurve3(P.map(([x, y]) => new THREE.Vector3(x + .03, y + .05, 0))), rg = new THREE.TubeGeometry(curve, 16, .09, 5, false);
     for (let b = 0; b <= bays; b++) add(g, rg, mBlk, 0, 0, -len / 2 + b * len / bays);
     add(g, new THREE.BoxGeometry(.5, .1, len + .3), mBlk, P[P.length - 1][0] + .2, Hh + .02, 0) }
-  for (const [e, n, s] of C.pergolas || []) shelter(grp(e, n), s);
+  // [e, n, šírka, rot]: rot=1 → otočený o 90° (otvor k hríbom/terase, Martin 25.11.); každý prístrešok 2 rebrá-polia ≈ 2 vozíky
+  for (const [e, n, s, r] of C.pergolas || []) shelter(grp(e, n, RU + (r ? Math.PI / 2 : 0)), s);
   // presklený obchod / pro shop (foto 7): sklenená kocka s tmavými rámami, plochá tmavá strecha, na konci oblúkové rebro s plachtou, stožiar s lanami
   if (C.shop) { const [e, n, s] = C.shop, g = grp(e, n), D = 4.6, hh = 2.7;
     const shopTex = cv(128, 64, (x, w, h) => { x.fillStyle = "#7f9a8a"; x.fillRect(0, 0, w, h); x.fillStyle = "rgba(255,255,255,.18)"; x.fillRect(0, 0, w, h * .45); x.fillStyle = "#26221f"; for (let i = 0; i <= 4; i++)x.fillRect(i * w / 4 - 2, 0, 4, h); x.fillRect(0, 0, w, 4); x.fillRect(0, h - 6, w, 6) });
