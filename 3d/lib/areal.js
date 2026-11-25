@@ -182,9 +182,12 @@ export async function buildAreal(THREE, o) {
   if (TR.length) { const { lowTrees } = await import("./treeshapes.js");   // tvar a farba podľa druhu (apex.json trees[k][5])
     for (const I of lowTrees(THREE, TR, V, hA)) G.add(I) }
   // --- vlajky na ostatných greenoch (18-ka červené, akadémia tmavomodré), aktuálna jamka má svoju
-  { const F = []; for (const h of READY) if (AP.gc[h - 1] && !(own === "apex" && h === o.hNum)) F.push([...AP.gc[h - 1], 0xd8262a]);
-    if (AK) AK.gc.forEach((p, i) => { if (!(own !== "apex" && i + 1 === o.hNum)) F.push([...akp(p), 0x16285a]) });
+  // v246: vlajky ostatných jamiek v okne jamky kreslí jamka sama (aj so skutočnou dierou – dá sa trafiť „nesprávna“ jamka); tu len vrátime ich polohu
+  const cups = [];
+  { const F = []; for (const h of READY) if (AP.gc[h - 1] && !(own === "apex" && h === o.hNum)) F.push([...AP.gc[h - 1], 0xd8262a, String(h)]);
+    if (AK) AK.gc.forEach((p, i) => { if (!(own !== "apex" && i + 1 === o.hNum)) F.push([...akp(p), 0x16285a, "A" + (i + 1)]) });
     if (AP.range) for (const t of AP.range.targets || []) F.push([t[0], t[1], 0xe0412b]);
+    for (let i = F.length - 1; i >= 0; i--) { const f = F[i]; if (!f[3]) continue; const [x, y] = L(f[0], f[1]); if (inWin(x, y, 6)) { cups.push({ x, y, h: f[3], col: f[2] }); F.splice(i, 1) } }
     const Fs = F.filter(p => near(p[0], p[1])), N = Fs.length;
     if (N) { const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(.06, .06, 2.1, 4), new THREE.MeshStandardMaterial({ color: 0xf4f4f0 }), N),
         cl = new THREE.InstancedMesh(new THREE.PlaneGeometry(.75, .5), new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide }), N), m = new THREE.Matrix4(), c = new THREE.Color();
@@ -207,5 +210,5 @@ export async function buildAreal(THREE, o) {
   if (!o.club && AP.clubhouse && near(AP.clubhouse.o[0], AP.clubhouse.o[1])) { const { buildClubhouse } = await import("./clubhouse.js");
     CLB = buildClubhouse(THREE, AP.clubhouse, V, hA); if (CLB) G.add(mergeStatic(THREE, CLB.group)) }
   // kolízie s budovami: pôvodné (nezlúčené) meshe clubhouse v ENU 18-ky + matica do scény jamky (G.matrix)
-  return { group: G, clubhouse: CLB, coll: CLB ? { root: CLB.group, matrix: G.matrix } : null };
+  return { group: G, clubhouse: CLB, coll: CLB ? { root: CLB.group, matrix: G.matrix } : null, cups };
 }
