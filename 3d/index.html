@@ -156,8 +156,11 @@ const TEEPL=CRS==="apex"?(()=>{const out=[],src=[...(DATA.teeboxes||[]).map(T=>T
   for(const P of src){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
     if(x1<-400||x0>400||y1<-120||y0>c+150)continue;const hs=[];for(let x=x0;x<=x1;x+=.7)for(let y=y0;y<=y1;y+=.7)if(inPoly([x,y],P))hs.push(raw(x,y));if(!hs.length)continue;
     hs.sort((a,b)=>a-b);out.push({P,bb:[x0-3,x1+3,y0-3,y1+3],z:hs[Math.floor(hs.length*.8)]+.3})}return out})():[];
-hBump=(x,y)=>{const M=9;let h=0;
-  for(const T of TEEPL){const bb=T.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,T.P);if(d>3)continue;const w=d<=0?1:1-sstep(d/3);h+=w*(T.z-raw(x,y));break}
+// v255: chodníky – terén pod nimi zarovnaný na vyhladený profil (lib/areal.js pathLevel, zdieľaný s okolím); odpalisko má prednosť
+const PLV=AR&&AR.A.lev,PLO=AR?AR.A.off:[0,0];
+hBump=(x,y)=>{const M=9;let h=0,tee=0;
+  for(const T of TEEPL){const bb=T.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,T.P);if(d>3)continue;const w=d<=0?1:1-sstep(d/3);h+=w*(T.z-raw(x,y));tee=1;break}
+  if(PLV&&!tee){const[e,n]=enu(x,y),q=PLV.query(e+PLO[0],n+PLO[1]);if(q)h+=q.w*(q.h-H0-raw(x,y))}
   for(const B of myBunkers){const bb=B.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,B);if(d>4)continue;
     if(d>=0){h+=.2*Math.exp(-(((d-.9)/.8)**2))*(B.gd<6?1:.5)}else{h-=.14*sstep(-d/1.5)}}
   if(x<GB.x0-M||x>GB.x1+M||y<GB.y0-M||y>GB.y1+M)return h;

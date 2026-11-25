@@ -7,13 +7,17 @@
 export const akoOf = AP => [(17.368905 - AP.origin[1]) * 111320 * Math.cos(AP.origin[0] * Math.PI / 180), (48.0007065 - AP.origin[0]) * 111200];
 
 // načítanie dát druhého ihriska + nízkeho terénu celého areálu (3d/areal-ter.json, 6 m)
+const terH = TER => (e, n) => { let c = (e - TER.e0) / TER.step, r = (n - TER.n0) / TER.step; c = Math.min(TER.w - 1.001, Math.max(0, c)); r = Math.min(TER.h - 1.001, Math.max(0, r));
+  const c0 = c | 0, r0 = r | 0, fc = c - c0, fr = r - r0, i = r0 * TER.w + c0, H = TER.H; return TER.base + (H[i] * (1 - fc) * (1 - fr) + H[i + 1] * fc * (1 - fr) + H[i + TER.w] * (1 - fc) * fr + H[i + TER.w + 1] * fc * fr) / 100 };
 export async function loadAreal(CRS, DATA) {
   const j = f => fetch(f).then(r => r.ok ? r.json() : null).catch(() => null);
   const [AP, AK, TER] = await Promise.all([CRS === "apex" ? DATA : j("apex.json"), CRS === "apex" ? j("akademia.json") : DATA, j("areal-ter.json")]);
   if (!AP || !TER) return null;
   TER.H = new Int16Array(Uint8Array.from(atob(TER.cm), c => c.charCodeAt(0)).buffer);
   const AKO = akoOf(AP), off = CRS === "apex" ? [0, 0] : AKO;   // ENU tohto ihriska = ENU 18-ky − off
-  return { AP, AK, TER, AKO, off, CRS };
+  // v255: zdieľaný profil chodníkov (z terénu areálu) – rovnaký pre okno jamky (hBump) aj okolie, aby na hrane okna nebol schod
+  const lev = pathLevel(pathList(AP), terH(TER), { avoid: pathAvoid(AP, AK, AKO), tunnels: (AP.objects || []).filter(O => O.t === "tunnel") });
+  return { AP, AK, TER, AKO, off, CRS, lev };
 }
 
 const shR = (R, d) => {   // posun dát driving range o d (ENU)
@@ -164,22 +168,26 @@ export function buildPaths(THREE, paths, pos, ground, o = {}) {
       if ((b[1] > y) !== (a[1] > y) && x < (a[0] - b[0]) * (y - b[1]) / (a[1] - b[1]) + b[0]) c = !c;
       const vx = b[0] - a[0], vy = b[1] - a[1], l = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (y - a[1]) * vy) / l)); m = Math.min(m, Math.hypot(a[0] + vx * t - x, a[1] + vy * t - y)) } return c ? -m : m };
   const blocked = (e, n, r) => AV.some(A => e > A.b[0] - r && e < A.b[1] + r && n > A.b[2] - r && n < A.b[3] + r && sdP(A.P, e, n) < r);
-  const vert = (e, n, u, v) => { const p = pos(e, n, ground(e, n) + off); V.push(p.x, p.y, p.z); U.push(u, v); C.push(col.r, col.g, col.b); return V.length / 3 - 1 };
+  // v255 (Martin: chodníky hrboľaté, presakuje tráva): výška = vyhladený pozdĺžny profil (pathLevel), naprieč rovno;
+  // nikdy nie pod skutočnou sieťou terénu (o.mesh = presná výška trojuholníkov), aby tráva nepresvitala
+  const LV = o.level, gm = o.mesh || ground; let hc = null;
+  const vert = (e, n, u, v) => { const g0 = gm(e, n), p = pos(e, n, (hc == null ? Math.max(g0, ground(e, n)) : Math.max(hc, g0)) + off); V.push(p.x, p.y, p.z); U.push(u, v); C.push(col.r, col.g, col.b); return V.length / 3 - 1 };
+  const hcOf = q => { if (!LV) return null; const r = LV.query(q.e, q.n); return r && r.w > .5 ? r.h : null };
   for (const Pp of paths || []) { if (!Pp.p || Pp.p.length < 2) continue;
     const w = Pp.w || 2.4, hw = w / 2, xs = [-hw - PATH_F, -hw, -hw + PATH_E, hw - PATH_E, hw, hw + PATH_F], S = pathSamples(Pp.p, step);
     col.setHex(PATHC[Pp.t] || PATHC.path);
     const ok = S.map(q => (!o.clip || o.clip(q.e, q.n)) && !blocked(q.e, q.n, hw + .25));
     let run = [];
     const cap = (q, dir, v0) => {   // polkruhové ukončenie (oblé ako reálny chodník)
-      const c = vert(q.e, q.n, .5, v0), nx = -q.uy, ny = q.ux, R = [hw - PATH_E, hw, hw + PATH_F], UU = [PU[3], PU[4], PU[5]], NA = 8, ring = [];
+      hc = hcOf(q); const c = vert(q.e, q.n, .5, v0), nx = -q.uy, ny = q.ux, R = [hw - PATH_E, hw, hw + PATH_F], UU = [PU[3], PU[4], PU[5]], NA = 8, ring = [];
       for (let k = 0; k <= NA; k++) { const a = Math.PI * k / NA, ca = Math.cos(a), sa = Math.sin(a) * dir;   // od pravej strany cez čelo k ľavej
         ring.push(R.map((r, j) => vert(q.e + (nx * ca + q.ux * sa) * r, q.n + (ny * ca + q.uy * sa) * r, UU[j], v0 + sa * r / PATH_TL))) }
       for (let k = 0; k < NA; k++) { const A = ring[k], B = ring[k + 1]; I.push(c, A[0], B[0]); for (let j = 0; j < 2; j++) I.push(A[j], A[j + 1], B[j + 1], A[j], B[j + 1], B[j]) } };
     const flush = () => { if (run.length < 3) { run = []; return } const base = [];
-      for (const i of run) { const q = S[i], nx = -q.uy, ny = q.ux; base.push(xs.map((x, j) => vert(q.e + nx * x, q.n + ny * x, PU[j], q.s / PATH_TL))) }
+      for (const i of run) { const q = S[i], nx = -q.uy, ny = q.ux; hc = hcOf(q); base.push(xs.map((x, j) => vert(q.e + nx * x, q.n + ny * x, PU[j], q.s / PATH_TL))) }
       for (let k = 1; k < base.length; k++) for (let j = 0; j < 5; j++) { const a = base[k - 1][j], b = base[k - 1][j + 1], c = base[k][j], d = base[k][j + 1]; I.push(a, b, c, b, d, c) }
       const q0 = S[run[0]], q1 = S[run[run.length - 1]];
-      if (run[0] === 0) cap(q0, -1, q0.s / PATH_TL); if (run[run.length - 1] === S.length - 1) cap(q1, 1, q1.s / PATH_TL); run = [] };
+      if (run[0] === 0) cap(q0, -1, q0.s / PATH_TL); if (run[run.length - 1] === S.length - 1) cap(q1, 1, q1.s / PATH_TL); hc = null; run = [] };
     for (let i = 0; i < S.length; i++) { if (ok[i]) run.push(i); else flush() } flush() }
   if (!I.length) return G;
   const gg = new THREE.BufferGeometry(); gg.setAttribute("position", new THREE.Float32BufferAttribute(V, 3)); gg.setAttribute("uv", new THREE.Float32BufferAttribute(U, 2)); gg.setAttribute("color", new THREE.Float32BufferAttribute(C, 3));
@@ -190,6 +198,52 @@ export function buildPaths(THREE, paths, pos, ground, o = {}) {
     if (uz * vx - ux * vz < 0) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t } }
   gg.setIndex(V.length / 3 > 65535 ? new THREE.Uint32BufferAttribute(I, 1) : new THREE.Uint16BufferAttribute(I, 1)); gg.computeVertexNormals();
   const m = new THREE.Mesh(gg, mat); m.receiveShadow = true; m.renderOrder = 1; G.add(m); return G;
+}
+// --- v255: výškový profil chodníkov a zarovnanie terénu pod nimi (Martin 25.11.: chodníky pri podjazde hrboľaté, prerušované, presakuje tráva).
+// Profil: priemer terénu na osi a na okrajoch, vyhladený pozdĺž (≈ σ 4 m); v tuneli pod cestou pripnutý na jeho dno.
+// lev(e,n,h): terén v páse chodníka (+ margin) = profil, ďalej plynulý prechod (fall) späť na pôvodný terén – chodník je zarezaný/nasypaný ako v skutočnosti.
+// Pri podjazde len úzky pás (oporné múry tam drží pôvodný svah). paths/avoid/tunnels v ENU 18-ky, ground(e,n) = pôvodný terén.
+export function tunnelFloor(O, ground) {
+  const ar = O.a * Math.PI / 180, d = [Math.cos(ar), Math.sin(ar)], r = O.r || [d[1], -d[0]], [e, n] = O.p, Lt = O.len || 11, w = O.w || 4.2, ts = O.ts || 6.5;
+  const P = (x, z) => [e + d[0] * x + r[0] * z, n + d[1] * x + r[1] * z], road = (ground(...P(0, ts + 2.5)) + ground(...P(0, -ts - 2.5))) / 2;
+  let fl = -1e9; for (let x = -Lt / 2 - 1; x <= Lt / 2 + 1; x += 1) for (let z = -w / 2; z <= w / 2; z += w / 4) fl = Math.max(fl, ground(...P(x, z)));
+  const h = Math.min(O.h || 2.7, Math.max(1.6, road - fl - .9)); fl = Math.min(fl, road - h - .9); return { fl, road, h, d, r, Lt, w, ts };
+}
+export function pathLevel(paths, ground, o = {}) {
+  const M0 = o.margin ?? 1, M1 = o.fall ?? 3, CS = 8, AV = (o.avoid || []).filter(P => P && P.length > 2).map(P => { const xs = P.map(p => p[0]), ys = P.map(p => p[1]); return { P, b: [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)] } });
+  const inP = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[j], b = P[i]; if ((b[1] > y) !== (a[1] > y) && x < (a[0] - b[0]) * (y - b[1]) / (a[1] - b[1]) + b[0]) c = !c } return c };
+  const inAv = (e, n) => AV.some(A => e > A.b[0] && e < A.b[1] && n > A.b[2] && n < A.b[3] && inP(A.P, e, n));
+  const TU = (o.tunnels || []).map(O => Object.assign(tunnelFloor(O, ground), { c: O.p }));
+  const SEG = [], H = new Map(), key = (i, j) => i * 100003 + j; let bb = [1e9, -1e9, 1e9, -1e9];
+  for (const Pp of paths || []) { if (!Pp.p || Pp.p.length < 2) continue;
+    const hw = (Pp.w || 2.4) / 2, S = pathSamples(Pp.p, 1), N = S.length, h = new Float64Array(N), pin = new Float64Array(N).fill(NaN), mg = new Float64Array(N), fa = new Float64Array(N);
+    S.forEach((q, i) => { const nx = -q.uy, ny = q.ux; h[i] = (ground(q.e, q.n) + ground(q.e + nx * hw, q.n + ny * hw) + ground(q.e - nx * hw, q.n - ny * hw)) / 3; mg[i] = M0; fa[i] = M1;
+      for (const T of TU) { const ve = q.e - T.c[0], vn = q.n - T.c[1], x = ve * T.d[0] + vn * T.d[1], z = ve * T.r[0] + vn * T.r[1];
+        if (Math.abs(x) < T.Lt / 2 + .5 && Math.abs(z) < T.w / 2 + .5) pin[i] = T.fl;
+        if (Math.abs(x) < T.Lt / 2 + 16 && Math.abs(z) < T.ts + 6) { mg[i] = .2; fa[i] = .8 } } });
+    for (let i = 0; i < N; i++) if (pin[i] === pin[i]) h[i] = pin[i];
+    const t = new Float64Array(N); for (let it = 0; it < 32; it++) { for (let i = 0; i < N; i++) t[i] = pin[i] === pin[i] ? pin[i] : .25 * h[Math.max(0, i - 1)] + .5 * h[i] + .25 * h[Math.min(N - 1, i + 1)]; h.set(t) }
+    const ok = S.map(q => !inAv(q.e, q.n));
+    for (let i = 0; i < N - 1; i++) { if (!ok[i] || !ok[i + 1]) continue; const a = S[i], b = S[i + 1], sg = { a, b, ha: h[i], hb: h[i + 1], hw, mg: Math.min(mg[i], mg[i + 1]), fa: Math.min(fa[i], fa[i + 1]) }; SEG.push(sg);
+      const R = hw + sg.mg + sg.fa, e0 = Math.min(a.e, b.e) - R, e1 = Math.max(a.e, b.e) + R, n0 = Math.min(a.n, b.n) - R, n1 = Math.max(a.n, b.n) + R;
+      bb = [Math.min(bb[0], e0), Math.max(bb[1], e1), Math.min(bb[2], n0), Math.max(bb[3], n1)];
+      for (let ci = Math.floor(e0 / CS); ci <= Math.floor(e1 / CS); ci++) for (let cj = Math.floor(n0 / CS); cj <= Math.floor(n1 / CS); cj++) { const k = key(ci, cj); let L = H.get(k); if (!L) H.set(k, L = []); L.push(sg) } } }
+  const sst = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  // {w: váha zarovnania 0..1, h: výška profilu} alebo null; na križovatkách vážený priemer profilov
+  const query = (e, n) => { if (e < bb[0] || e > bb[1] || n < bb[2] || n > bb[3]) return null; const L = H.get(key(Math.floor(e / CS), Math.floor(n / CS))); if (!L) return null;
+    let wm = 0, ws = 0, hs = 0;
+    for (const g of L) { const vx = g.b.e - g.a.e, vy = g.b.n - g.a.n, l = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((e - g.a.e) * vx + (n - g.a.n) * vy) / l)), d = Math.hypot(g.a.e + vx * t - e, g.a.n + vy * t - n) - g.hw - g.mg;
+      if (d >= g.fa) continue; const w = d <= 0 ? 1 : 1 - sst(d / g.fa), wq = w * w * w + 1e-6; wm = Math.max(wm, w); ws += wq; hs += wq * (g.ha + (g.hb - g.ha) * t) }
+    return wm > 0 ? { w: wm, h: hs / ws } : null };
+  return { query, lev: (e, n, h) => { const q = query(e, n); return q ? h + q.w * (q.h - h) : h } };
+}
+// presná výška pravidelnej siete trojuholníkov (ako ju vykreslí GPU): f(i,j) výška uzla, x0,y0 roh, dx,dy krok (môžu byť záporné),
+// diag "/" = delenie bunky uhlopriečkou (0,0)–(1,1), "\\" = (1,0)–(0,1)
+export function gridTri(f, x0, y0, dx, dy, ni, nj, diag) {
+  return (x, y) => { let u = (x - x0) / dx, v = (y - y0) / dy; u = Math.max(0, Math.min(ni - 1.0001, u)); v = Math.max(0, Math.min(nj - 1.0001, v)); const i = u | 0, j = v | 0, fu = u - i, fv = v - j;
+    const A = f(i, j), B = f(i + 1, j), C = f(i, j + 1), D = f(i + 1, j + 1);
+    if (diag === "/") return fv >= fu ? A + (D - C) * fu + (C - A) * fv : A + (B - A) * fu + (D - B) * fv;
+    return fu + fv <= 1 ? A + (B - A) * fu + (C - A) * fv : D + (C - D) * (1 - fu) + (B - D) * (1 - fv) };
 }
 // polygóny, cez ktoré chodník nevedie (bunkre, greeny) – v ENU 18-ky
 export function pathAvoid(AP, AK, AKO) {
@@ -289,8 +343,7 @@ export async function buildAreal(THREE, o) {
   const { A, loc, hL, H0, mobile } = o, [X0, X1, Y0, Y1] = o.win, AP = A.AP, AK = A.AK, TER = A.TER, AKO = A.AKO, off = A.off;
   const L = (e, n) => loc([e - off[0], n - off[1]]);                    // ENU 18-ky -> lokálne súradnice jamky
   const inWin = (x, y, m = 0) => x > X0 + m && x < X1 - m && y > Y0 + m && y < Y1 - m;
-  const hT = (e, n) => { let c = (e - TER.e0) / TER.step, r = (n - TER.n0) / TER.step; c = Math.min(TER.w - 1.001, Math.max(0, c)); r = Math.min(TER.h - 1.001, Math.max(0, r));
-    const c0 = c | 0, r0 = r | 0, fc = c - c0, fr = r - r0, i = r0 * TER.w + c0, H = TER.H; return TER.base + (H[i] * (1 - fc) * (1 - fr) + H[i + 1] * fc * (1 - fr) + H[i + TER.w] * (1 - fc) * fr + H[i + TER.w + 1] * fc * fr) / 100 };
+  const hT0 = terH(TER), hT = (e, n) => A.lev.lev(e, n, hT0(e, n));   // v255: pod chodníkmi zarovnaný terén
   // výška (absolútna): v okne jamky jej vlastný terén (aby objekty sedeli na detailnej zemi), inak terén areálu
   const hA = (e, n) => { const [x, y] = L(e, n); return inWin(x, y, 1) ? hL(x, y) + H0 : hT(e, n) };
   const akp = p => [p[0] + AKO[0], p[1] + AKO[1], ...p.slice(2)];
@@ -335,10 +388,12 @@ export async function buildAreal(THREE, o) {
   paintPathVerge(g, AP.paths, tx, ty, PPM);
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   // --- zem: mriežka 6 m, trojuholníky celé v okne jamky vynecháme; okraj klesne k rovine okolia
+  let gridH = hT;
   { const NX = Math.round((e1 - e0) / ST) + 1, NY = Math.round((n1 - n0) / ST) + 1, P = new Float32Array(NX * NY * 3), UV = new Float32Array(NX * NY * 2), IN = new Uint8Array(NX * NY), farA = o.farY + H0;
     for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const k = j * NX + i, e = e0 + i * ST, n = n0 + j * ST, ed = Math.min(i, j, NX - 1 - i, NY - 1 - j), ramp = Math.min(1, ed / 5);
       P[k * 3] = e; P[k * 3 + 1] = farA + (hT(e, n) - farA) * ramp * ramp * (3 - 2 * ramp); P[k * 3 + 2] = -n; UV[k * 2] = (e - e0) / (e1 - e0); UV[k * 2 + 1] = (n - n0) / (n1 - n0); const [x, y] = L(e, n); IN[k] = inWin(x, y, -.5) ? 1 : 0 }
     const idx = []; for (let j = 0; j < NY - 1; j++) for (let i = 0; i < NX - 1; i++) { const a = j * NX + i, b = a + 1, c = a + NX, d = c + 1; if (IN[a] && IN[b] && IN[c] && IN[d]) continue; idx.push(a, c, b, b, c, d) }
+    gridH = gridTri((i, j) => P[(j * NX + i) * 3 + 1], e0, n0, ST, ST, NX, NY, "\\");
     const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(P, 3)); geo.setAttribute("uv", new THREE.BufferAttribute(UV, 2));
     geo.setIndex(NX * NY > 65535 ? new THREE.Uint32BufferAttribute(idx, 1) : new THREE.Uint16BufferAttribute(idx, 1)); geo.computeVertexNormals();
     // okraj (posledných 5 riadkov) plynulo klesá k rovine okolia; normály tam smerom hore, inak by svah vyšiel ako tmavý pás na obzore (Martin 24.11.)
@@ -390,7 +445,10 @@ export async function buildAreal(THREE, o) {
   for (const O of AP.objects || []) if (O.t === "tunnel" && near(O.p[0], O.p[1])) { const [x, y] = L(...O.p); if (!inWin(x, y, 2)) G.add(buildTunnel(THREE, O, V, hA)) }
   // --- hlavná cesta ako 3D pás (v248): ostré okraje a čiary, rovný profil; v okne jamky na jej detailnom teréne
   // --- chodníky, príjazd, rampy ako 3D pás (v250); cez bunkre a greeny sa prerušia
-  G.add(buildPaths(THREE, pathList(AP), V, (e, n) => hA(e, n), { off: .1, fog: o.groundFog !== false, clip: (e, n) => near(e, n, -8), avoid: pathAvoid(AP, AK, AKO) }));
+  // v255: presná výška vykreslenej zeme (sieť jamky 2 m v okne, sieť okolia 6 m mimo) – chodník nikdy pod ňou
+  const wsx = Math.floor((X1 - X0) / 2), wsy = Math.floor((Y1 - Y0) / 2), hWin = gridTri((i, j) => hL(X0 + i * (X1 - X0) / wsx, Y1 - j * (Y1 - Y0) / wsy), X0, Y1, (X1 - X0) / wsx, -(Y1 - Y0) / wsy, wsx + 1, wsy + 1, "\\");
+  const hMesh = (e, n) => { const [x, y] = L(e, n); return inWin(x, y, 1) ? hWin(x, y) + H0 : gridH(e, n) };
+  G.add(buildPaths(THREE, pathList(AP), V, (e, n) => hA(e, n), { level: A.lev, mesh: hMesh, off: .1, fog: o.groundFog !== false, clip: (e, n) => near(e, n, -8), avoid: pathAvoid(AP, AK, AKO) }));
   for (const r of ar.roads || []) if (r.t === "main") G.add(buildRoad(THREE, r, V, hA, { off: .08, fog: o.groundFog !== false, clip: (e, n) => near(e, n, -8), tunnels: (AP.objects || []).filter(O => O.t === "tunnel") }));
   // --- clubhouse (ak ho nekreslí jamka): zjednodušený na pár zlúčených objektov
   let CLB = null;

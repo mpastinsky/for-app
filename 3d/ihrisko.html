@@ -88,6 +88,14 @@ const HM=hsum/hn,EX=1.4;   // mierne prevýšenie, aby boli vlny vidno aj z vý�
 for(let k=0;k<HS.length;k++)HS[k]=isNaN(HS[k])?0:(HS[k]-HM)*EX;
 const hAt=(e,n)=>{let i=(e-e0)/ST,j=(n-n0)/ST;i=Math.max(0,Math.min(NX-1.001,i));j=Math.max(0,Math.min(NY-1.001,j));const i0=i|0,j0=j|0,fi=i-i0,fj=j-j0,k=j0*NX+i0;
   return HS[k]*(1-fi)*(1-fj)+HS[k+1]*fi*(1-fj)+HS[k+NX]*(1-fi)*fj+HS[k+NX+1]*fi*fj};
+// v255: terén pod chodníkmi zarovnaný na ich vyhladený profil (inak hrboľaté a presakovala tráva)
+const AM=await import("./lib/areal.js");
+const PLV=(()=>{const R=HS.slice(),hR=(e,n)=>{let i=(e-e0)/ST,j=(n-n0)/ST;i=Math.max(0,Math.min(NX-1.001,i));j=Math.max(0,Math.min(NY-1.001,j));const i0=i|0,j0=j|0,fi=i-i0,fj=j-j0,k=j0*NX+i0;
+  return R[k]*(1-fi)*(1-fj)+R[k+1]*fi*(1-fj)+R[k+NX]*(1-fi)*fj+R[k+NX+1]*fi*fj};
+ const L=AM.pathLevel(AM.pathList(DATA),hR,{avoid:AM.pathAvoid(DATA,AKD,AKO),tunnels:(DATA.objects||[]).filter(O=>O.t==="tunnel"),margin:1.5,fall:4});
+ for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const k=j*NX+i;HS[k]=L.lev(e0+i*ST,n0+j*ST,R[k])}return L})();
+// presná výška siete terénu (PlaneGeometry nižšie: uzly po (e1-e0)/(NX-1), riadky od n1, uhlopriečka "/")
+const GDX=(e1-e0)/(NX-1),GDY=(n1-n0)/(NY-1),hMesh=AM.gridTri((i,j)=>hAt(e0+i*GDX,n1-j*GDY),e0,n1,GDX,-GDY,NX,NY,"\\");
 const W=(e,n,h)=>new THREE.Vector3(e,h,-n);
 // --- textúra ihriska
 const PPM=Math.min(1.5,3072/Math.max(e1-e0,n1-n0)),TW=Math.round((e1-e0)*PPM),TH=Math.round((n1-n0)*PPM);
@@ -250,7 +258,7 @@ if((DATA.objects||[]).some(O=>O.t==="tunnel")){const{buildTunnel}=await import("
 // hlavná cesta ako 3D pás (v248, Martin: kostrbatá, zubatá) – ostré okraje a čiary, plynulý profil
 if(DATA.area&&DATA.area.roads){const{buildRoad}=await import("./lib/areal.js");const TN=(DATA.objects||[]).filter(O=>O.t==="tunnel");for(const r of DATA.area.roads)if(r.t==="main")scene.add(buildRoad(THREE,r,W,hAt,{off:.3,step:3,clip:(e,n)=>e>e0+4&&e<e1-4&&n>n0+4&&n<n1-4,tunnels:TN}))}
 // chodníky pre vozíky, príjazd a rampy ako ostrý 3D pás (v250, Martin: rozmazané a neostré)
-{const{buildPaths,pathList,pathAvoid}=await import("./lib/areal.js");scene.add(buildPaths(THREE,pathList(DATA),W,hAt,{off:.2,step:1.5,clip:(e,n)=>e>e0+4&&e<e1-4&&n>n0+4&&n<n1-4,avoid:pathAvoid(DATA,AKD,AKO)}))}
+{const{buildPaths,pathList,pathAvoid}=await import("./lib/areal.js");scene.add(buildPaths(THREE,pathList(DATA),W,hAt,{level:PLV,mesh:hMesh,off:.15,step:1.5,clip:(e,n)=>e>e0+4&&e<e1-4&&n>n0+4&&n<n1-4,avoid:pathAvoid(DATA,AKD,AKO)}))}
 if(DATA.clubhouse){const C=DATA.clubhouse,{buildClubhouse,clubMenu}=await import("./lib/clubhouse.js");
  const CL=buildClubhouse(THREE,C,(e,n,h)=>W(e,n,h),hAt);
  if(CL){scene.add(CL.group);if(Q.has("dbg"))window.__cl={CL,camera,controls,renderer,scene,W,hAt};const el=document.createElement("a");el.href="#";el.className="clubl";el.textContent="🍽 "+C.name;el.onclick=ev=>{ev.preventDefault();clubMenu(C)};
