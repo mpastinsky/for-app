@@ -2374,11 +2374,7 @@ function startPlay(){
     mg.fillStyle="#fff";mg.strokeStyle="#1d6fd6";mg.lineWidth=1.5;mg.beginPath();mg.arc(mx(S.x),my(S.y),3,0,7);mg.fill();mg.stroke()}
   const tv=new THREE.Vector3();
   function hudTick(){mapF++;if(arcM.visible)arcW();if(ring.visible)rollD.scale.setScalar(Math.min(5,Math.max(.2,camera.position.distanceTo(rollD.position)/26)));if(ring.visible)ring.scale.setScalar(Math.min(5,Math.max(.15,camera.position.distanceTo(ring.position)/22)));   // v235 (Martin: pri veľkom zoome krúžok menší, aby sa dalo mieriť presne do jamky): min. mierka 1 → .15
-<<<<<<< HEAD
-  if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
-=======
     if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
->>>>>>> origin/main
     const T=$("p-tgt");if(S.mode!=="aim"){T.hidden=true;return}
     const putt=!CLUBS[S.club].a,X=putt?PIN[0]:TG.x,Y=putt?PIN[1]:TG.y,el=gS(X,Y)-gS(S.x,S.y);
     {const rr=putt?.6:2*ring.scale.x+.3,px=Math.cos(S.aim)*rr,py=-Math.sin(S.aim)*rr;tv.set(X+px,gS(X+px,Y+py)+(putt?.3:.1),-(Y+py)).project(camera)}if(tv.z>1||Math.abs(tv.x)>1.05||Math.abs(tv.y)>1.05){T.hidden=true;return}
