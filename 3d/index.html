@@ -1177,6 +1177,8 @@ for(const O of (DATA.objects||[])){if(O.t!=="hut")continue;const[x,y]=loc(O.p),a
     const dr=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2),new THREE.MeshLambertMaterial({color:0x5d5245}));dr.position.set(0,1,Wd/2+.01);g.add(dr)}
   const sh=new THREE.Shape([new THREE.Vector2(-Wd/2-.35,0),new THREE.Vector2(Wd/2+.35,0),new THREE.Vector2(0,rh)]),rg=new THREE.ExtrudeGeometry(sh,{depth:L+.5,bevelEnabled:false});rg.translate(0,0,-(L+.5)/2);rg.rotateY(Math.PI/2);
   const rf=new THREE.Mesh(rg,mR);rf.position.y=H;rf.castShadow=true;g.add(rf);g.rotation.y=R;g.position.copy(W(x,y,z));scene.add(g);bldAdd(g)}
+// portál tunela pod hlavnou cestou (k jamke 11): v okne jamky na jej detailnom teréne
+if(AR)for(const O of (DATA.objects||[])){if(O.t!=="portal")continue;const[x,y]=loc(O.p);if(!inside(x,y))continue;const g=AR.M.buildPortal(THREE,O,(e,n,h)=>W(...loc([e,n]),h),(e,n)=>hL(...loc([e,n])));scene.add(g);bldAdd(g)}
 for(const O of (DATA.objects||[])){if(O.t!=="shade")continue;const[x,y]=loc(O.p),z=hL(x,y),r=O.r||3,H=2.7,g=new THREE.Group();
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,H,8),new THREE.MeshLambertMaterial({color:0x8a7a62}));pole.position.y=H/2;g.add(pole);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(r,1.1,16,1,true),new THREE.MeshLambertMaterial({color:0xf1eadb,side:THREE.DoubleSide,flatShading:true}));roof.position.y=H+.45;roof.castShadow=true;g.add(roof);

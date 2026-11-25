@@ -996,7 +996,7 @@ async function renderAreal(){if(arealDone)return;arealDone=true;const svg=$("ar-
   // podklad: plochy ihriska (rough)
   for(const k of ["south","north","akad"])if(AR[k])o+=poly(AR[k],'fill="#a9c77a" stroke="#8fae62" stroke-width="2"');
   // cesty
-  for(const r of AR.roads||[])o+=line(r.p,`stroke="#fff" stroke-width="${r.w+3}"`)+line(r.p,`stroke="${r.t==="main"?"#8d9096":"#b8ad97"}" stroke-width="${r.w}"`);
+  for(const r of (AR.roads||[]).filter(r=>r.t!=="ramp"))o+=line(r.p,`stroke="#fff" stroke-width="${r.w+3}"`)+line(r.p,`stroke="${r.t==="main"?"#8d9096":"#b8ad97"}" stroke-width="${r.w}"`);
   for(const r of D.paths||[])o+=line(r.p,`stroke="#e4d9bf" stroke-width="${Math.max(2.5,r.w)}"`);
   for(const q of D.paved||[])o+=poly(q.p,'fill="#c9c4b8"');
   // 18-ka: fairwaye, odpaliská, greeny, bunkre, voda, stromy
