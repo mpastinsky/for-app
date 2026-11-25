@@ -2355,7 +2355,8 @@ function startPlay(){
     // loptička
     mg.fillStyle="#fff";mg.strokeStyle="#1d6fd6";mg.lineWidth=1.5;mg.beginPath();mg.arc(mx(S.x),my(S.y),3,0,7);mg.fill();mg.stroke()}
   const tv=new THREE.Vector3();
-  function hudTick(){mapF++;if(arcM.visible)arcW();if(ring.visible)rollD.scale.setScalar(Math.min(5,Math.max(.2,camera.position.distanceTo(rollD.position)/26)));if(ring.visible)ring.scale.setScalar(Math.min(5,Math.max(.15,camera.position.distanceTo(ring.position)/22)));   // v235 (Martin: pri veľkom zoome krúžok menší, aby sa dalo mieriť presne do jamky): min. mierka 1 → .15if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
+  function hudTick(){mapF++;if(arcM.visible)arcW();if(ring.visible)rollD.scale.setScalar(Math.min(5,Math.max(.2,camera.position.distanceTo(rollD.position)/26)));if(ring.visible)ring.scale.setScalar(Math.min(5,Math.max(.15,camera.position.distanceTo(ring.position)/22)));   // v235 (Martin: pri veľkom zoome krúžok menší, aby sa dalo mieriť presne do jamky): min. mierka 1 → .15
+  if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
     const T=$("p-tgt");if(S.mode!=="aim"){T.hidden=true;return}
     const putt=!CLUBS[S.club].a,X=putt?PIN[0]:TG.x,Y=putt?PIN[1]:TG.y,el=gS(X,Y)-gS(S.x,S.y);
     {const rr=putt?.6:2*ring.scale.x+.3,px=Math.cos(S.aim)*rr,py=-Math.sin(S.aim)*rr;tv.set(X+px,gS(X+px,Y+py)+(putt?.3:.1),-(Y+py)).project(camera)}if(tv.z>1||Math.abs(tv.x)>1.05||Math.abs(tv.y)>1.05){T.hidden=true;return}
@@ -2398,7 +2399,7 @@ function startPlay(){
     aimG.setDrawRange(0,n);aimG.attributes.position.needsUpdate=true;aimL.computeLineDistances();aimL.visible=false;if(cl.a)puttM.visible=false;else{S.pDirty=1;putPrep();if(S.pFar&&S.pFarK!==pvKey){S.pFarK=pvKey;msg("Patovačkou to k jamke nedotlačíš – tráva loptičku zabrzdí");setTimeout(()=>{if($("p-msg").textContent.startsWith("Patovačkou"))msg("")},2600)}}   // čiara patu sa prepočíta v slučke (najviac raz za 2 snímky)
     const ex=S.x+dx*L,ey=S.y+dy*L;TG.x=ex;TG.y=ey;TG.L=L;ring.visible=!!cl.a;ring.position.set(ex,gS(ex,ey)+.07,-ey)}
   let hint=0;
-  function prepare(){S.sandCam=0;S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;orbOff();if(!hint++&&!Q.has("dbg")){setTimeout(()=>{if(S.mode==="aim"&&!$("p-msg").textContent){msg(matchMedia("(pointer:fine)").matches?"Ťahaj myšou: do strán smer, hore/dole vzdialenosť · šípky ↑↓ = palica":"Ťukni na ihrisko alebo ťahaj prstom: do strán smer, hore/dole vzdialenosť");setTimeout(()=>{if(/^Ťukni|^Ťahaj m/.test($("p-msg").textContent))msg("")},3500)}},1200)}S.mode="aim";S.vx=S.vy=S.vz=0;S.lie=S.tee?SURF.fair:surf(S.x,S.y);S.man=0;setAim();pickClub();info();drawAim();$("p-hit").disabled=false;
+  function prepare(){S.sandCam=0;S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;orbOff();if(!hint++&&!Q.has("dbg")){setTimeout(()=>{if(S.mode==="aim"&&!$("p-msg").textContent){msg(CLUBS[S.club].a?(matchMedia("(pointer:fine)").matches?"Chyť krúžok myšou: do strán smer, hore/dole vzdialenosť · koliesko = zoom":"Chyť krúžok prstom: do strán smer, hore/dole vzdialenosť · 2 prsty = zoom"):"Ťahaj do strán = smer patu");setTimeout(()=>{if(/^Chyť krúžok|^Ťahaj do/.test($("p-msg").textContent))msg("")},3500)}},1200)}S.mode="aim";S.vx=S.vy=S.vz=0;S.lie=S.tee?SURF.fair:surf(S.x,S.y);S.man=0;setAim();pickClub();info();drawAim();$("p-hit").disabled=false;
     $("p-ht").textContent=CLUBS[S.club].a?"Drž a pusti – úder":"Drž a pusti – pat";place();
     if(S.lie===SURF.sand&&!S.tee)setTimeout(()=>{if(S.mode==="aim"){msg("Bunker: užší zelený stred a rýchlejšie kyvadlo");setTimeout(()=>{if($("p-msg").textContent.startsWith("Bunker"))msg("")},2600)}},1000)}
   const rotAx=new THREE.Vector3();let lastBX=null,lastBY=0;
@@ -2772,10 +2773,10 @@ function startPlay(){
   $("p-fix").onclick=e=>{e.stopPropagation();const m=MARKS.pop();if(!m)return;S.pDirty=1;pvKey="";let t=0;const g=m.mesh;(function an(){t+=.06;g.scale.setScalar(Math.max(.01,1-t));if(t<1)requestAnimationFrame(an);else scene.remove(g)})();
     msg("Pitchmark opravený ✓");setTimeout(()=>{if($("p-msg").textContent.startsWith("Pitchmark"))msg("")},1500);fixVis();if(S.mode==="aim"){S.lm=markAt(S.x,S.y);info()}};
   $("p-z").onclick=()=>{if(S.mode!=="aim")return;if(S.orb){orbOff();S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;info();msg("Pohľad za loptičkou");setTimeout(()=>{if($("p-msg").textContent==="Pohľad za loptičkou")msg("")},1300);return}S.zoom=S.zoom>.5?0:1;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;info();
-    msg(S.zoom?(CLUBS[S.club].a?"Pohľad na dopad · ťahaj = posun, 2 prsty = otočiť a priblížiť, ťuk = cieľ":"Pohľad na jamku · ťahaj = posun, 2 prsty = otočiť a priblížiť"):"Pohľad za loptičkou");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1800)};
+    msg(S.zoom?(CLUBS[S.club].a?"Pohľad na dopad · ťahaj = posun, krúžok = cieľ, 2 prsty = otočiť a priblížiť":"Pohľad na jamku · ťahaj = posun, 2 prsty = otočiť a priblížiť"):"Pohľad za loptičkou");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1800)};
   // VOĽNÝ ZOOM PRI MIERENÍ (Martin 23.11., 2×: „zoom ide len po žltej osi“): koliesko / touchpad na PC a dva prsty na mobile prepnú kameru
   // na OrbitControls – presne to isté ovládanie ako prehľad Akadémie (lib/pcnav.js: zoom ku kurzoru, otáčanie, posun), na oboch okruhoch, pri údere aj pate.
-  // Mierenie ostáva: ťuk = nový cieľ, dopadovú zónu sa dá chytiť a ťahať, ◀ ▶ otáča smer. ↩ alebo ďalší úder = späť za loptičku.
+  // Mierenie ostáva: dopadovú zónu sa dá chytiť a ťahať, ◀ ▶ otáča smer. ↩ alebo ďalší úder = späť za loptičku.
   // Mimo voľného režimu je OrbitControls zapnutý len „nastražený“ (bez posunu/otáčania/zoomu), aby zachytil začiatok gesta dvoch prstov.
   function orbOn(){if(S.orb||S.mode!=="aim"||SW)return;S.orb=1;S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;camera.position.copy(camP);controls.target.copy(camT);
     controls.minDistance=.8;controls.maxDistance=CRS==="apex"?400:650;controls.enabled=true;controls.enableZoom=controls.enablePan=controls.enableRotate=true;controls.update();info()}
@@ -2800,7 +2801,7 @@ function startPlay(){
     if(t>0&&Math.abs(t-h.distance)<30)h.point.copy(o).addScaledVector(d,t);return h};
   // dva prsty: roztiahnutie = priblížiť na miesto dopadu, zovretie = späť za loptičku (ako zoom fotky v telefóne)
   const PT2=new Map();let pz=null;const pDist=()=>{const[a,b]=[...PT2.values()];return Math.hypot(a[0]-b[0],a[1]-b[1])},pAng=()=>{const[a,b]=[...PT2.values()];return Math.atan2(b[1]-a[1],b[0]-a[0])};
-  renderer.domElement.addEventListener("pointerdown",e=>{PT2.set(e.pointerId,[e.clientX,e.clientY]);if(PT2.size===2&&S.mode==="aim"&&!SW){ringDrag=false;drag=null;tap=null;dragT=false;dY=null;pz=1;orbOn();orbSync()}},true);   // druhý prst: voľná kamera (OrbitControls spracuje gesto hneď od začiatku)
+  renderer.domElement.addEventListener("pointerdown",e=>{PT2.set(e.pointerId,[e.clientX,e.clientY]);if(PT2.size===2&&S.mode==="aim"&&!SW){if(tap&&(dragT||ringDrag)){S.aim=tap[3];S.tl=tap[4];S.club=tap[5];S.man=tap[6];drawAim()}ringDrag=false;drag=null;tap=null;dragT=false;dY=null;pz=1;orbOn();orbSync()}},true);   // druhý prst: voľná kamera (OrbitControls spracuje gesto hneď od začiatku)
   addEventListener("pointermove",e=>{if(PT2.has(e.pointerId))PT2.set(e.pointerId,[e.clientX,e.clientY])},true);
   for(const ev of["pointerup","pointercancel"])addEventListener(ev,e=>{PT2.delete(e.pointerId);if(pz&&PT2.size<2){pz=null;tap=null;drag=null;dragT=false}},true);
   // chytenie dopadovej zóny prstom: vždy (aj po priblížení) sa dá ťahať – cieľ ide presne pod prst, bez prepínania pohľadu
@@ -2809,18 +2810,17 @@ function startPlay(){
     const px=(tv.x+1)/2*innerWidth,py=(1-tv.y)/2*innerHeight;if(Math.hypot(cx-px,cy-py)<48)return true;const h=tgtHit(cx,cy);return!!h&&Math.hypot(h.point.x-TG.x,-h.point.z-TG.y)<2*ring.scale.x+1};
   addEventListener("pointermove",e=>{if(!ringDrag||pz||S.mode!=="aim"||SW)return;const h=tgtHit(e.clientX+rOff[0],e.clientY+rOff[1]);if(h)setTarget(h.point.x,-h.point.z)},true);
   addEventListener("pointerup",()=>{if(ringDrag){ringDrag=false;tap=null;drag=null;dragT=false}},true);
-  renderer.domElement.addEventListener("pointerdown",e=>{if(pz)return;ringDrag=S.mode==="aim"&&!SW&&(S.zoom>.5||S.orb)&&nearRing(e.clientX,e.clientY);if(ringDrag){controls.enabled=false;tv.set(TG.x,gS(TG.x,TG.y),-TG.y).project(camera);rOff=[(tv.x+1)/2*innerWidth-e.clientX,(1-tv.y)/2*innerHeight-e.clientY]}if(ringDrag)camAnchor();   // v235: stred krúžku drží odstup od prsta (chytíš ho za okraj a jamku vidno, prst ju nezakrýva)   // bez priblíženia funguje ťahanie ako doteraz (do strán smer, hore/dole dĺžka)
-    drag=e.clientX;tap=[e.clientX,e.clientY,performance.now(),S.aim];dragT=false;
-    if(S.mode==="aim"&&!SW)dragT=true},true);   // (capture: pred OrbitControls, aby chytenie zóny vypnulo kameru) ťahanie kdekoľvek: do strán = smer, hore/dole = vzdialenosť dopadu
+  renderer.domElement.addEventListener("pointerdown",e=>{if(pz)return;const full=!!CLUBS[S.club].a,grab=full&&S.mode==="aim"&&!SW&&nearRing(e.clientX,e.clientY);   // v245 (Martin 25.11.: kurzor sa posúval aj pri ťuknutí/ťahaní vedľa neho → pokazený zoom): zameriavač sa hýbe IBA keď ho chytíš za krúžok
+    ringDrag=grab&&(S.zoom>.5||S.orb);if(ringDrag){controls.enabled=false;tv.set(TG.x,gS(TG.x,TG.y),-TG.y).project(camera);rOff=[(tv.x+1)/2*innerWidth-e.clientX,(1-tv.y)/2*innerHeight-e.clientY]}if(ringDrag)camAnchor();   // v235: stred krúžku drží odstup od prsta (chytíš ho za okraj a jamku vidno, prst ju nezakrýva)   // bez priblíženia funguje ťahanie ako doteraz (do strán smer, hore/dole dĺžka)
+    tap=[e.clientX,e.clientY,performance.now(),S.aim,S.tl,S.club,S.man];dragT=false;drag=null;
+    if(S.mode==="aim"&&!SW&&(!full||grab)){drag=e.clientX;dragT=true}},true);   // pat: ťahanie do strán kdekoľvek = smer (nie je krúžok); úder: len za krúžok   // (capture: pred OrbitControls, aby chytenie zóny vypnulo kameru) ťahanie kdekoľvek: do strán = smer, hore/dole = vzdialenosť dopadu
   addEventListener("pointermove",e=>{if(!dragT||S.mode!=="aim"||SW||S.zoom>.5||S.orb||ringDrag)return;if(dY==null){dY=e.clientY;return}
     const cl=CLUBS[S.club];if(!cl.a){dY=e.clientY;return}const L=tgtL(),nL=Math.max(3,L+(dY-e.clientY)*Math.max(.12,L/700));dY=e.clientY;setTarget(S.x+Math.sin(S.aim)*nL,S.y+Math.cos(S.aim)*nL)});
   addEventListener("pointerup",()=>{dY=null});
   addEventListener("pointerup",()=>{dragT=false});
   renderer.domElement.addEventListener("pointerup",e=>{const t=tap;tap=null;if(!t||S.mode!=="aim"||SW)return;
-    if(e.pointerType==="mouse")return;   // PC (Martin 24.11.): klik myšou cieľ nemení, zameriavač sa len ťahá; na mobile ťuk ostáva
-    if(Math.hypot(e.clientX-t[0],e.clientY-t[1])>8||performance.now()-t[2]>500)return;
-    const h=tgtHit(e.clientX,e.clientY);
-    if(h){S.aim=t[3];camAnchor();setTarget(h.point.x,-h.point.z)}});
+    return;   // v245: ťuk ani klik cieľ nemení (Martin 25.11.) – zameriavač sa len chytí a ťahá, ◀ ▶ otáča smer
+    });
   // ťahanie prstom do strán = smer (rýchlejšie a so zrýchlením pri švihu, aby sa dalo plynule namieriť aj úplne inam, napr. opačne od jamky);
   // pri priblížení (🔍 / dva prsty) ťahanie jedným prstom posúva pohľad ako mapu – kamera nie je viazaná na žltú čiaru
   let dragY=null;addEventListener("pointermove",e=>{if(drag==null||S.mode!=="aim"||SW)return;const d=e.clientX-drag;drag=e.clientX;
