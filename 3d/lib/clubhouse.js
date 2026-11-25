@@ -70,12 +70,19 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
   // ---- okolie podľa Martinových fotiek (25.11.2026; novšie než mapy.com) ----
   const grp = (e, n, rot = RU) => { const g = new THREE.Group(); g.position.copy(pos(e, n, ground(e, n))); g.rotation.y = rot; G.add(g); return g };
   const add = (g, geo, mat, x = 0, y = 0, z = 0, hit = false) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; g.add(m); if (hit) hits.push(m); return m };
-  const mBlk = M({ color: 0x24211f, roughness: .55, side: THREE.DoubleSide }), mOch = M({ color: 0xd8a952, roughness: .7, side: THREE.DoubleSide }), mSteel = M({ color: 0xb4b6b8, metalness: .5, roughness: .4 });
+  const mSteelD = M({ color: 0x3a3a3a, roughness: .5 }), mBlk = M({ color: 0x24211f, roughness: .55, side: THREE.DoubleSide }), mOch = M({ color: 0xd8a952, roughness: .7, side: THREE.DoubleSide }), mSteel = M({ color: 0xb4b6b8, metalness: .5, roughness: .4 });
   const mCable = new THREE.LineBasicMaterial({ color: 0x8f9396 });
   // štvorcové slnečníky: terasa pred kaštieľom béžové (foto 6), nádvorie čierne/krémové (foto 5)
   const sqUmb = (g, x, z, w, col) => { add(g, new THREE.CylinderGeometry(.05, .05, 2.7, 5), mPole, x, 1.35, z);
     const c = add(g, new THREE.ConeGeometry(w * .707, .55, 4, 1, true), M({ color: col, roughness: .9, side: THREE.DoubleSide }), x, 2.75, z); c.rotation.y = Math.PI / 4 };
   for (const [e, n] of C.tents || []) sqUmb(grp(e, n), 0, 0, 4.2, 0xa3988a);
+  // stoly so stoličkami pod slnečníkmi na terase (Martin 25.11. + foto zo street view): okrúhly stôl, 4 ratanové stoličky
+  const mRat = M({ color: 0x6f665c, roughness: .95 }), mTop = M({ color: 0x8b8378, roughness: .6 });
+  const table = (g) => { add(g, new THREE.CylinderGeometry(.5, .5, .04, 16), mTop, 0, .74, 0); add(g, new THREE.CylinderGeometry(.04, .04, .72, 6), mSteelD, 0, .37, 0);
+    for (let k = 0; k < 4; k++) { const t = k * Math.PI / 2 + Math.PI / 4, cg = new THREE.Group(); cg.position.set(Math.cos(t) * .85, 0, Math.sin(t) * .85); cg.rotation.y = -t - Math.PI / 2; g.add(cg);
+      add(cg, new THREE.BoxGeometry(.5, .08, .5), mRat, 0, .45, 0); add(cg, new THREE.BoxGeometry(.5, .5, .07), mRat, 0, .72, -.24);
+      for (const [x, z] of [[-.21, -.21], [.21, -.21], [-.21, .21], [.21, .21]]) add(cg, new THREE.BoxGeometry(.05, .42, .05), mRat, x, .21, z) } };
+  for (const [e, n] of C.tents || []) table(grp(e, n));
   for (const [a, b, k] of C.cups || []) { const [e, n] = at(a, C.L / 2 + b), g = new THREE.Group(); g.position.copy(pos(e, n, base + .06)); g.rotation.y = RU; G.add(g); sqUmb(g, 0, 0, 3.6, k ? 0xe9e3cf : 0x262524) }
   // "hríby" (foto 1–3): lievikový stĺp z čiernych rebier so žltými klinmi, 6-ramenná strecha (hore čierna, spodok okrový), oceľový stožiar s lanami; pod severným okrúhly drevený bar
   const funTex = cv(256, 64, (g, w, h) => { g.fillStyle = "#1f1d1b"; g.fillRect(0, 0, w, h); g.fillStyle = "#d6a54e"; for (let i = 0; i < 6; i++) { const x0 = (i + .5) * w / 6, hw = w / 12 * .7; g.beginPath(); g.moveTo(x0 - 1, h); g.lineTo(x0 + 1, h); g.lineTo(x0 + hw, 0); g.lineTo(x0 - hw, 0); g.closePath(); g.fill() } });
@@ -118,6 +125,15 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
     add(g, new THREE.CylinderGeometry(.08, .1, 2.2, 8), mSteel, 0, hh + 1.1, s / 2 - 2.4);
     const L = []; for (const [x, z] of [[-D / 2, -s / 2], [D / 2, -s / 2], [-D / 2, s / 2 - 1], [D / 2, s / 2 - 1]]) L.push(0, hh + 2.1, s / 2 - 2.4, x, hh + .25, z);
     const lg = new THREE.BufferGeometry(); lg.setAttribute("position", new THREE.Float32BufferAttribute(L, 3)); g.add(new THREE.LineSegments(lg, mCable)) }
+  // hlavný vstup (street view): kamenný oblúk okolo presklených dverí v strede SZ fasády, schodík; C.door = v (m od W rohu)
+  if (C.door != null) { const g = new THREE.Group(); g.position.copy(P3(0, C.door, 0)); g.rotation.y = RU; G.add(g);
+    const W2 = 1.75, Hs = 2.6, out = new THREE.Shape(); out.moveTo(-W2 - .35, 0); out.lineTo(-W2 - .35, Hs); out.absarc(0, Hs, W2 + .35, Math.PI, 0, true); out.lineTo(W2 + .35, 0); out.lineTo(-W2 - .35, 0);
+    const hole = new THREE.Path(); hole.moveTo(-W2, 0); hole.lineTo(-W2, Hs); hole.absarc(0, Hs, W2, Math.PI, 0, true); hole.lineTo(W2, 0); hole.lineTo(-W2, 0); out.holes.push(hole);
+    const fg = new THREE.ExtrudeGeometry(out, { depth: .25, bevelEnabled: false }); fg.rotateY(Math.PI / 2); add(g, fg, M({ color: 0xd9c9a0, roughness: .9 }), -.2, 0, 0, true);
+    const gs = new THREE.Shape(); gs.moveTo(-W2, 0); gs.lineTo(-W2, Hs); gs.absarc(0, Hs, W2, Math.PI, 0, true); gs.lineTo(W2, 0); gs.lineTo(-W2, 0);
+    const gg = new THREE.ShapeGeometry(gs, 16); gg.rotateY(Math.PI / 2); add(g, gg, M({ color: 0x3c4c55, roughness: .2, metalness: .3, side: THREE.DoubleSide }), -.06, 0, 0);
+    for (const [z, y, w, h] of [[0, 1.2, .08, 2.4], [-.6, 1.2, .07, 2.4], [.6, 1.2, .07, 2.4], [0, 2.42, 1.3, .07], [0, Hs + .55, 2 * W2, .07]]) add(g, new THREE.BoxGeometry(.05, h, w), mWhite, -.1, y, z);
+    add(g, new THREE.BoxGeometry(1.4, .16, 4.4), M({ color: 0xd6ccb5, roughness: .95 }), -.7, .08, 0) }
   // kamenná studňa (foto 2)
   if (C.well) { const g = grp(...C.well); add(g, new THREE.CylinderGeometry(.85, .9, .7, 14), M({ color: 0x9a948a, roughness: 1 }), 0, .35, 0); add(g, new THREE.CylinderGeometry(.62, .62, .05, 14), mDark, 0, .71, 0) }
   // menšie budovy (Garden room a sála): krémová omietka, oblúkové okná/dvere na dlhých stranách (foto 4, 6), tmavohnedá sedlová strecha
