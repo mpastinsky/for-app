@@ -150,7 +150,11 @@ export async function buildAreal(THREE, o) {
     const m = new THREE.Mesh(geo, mat); m.receiveShadow = !mobile; m.frustumCulled = false; G.add(m) }
   // --- stromy: jednoduché koruny (2 inštancované objekty pre všetky); vlastné stromy v okne už kreslí jamka
   const own = A.CRS, TR = [];
-  const addT = (e, n, r, h, mine, kc) => { if (!near(e, n)) return; const [x, y] = L(e, n); if (mine && inWin(x, y, 2)) return; TR.push([e, n, r, h, kc]) };
+  // v238 (Martin: stromy pri clubhouse vyzerali inak než tie, ktoré hráme): cudzie stromy v okne jamky kreslí jamka svojím detailným generátorom (o.detail), tu ostanú len stromy mimo dosahu hry
+  let nd = 0;
+  const addT = (e, n, r, h, mine, kc) => { if (!near(e, n)) return; const [x, y] = L(e, n); if (inWin(x, y, 2)) { if (mine) return; if (o.detail && o.detail(x, y, r, h, kc, nd++, 0)) return }
+    else if (o.detail && o.band && inWin(x, y, -o.band) && o.detail(x, y, r, h, kc, nd++, hA(e, n) - H0)) return;   // pás za oknom: rovnaký vzhľad, len bez kolízií (loptička tam nedoletí)
+    TR.push([e, n, r, h, kc]) };
   for (const t of AP.trees || []) addT(t[0], t[1], t[2] || 3, t[3] || 10, own === "apex", t[5]);
   if (AK) { for (const t of AK.trees || []) { const [e, n] = akp(t); addT(e, n, t[2] || 3.5, t[3] || 10, own !== "apex") }
     for (const t of AK.row || []) { const [e, n] = akp(t); addT(e, n, 2.6, 8, own !== "apex") }
@@ -182,5 +186,6 @@ export async function buildAreal(THREE, o) {
   let CLB = null;
   if (!o.club && AP.clubhouse && near(AP.clubhouse.o[0], AP.clubhouse.o[1])) { const { buildClubhouse } = await import("./clubhouse.js");
     CLB = buildClubhouse(THREE, AP.clubhouse, V, hA); if (CLB) G.add(mergeStatic(THREE, CLB.group)) }
-  return { group: G, clubhouse: CLB };
+  // kolízie s budovami: pôvodné (nezlúčené) meshe clubhouse v ENU 18-ky + matica do scény jamky (G.matrix)
+  return { group: G, clubhouse: CLB, coll: CLB ? { root: CLB.group, matrix: G.matrix } : null };
 }
