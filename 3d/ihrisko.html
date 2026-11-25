@@ -132,7 +132,7 @@ if(RG)drawRange(g,tx,ty,PPM,false);
 // cesty pre vozíky a chodníky
 for(const Pp of (DATA.paths||[])){g.lineCap=g.lineJoin="round";g.beginPath();Pp.p.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.lineWidth=Math.max(1.5,Pp.w*PPM);g.strokeStyle="#cfcbbd";g.stroke()}
 // hlavná cesta a príjazd ku clubhousu (apex.json area.roads)
-for(const r of ((DATA.area&&DATA.area.roads)||[])){g.lineCap=g.lineJoin="round";g.beginPath();r.p.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.lineWidth=r.w*PPM;g.strokeStyle=r.t==="main"?"#7d7f80":"#a9a291";g.stroke()}
+if(DATA.area&&DATA.area.roads){const{paintRoads}=await import("./lib/areal.js");paintRoads(g,DATA.area.roads,tx,ty,PPM)}   // v246: spoločné s jamkami (aj pruhy)
 // akadémia: lesy, fairwaye, odpaliská, greeny, bunkre
 if(AKD){const ap=P=>path(P.map(akp));
  for(const P of [...(AKD.woods||[]),...(AKD.groves||[]).map(G=>G.p)]){ap(P);g.fillStyle="#3f6a2c";g.fill()}
@@ -216,6 +216,8 @@ if(RG){const R=RG,pts=[...R.fan,...R.tee,...((DATA.practice&&DATA.practice.range
  for(const P of ((DATA.practice&&DATA.practice.rangeGreens)||[])){x2.beginPath();P.forEach(([e,n],i)=>i?x2.lineTo(tx2(e),ty2(n)):x2.moveTo(tx2(e),ty2(n)));x2.closePath();x2.lineJoin="round";x2.lineWidth=4*S;x2.strokeStyle="#7cba4b";x2.stroke();x2.fillStyle="#9fd95e";x2.fill()}
  drawRange(x2,tx2,ty2,S,true);
  for(const P of (DATA.rangeBunkers||[])){x2.beginPath();P.forEach(([e,n],i)=>i?x2.lineTo(tx2(e),ty2(n)):x2.moveTo(tx2(e),ty2(n)));x2.closePath();x2.fillStyle="#eadcae";x2.fill()}
+ // v246 (Martin: range príliš zelený): rovnaké tónovanie ako hlavná textúra (multiply ~0,765 + screen 60 → c' = 60 + 0,585·c), len kreslené pixely
+ {const im=x2.getImageData(0,0,c2.width,c2.height),d=im.data;for(let k=0;k<d.length;k+=4)if(d[k+3]){d[k]=60+.585*d[k];d[k+1]=60+.585*d[k+1];d[k+2]=60+.585*d[k+2]}x2.putImageData(im,0,0)}
  // priehľadné mimo nakreslených prvkov: maska = len pixely, ktoré sme kreslili (plátno je inak prázdne)
  const NXr=Math.ceil((a1-a0)/2),NYr=Math.ceil((b1-b0)/2),geo=new THREE.PlaneGeometry(a1-a0,b1-b0,NXr,NYr);geo.rotateX(-Math.PI/2);const p=geo.attributes.position;
  for(let k=0;k<p.count;k++){const e=p.getX(k)+(a0+a1)/2,n=-p.getZ(k)+(b0+b1)/2;p.setXYZ(k,e,hAt(e,n)+.15,-n)}
@@ -230,10 +232,8 @@ if(RG){const R=RG,pts=[...R.fan,...R.tee,...((DATA.practice&&DATA.practice.range
   for(let k=0;k<=6;k++)for(const z of [-1,1]){const po=new THREE.Mesh(pg,pm);po.position.set(-L/2+k*L/6,R.roof.h/2,z*(R.roof.w/2-.2));rg.add(po)}
   scene.add(rg)}
  const hut=new THREE.Mesh(new THREE.BoxGeometry(3,2.4,2.2),new THREE.MeshLambertMaterial({color:0x8a8478}));hut.position.copy(W(R.hut[0],R.hut[1],hAt(...R.hut)+1.2));hut.rotation.y=ang;scene.add(hut);
- // vlajky v cieľových greenoch (2 inštancie: žrď + látka)
- const N=R.targets.length,pole=new THREE.InstancedMesh(new THREE.CylinderGeometry(.06,.06,3,4),new THREE.MeshLambertMaterial({color:0xf4f4f0}),N),
-  fl=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.1,.7),new THREE.MeshBasicMaterial({color:0xe0412b,side:THREE.DoubleSide}),N),m=new THREE.Matrix4();
- R.targets.forEach((t,k)=>{const z=hAt(t[0],t[1]);m.makeTranslation(t[0],z+1.5,-t[1]);pole.setMatrixAt(k,m);m.makeTranslation(t[0]+.55,z+2.65,-t[1]);fl.setMatrixAt(k,m)});scene.add(pole,fl);
+ // tabule vzdialeností 50/100/150/200 (žlto-čierne) namiesto vlajok – v246, Martin
+ {const{buildRangeSigns}=await import("./lib/areal.js");scene.add(buildRangeSigns(THREE,R,W,hAt))}
  const el=document.createElement("a");el.href="#";el.className="rngl";el.textContent="🏌️ Driving range";const lc=R.tee[R.tee.length>>1];
  const st=document.createElement("style");st.textContent=".rngl{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:4px 8px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.4);text-decoration:none;z-index:3}";document.head.appendChild(st);
  // klik: prelet nad odpaliskovú líniu s pohľadom na lúku (aj ?range=1)
@@ -245,6 +245,8 @@ if(RG){const R=RG,pts=[...R.fan,...R.tee,...((DATA.practice&&DATA.practice.range
  el.onclick=ev=>{ev.preventDefault();go()};
  if(Q.has("range")){const v=view();camera.position.copy(v.p);controls.target.copy(v.t);camera.lookAt(v.t);controls.update()}}
 // clubhouse Kaštieľ Báč: 3D budova, štítok a klik = menu reštaurácie
+// portály tunela pod hlavnou cestou (k jamke 11)
+if((DATA.objects||[]).some(O=>O.t==="tunnel")){const{buildTunnel}=await import("./lib/areal.js");for(const O of DATA.objects)if(O.t==="tunnel")scene.add(buildTunnel(THREE,O,W,hAt))}
 if(DATA.clubhouse){const C=DATA.clubhouse,{buildClubhouse,clubMenu}=await import("./lib/clubhouse.js");
  const CL=buildClubhouse(THREE,C,(e,n,h)=>W(e,n,h),hAt);
  if(CL){scene.add(CL.group);if(Q.has("dbg"))window.__cl={CL,camera,controls,renderer,scene,W,hAt};const el=document.createElement("a");el.href="#";el.className="clubl";el.textContent="🍽 "+C.name;el.onclick=ev=>{ev.preventDefault();clubMenu(C)};
