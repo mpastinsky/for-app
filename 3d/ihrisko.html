@@ -101,7 +101,7 @@ for(const h of READY)for(const P of DATA.mow[h]||[]){path(P);g.fillStyle="#76b24
 for(const h of READY)for(const p of DATA.pads[h]){g.beginPath();g.arc(tx(p[0]),ty(p[1]),4.5*PPM,0,7);g.fillStyle="#86c45a";g.fill()}
 for(const P of DATA.water){path(P);g.fillStyle="#3d7397";g.fill();g.lineWidth=2*PPM;g.strokeStyle="#6f9a4a";g.stroke()}
 for(const h of READY){const P=DATA.greens[h-1];path(P);g.lineJoin="round";g.lineWidth=7*PPM;g.strokeStyle="#7cba4b";g.stroke();g.fillStyle="#9fd95e";g.fill()}
-for(const Q of (DATA.paved||[])){path(Q.p);g.fillStyle=Q.t==="parking"?"#8d8c86":"#bdb6a6";g.fill()}
+for(const Q of (DATA.paved||[])){path(Q.p);g.fillStyle=Q.t==="parking"?"#8d8c86":"#d6ccb5";g.fill()}
 for(const P of ((DATA.practice&&DATA.practice.greens)||[])){path(P);g.lineJoin="round";g.lineWidth=5*PPM;g.strokeStyle="#7cba4b";g.stroke();g.fillStyle="#9fd95e";g.fill()}
 // driving range (apex.json range): kosené pásy, odpalisková línia z umelej trávy, kruhová plocha, cieľové greeny na lúke, trávové odpalisko
 const RG=DATA.range;
