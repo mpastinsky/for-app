@@ -441,7 +441,7 @@ const seeM=new THREE.MeshStandardMaterial({color:0x3b7d33,roughness:.95,transpar
 // stromy, ktoré stoja v ploche hrania (medzi odpaliskom a greenom), sú priesvitné, aby bolo vidno cez ne
 // stromy medzi kamerou a tým, na čo sa pozeráme, sa priebežne zprehľadnia
 const FADE=[];let PIN_V=null;const TRUNKS=[];   // kmene stromov pre kolíziu loptičky: [x,y,polomer,výška vrchu]
-// budovy a prístrešky pre kolíziu loptičky (v238, Martin: loptička preletela clubhousom): trojuholníky v súradniciach scény + obal (Box3)
+// budovy a prístrešky pre kolíziu loptičky (v239, Martin: loptička preletela clubhousom): trojuholníky v súradniciach scény + obal (Box3)
 const BLD=[];
 function bldAdd(root,pre){root.updateMatrixWorld(true);const m=new THREE.Matrix4(),v=new THREE.Vector3();
   root.traverse(o=>{if(!o.isMesh||o.isInstancedMesh)return;m.copy(o.matrixWorld);if(pre)m.premultiply(pre);const g=o.geometry,P=g.attributes.position,I=g.index,n=I?I.count:P.count,T=new Float32Array(n*3),box=new THREE.Box3();
@@ -1955,7 +1955,7 @@ if(DATA.clubhouse){const C=DATA.clubhouse,[cx,cy]=loc(C.o);const cc=loc([C.o[0]+
     renderer.domElement.addEventListener("pointerup",e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>8||game)return;
       mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(mv,camera);if(rc.intersectObjects(CLUB.hits,false).length)clubMenu(C)})}}}
 // okolie areálu mimo okna jamky: terén a povrch celého areálu, stromy, vlajky ostatných jamiek, driving range, clubhouse (lib/areal.js)
-// v238 (Martin: niektoré stromy pri akadémii vyzerali inak, než by vyzerali, keby sme ich hrali): stromy 18-ky v okne jamky akadémie (a stromy akadémie v okne jamky 18-ky)
+// v239 (Martin: niektoré stromy pri akadémii vyzerali inak, než by vyzerali, keby sme ich hrali): stromy 18-ky v okne jamky akadémie (a stromy akadémie v okne jamky 18-ky)
 // sa kreslili ako jednoduché guľaté koruny okolia. Teraz ich kreslí jamka rovnakým generátorom ako svoje: blízko hry plné kópie (kolízia, stmievanie),
 // ďalej od hry inštancie (2 objekty na typ – šetrí iPhone). Okolie mimo okna (kam loptička nedoletí) ostáva jednoduché.
 const XOBST=[],XW={};
@@ -2103,7 +2103,7 @@ function startPlay(){
   const R=.06,G=9.81;
   // stromy ako prekážky (koruny)
   const OBST=DATA.trees.map(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(PROC[k]){const P=PT.PARAMS[PROC[k]],z=hL(x,y);return{x,y,r:Math.max(P.rx,P.rz)*.9,z0:z+P.cy-P.ry*.85,z1:z+P.cy+P.ry}}if(NP[k]){const P=PT.PARAMS[NP[k].kd],q=NP[k].s,z=hL(x,y);return{x,y,r:Math.max(P.rx,P.rz)*.9*q,z0:z+(P.cy-P.ry*.85)*q,z1:z+(P.cy+P.ry)*q}}return{x,y,r:r*1.05,z0:g?hL(x,y):hL(x,y)+h*.5-r*.2,z1:hL(x,y)+h*.5+r*2}});
-  HEDGE_PTS.forEach(([x,y,r,z0,z1])=>OBST.push({x,y,r,z0,z1}));OBST.push(...XOBST);   // + stromy okolia v okne jamky (v238)   // kríky plotu: ako koruna stromu (cez riedke lístie môže prejsť)
+  HEDGE_PTS.forEach(([x,y,r,z0,z1])=>OBST.push({x,y,r,z0,z1}));OBST.push(...XOBST);   // + stromy okolia v okne jamky (v239)   // kríky plotu: ako koruna stromu (cez riedke lístie môže prejsť)
   // loptička, stopa, mierenie
   // loptička: jamôčky (dimples) ako normálová mapa z jedného malého plátna (vypočíta sa raz, na iPhone lacné), plus potlač a čiara na mierenie
   const ballMat=(()=>{const Wd=512,Ht=256,cv=document.createElement("canvas");cv.width=Wd;cv.height=Ht;const x=cv.getContext("2d");
@@ -2564,7 +2564,7 @@ function startPlay(){
       if(S.mode==="fly")leafBurst(T[0],T[1],Math.min(S.z+1.5,T[3]),5);
       msg("Kmeň stromu! 🌳");const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1500);return true}
     return false}
-  // budova / prístrešok (v238): úsek pohybu proti trojuholníkom BLD; od steny sa loptička odrazí a stratí rýchlosť, zo strechy sa odrazí a skotúľa dolu
+  // budova / prístrešok (v239): úsek pohybu proti trojuholníkom BLD; od steny sa loptička odrazí a stratí rýchlosť, zo strechy sa odrazí a skotúľa dolu
   const bA=new THREE.Vector3(),bB=new THREE.Vector3(),bD=new THREE.Vector3(),bP=new THREE.Vector3(),bH=new THREE.Vector3(),bN=new THREE.Vector3(),t0=new THREE.Vector3(),t1=new THREE.Vector3(),t2=new THREE.Vector3(),bBox=new THREE.Box3(),bRay=new THREE.Ray();
   function bldHit(ox,oy,oz,roll){if(!BLD.length)return false;bA.set(ox,oz,-oy);bB.set(S.x,S.z,-S.y);bD.subVectors(bB,bA);const L=bD.length();if(L<1e-5)return false;bD.divideScalar(L);
     bBox.makeEmpty();bBox.expandByPoint(bA);bBox.expandByPoint(bB);bBox.expandByScalar(R+.05);bRay.set(bA,bD);let best=L+R+.02,hit=false;
