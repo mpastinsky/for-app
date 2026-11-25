@@ -130,7 +130,7 @@ function drawRange(g,tx,ty,S,fine){const R=RG,pth=P=>{g.beginPath();P.forEach(([
  if(fine){g.beginPath();g.arc(tx(c[0]),ty(c[1]),c[2]*.35*S,0,7);g.strokeStyle="#c9c5b6";g.lineWidth=.2*S;g.stroke()}}
 if(RG)drawRange(g,tx,ty,PPM,false);
 // cesty pre vozíky a chodníky
-for(const Pp of (DATA.paths||[])){g.lineCap=g.lineJoin="round";g.beginPath();Pp.p.forEach(([e,n],i)=>i?g.lineTo(tx(e),ty(n)):g.moveTo(tx(e),ty(n)));g.lineWidth=Math.max(1.5,Pp.w*PPM);g.strokeStyle="#cfcbbd";g.stroke()}
+{const{paintPathVerge}=await import("./lib/areal.js");paintPathVerge(g,DATA.paths,tx,ty,PPM)}   // v250: chodník samotný = 3D pás buildPaths
 // hlavná cesta a príjazd ku clubhousu (apex.json area.roads)
 if(DATA.area&&DATA.area.roads){const{paintRoads}=await import("./lib/areal.js");paintRoads(g,DATA.area.roads,tx,ty,PPM)}   // v248: hlavná cesta len krajnica, vozovku kreslí 3D pás buildRoad
 // akadémia: lesy, fairwaye, odpaliská, greeny, bunkre
@@ -249,6 +249,8 @@ if(RG){const R=RG,pts=[...R.fan,...R.tee,...((DATA.practice&&DATA.practice.range
 if((DATA.objects||[]).some(O=>O.t==="tunnel")){const{buildTunnel}=await import("./lib/areal.js");for(const O of DATA.objects)if(O.t==="tunnel")scene.add(buildTunnel(THREE,O,W,hAt))}
 // hlavná cesta ako 3D pás (v248, Martin: kostrbatá, zubatá) – ostré okraje a čiary, plynulý profil
 if(DATA.area&&DATA.area.roads){const{buildRoad}=await import("./lib/areal.js");const TN=(DATA.objects||[]).filter(O=>O.t==="tunnel");for(const r of DATA.area.roads)if(r.t==="main")scene.add(buildRoad(THREE,r,W,hAt,{off:.3,step:3,clip:(e,n)=>e>e0+4&&e<e1-4&&n>n0+4&&n<n1-4,tunnels:TN}))}
+// chodníky pre vozíky, príjazd a rampy ako ostrý 3D pás (v250, Martin: rozmazané a neostré)
+{const{buildPaths,pathList,pathAvoid}=await import("./lib/areal.js");scene.add(buildPaths(THREE,pathList(DATA),W,hAt,{off:.2,step:1.5,clip:(e,n)=>e>e0+4&&e<e1-4&&n>n0+4&&n<n1-4,avoid:pathAvoid(DATA,AKD,AKO)}))}
 if(DATA.clubhouse){const C=DATA.clubhouse,{buildClubhouse,clubMenu}=await import("./lib/clubhouse.js");
  const CL=buildClubhouse(THREE,C,(e,n,h)=>W(e,n,h),hAt);
  if(CL){scene.add(CL.group);if(Q.has("dbg"))window.__cl={CL,camera,controls,renderer,scene,W,hAt};const el=document.createElement("a");el.href="#";el.className="clubl";el.textContent="🍽 "+C.name;el.onclick=ev=>{ev.preventDefault();clubMenu(C)};

@@ -311,6 +311,7 @@ if(AR&&DATA.area&&DATA.area.roads){g2.save();enuT();AR.M.paintRoads(g2,DATA.area
 // cesty pre vozíky (z leteckých záberov; DATA.paths: [{w,p:[[e,n],…]}])
 for(const Pp of (DATA.paths||[])){const P=Pp.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
   g2.lineCap=g2.lineJoin="round";g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));
+  if(AR){g2.lineWidth=(Pp.w+.6)*ppm;g2.strokeStyle="rgba(110,110,84,.35)";g2.stroke();continue}   // v250: samotný chodník = ostrý 3D pás (buildPaths v buildAreal)
   g2.lineWidth=(Pp.w+.6)*ppm;g2.strokeStyle="rgba(70,80,50,.45)";g2.stroke();g2.lineWidth=Pp.w*ppm;g2.strokeStyle="#c8c4b6";g2.stroke();
   g2.lineWidth=Pp.w*.5*ppm;g2.strokeStyle="rgba(255,255,250,.18)";g2.stroke()}
 const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
@@ -2117,7 +2118,7 @@ function startPlay(){
   const mowL=MOW?MOW.map(p=>p.map(loc)):null;
   // v249: tvrdé povrchy (hlavná cesta, rampy = asfalt/betón; príjazd, chodníky pre vozíky, spevnené plochy = chodník) a cudzie greeny v okne jamky
   const HARD=[],OGRN=[];{const inW=P=>P.some(([x,y])=>x>X0-15&&x<X1+15&&y>Y0-15&&y<Y1+15),bbx=(P,m)=>{const xs=P.map(p=>p[0]),ys=P.map(p=>p[1]);return[Math.min(...xs)-m,Math.max(...xs)+m,Math.min(...ys)-m,Math.max(...ys)+m]};
-    const line=(E,w,sf)=>{const P=E.map(loc);if(!inW(P))return;for(let i=1;i<P.length;i++){const S2=[P[i-1],P[i]],h=w/2;HARD.push({s:S2,h,sf,b:bbx(S2,h)})}};
+    const line=(E,w,sf)=>{const P=E.map(loc);if(!inW(P))return;for(let i=1;i<P.length;i++){const S2=[P[i-1],P[i]],h=w/2;HARD.push({s:S2,h,sf,b:bbx(S2,h),lift:!!AR})}};
     for(const r of (DATA.area&&DATA.area.roads)||[])line(r.p,r.w||5,r.t==="access"?SURF.path:SURF.road);
     for(const q of DATA.paths||[])line(q.p,q.w||2.4,SURF.path);
     for(const q of DATA.paved||[]){const P=q.p.map(loc);if(inW(P))HARD.push({P,sf:q.t==="parking"?SURF.road:SURF.path,b:bbx(P,0)})}
@@ -2125,8 +2126,8 @@ function startPlay(){
     READY.forEach(h=>{if(h!==hNum&&DATA.greens[h-1])og(DATA.greens[h-1])});for(const P of (DATA.practice&&DATA.practice.greens)||[])og(P);
     if(AR){const A=AR.A,o=A.off;if(A.CRS==="apex"&&A.AK)for(const P of A.AK.greens)og(P.map(p=>[p[0]+A.AKO[0],p[1]+A.AKO[1]]));
       else if(A.CRS!=="apex")for(const h of A.AP.ready||[])if(A.AP.greens[h-1])og(A.AP.greens[h-1].map(p=>[p[0]-o[0],p[1]-o[1]]))}}
-  function hardAt(x,y){for(const H of HARD){const b=H.b;if(x<b[0]||x>b[1]||y<b[2]||y>b[3])continue;
-      if(H.P){if(inPoly([x,y],H.P))return H.sf;continue}const[[ax,ay],[bx,by]]=H.s,vx=bx-ax,vy=by-ay,l=vx*vx+vy*vy||1,t=Math.max(0,Math.min(1,((x-ax)*vx+(y-ay)*vy)/l));
+  function hardAt(x,y,lift){for(const H of HARD){const b=H.b;if(x<b[0]||x>b[1]||y<b[2]||y>b[3])continue;
+      if(H.P){if(!lift&&inPoly([x,y],H.P))return H.sf;continue}if(lift&&!H.lift)continue;const[[ax,ay],[bx,by]]=H.s,vx=bx-ax,vy=by-ay,l=vx*vx+vy*vy||1,t=Math.max(0,Math.min(1,((x-ax)*vx+(y-ay)*vy)/l));
       if(Math.hypot(ax+vx*t-x,ay+vy*t-y)<H.h)return H.sf}return null}
   function surf(x,y){for(const B of allBunkL)if(inPoly([x,y],B))return SURF.sand;
     const sd=sdist(x,y,green);if(sd<0)return SURF.green;{const hs=hardAt(x,y);if(hs)return hs}if(sd<1.5)return SURF.collar;if(sd<4)return SURF.cut;
@@ -2137,7 +2138,7 @@ function startPlay(){
   // predtým loptička v piesku „plávala“ 5–8 cm nad ním, a preto nebolo vidno zaborenie ani kráter
   const SBB=allBunkL.map(P=>{const xs=P.map(p=>p[0]),ys=P.map(p=>p[1]),b=[Math.min(...xs),Math.max(...xs),Math.min(...ys),Math.max(...ys)];
     const cx=(b[0]+b[1])/2,cy=(b[2]+b[3])/2;return[...b,P,myBunkers.some(B=>cx>B.bb[0]&&cx<B.bb[1]&&cy>B.bb[2]&&cy<B.bb[3])?.03:.005]});
-  const gS=(x,y)=>{const h=hL(x,y);for(const b of SBB)if(x>=b[0]&&x<=b[1]&&y>=b[2]&&y<=b[3]&&inPoly([x,y],b[4]))return h+b[5];return h+.08};
+  const gS=(x,y)=>{const h=hL(x,y);for(const b of SBB)if(x>=b[0]&&x<=b[1]&&y>=b[2]&&y<=b[3]&&inPoly([x,y],b[4]))return h+b[5];return h+(hardAt(x,y,1)?.12:.08)};   // v250: na 3D páse cesty/chodníka (o .08–.1 m nad terénom) leží loptička na ňom, nie pod ním
   const R=.06,G=9.81;
   // stromy ako prekážky (koruny)
   const OBST=DATA.trees.map(([e,n,r,h,g],k)=>{const[x,y]=loc([e,n]);if(PROC[k]){const P=PT.PARAMS[PROC[k]],z=hL(x,y);return{x,y,r:Math.max(P.rx,P.rz)*.9,z0:z+P.cy-P.ry*.85,z1:z+P.cy+P.ry}}if(NP[k]){const P=PT.PARAMS[NP[k].kd],q=NP[k].s,z=hL(x,y);return{x,y,r:Math.max(P.rx,P.rz)*.9*q,z0:z+(P.cy-P.ry*.85)*q,z1:z+(P.cy+P.ry)*q}}return{x,y,r:r*1.05,z0:g?hL(x,y):hL(x,y)+h*.5-r*.2,z1:hL(x,y)+h*.5+r*2}});
