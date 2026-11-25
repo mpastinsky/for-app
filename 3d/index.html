@@ -68,7 +68,7 @@ addEventListener("error",e=>{try{if(window.__3dok)return;let d=document.getEleme
 })();</script>
 <script>/* plynulý prechod: posledný záber predchádzajúcej obrazovky ostane viditeľný, kým sa nová scéna nevykreslí */
 try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.src=s;
- i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:1;pointer-events:none;transition:opacity .35s";document.body.appendChild(i)}}catch(e){}</script>
+ i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:1;pointer-events:none;transition:opacity .35s";document.body.appendChild(i);const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w)}}catch(e){}</script>
 <div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div></div>
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
@@ -2828,7 +2828,7 @@ window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(s
  document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
  const done=()=>{document.body.appendChild(i);const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
 
-window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}};
+window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));{const w=document.getElementById("ldpill");if(w)w.remove()}const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}};
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
   if(CRS==="apex"||OVQ)snapGo(OVH);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!PLAY){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
 document.querySelectorAll("#holes a").forEach(a=>a.addEventListener("click",ev=>{if(ev.metaKey||ev.ctrlKey)return;ev.preventDefault();snapGo(a.href)}));
