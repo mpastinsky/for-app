@@ -63,25 +63,78 @@ export function paintRange(g, R, tx, ty, S, fine) {
 // hlavná cesta (asfalt) a príjazd ku clubhousu
 export function paintRoads(g, roads, tx, ty, S) {
   for (const r of roads || []) { g.lineCap = g.lineJoin = "round"; g.beginPath(); r.p.forEach(([e, n], i) => i ? g.lineTo(tx(e), ty(n)) : g.moveTo(tx(e), ty(n)));
-    g.lineWidth = (r.w + 1.2) * S; g.strokeStyle = "rgba(70,80,50,.45)"; g.stroke(); g.lineWidth = r.w * S; g.strokeStyle = ROADC[r.t] || ROADC.access; g.stroke() }
+    g.lineWidth = (r.w + 1.2) * S; g.strokeStyle = "rgba(70,80,50,.45)"; g.stroke(); g.lineWidth = r.w * S; g.strokeStyle = ROADC[r.t] || ROADC.access; g.stroke();
+    if (r.t === "main") roadLines(g, r, tx, ty, S) }
+}
+// vodorovné značenie hlavnej cesty (v246): okrajové plné čiary a stredová prerušovaná 3 m / 6 m medzera (mimo obce), šírka 0,15 m,
+// aspoň 1 px, aby boli vidno aj v hrubej textúre prehľadu
+function roadLines(g, r, tx, ty, S) {
+  const t = g.getTransform(), lw = Math.max(.15 * S, 1 / (Math.hypot(t.a, t.b) || 1)), off = r.w / 2 - .35;
+  const line = (o, dash) => { g.beginPath();
+    for (let i = 0; i < r.p.length; i++) { const [e, n] = r.p[i], A = r.p[Math.max(0, i - 1)], B = r.p[Math.min(r.p.length - 1, i + 1)], de = B[0] - A[0], dn = B[1] - A[1], l = Math.hypot(de, dn) || 1;
+      const x = tx(e - dn / l * o), y = ty(n + de / l * o); i ? g.lineTo(x, y) : g.moveTo(x, y) }
+    g.setLineDash(dash ? [3 * S, 6 * S] : []); g.lineDashOffset = 0; g.stroke() };
+  g.save(); g.lineCap = "butt"; g.strokeStyle = "rgba(245,245,240,.92)"; g.lineWidth = lw; line(off, 0); line(-off, 0); line(0, 1); g.setLineDash([]); g.restore();
 }
 // farby: asfalt, príjazd, betónové rampy k tunelu pod cestou (jamka 11, Martin 25.11.)
 export const ROADC = { main: "#7d7f80", access: "#a9a291", ramp: "#c4b8ae" };
-// portál tunela pod hlavnou cestou (DATA.objects t:"portal"): betónové čelo s tmavým otvorom na konci rampy.
-// O: {p:[e,n], a: smer von (° od východu), w, h}; pos(e,n,h) -> THREE.Vector3, ground(e,n) -> výška
-export function buildPortal(THREE, O, pos, ground) {
-  const ar = O.a * Math.PI / 180, d = [Math.cos(ar), Math.sin(ar)], [e, n] = O.p, w = O.w || 4.2, h = O.h || 2.7;
-  const base = ground(e + d[0] * 2, n + d[1] * 2), top = Math.max(base + h + .7, ground(e - d[0] * 2.5, n - d[1] * 2.5) + .15), H = top - base;
-  const a = pos(e, n, 0), b = pos(e + d[0], n + d[1], 0), g = new THREE.Group(); g.position.copy(pos(e, n, base)); g.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
-  const mC = new THREE.MeshLambertMaterial({ color: 0xb9b2a8 }), mD = new THREE.MeshLambertMaterial({ color: 0x15161a }), sw = 1.3, T = .5;
+// tunel pod hlavnou cestou k jamke 11 (DATA.objects t:"tunnel", v246 – Martin: priechodný, nech je vidno skrz).
+// Terén má pod cestou otvorený priekop; objekt = dno, bočné steny a strop s vozovkou (pruhy) navrchu.
+// O: {p:[e,n] stred (os cesty), a: os tunela (° od východu, kolmo na cestu), len, w, h, ts: polovica dĺžky bloku pozdĺž cesty,
+//     rw: šírka vozovky, r:[e,n] smer cesty, d0: vzdialenosť stredu od začiatku cesty (fáza prerušovanej čiary)}
+// pos(e,n,h) -> THREE.Vector3, ground(e,n) -> výška
+export function buildTunnel(THREE, O, pos, ground) {
+  const ar = O.a * Math.PI / 180, d = [Math.cos(ar), Math.sin(ar)], r = O.r || [d[1], -d[0]], [e, n] = O.p;
+  const Lt = O.len || 11, w = O.w || 4.2, ts = O.ts || 6.5, rw = O.rw || 9, P = (x, z) => [e + d[0] * x + r[0] * z, n + d[1] * x + r[1] * z];
+  // úroveň cesty: terén na osi cesty kúsok za blokom (obe strany); dno: najvyšší terén v otvore, aby ho nič neprekrývalo
+  const road = (ground(...P(0, ts + 2.5)) + ground(...P(0, -ts - 2.5))) / 2;
+  let fl = -1e9; for (let x = -Lt / 2 - 1; x <= Lt / 2 + 1; x += 1) for (let z = -w / 2; z <= w / 2; z += w / 4) fl = Math.max(fl, ground(...P(x, z)));
+  const h = Math.min(O.h || 2.7, Math.max(1.6, road - fl - .9)); fl = Math.min(fl, road - h - .9); const R = road - fl;
+  const a = pos(e, n, 0), b = pos(e + d[0], n + d[1], 0), g = new THREE.Group(); g.position.copy(pos(e, n, fl)); const th = Math.atan2(-(b.z - a.z), b.x - a.x); g.rotation.y = th;
+  // lokálne: x = os tunela (kolmo na cestu), z = pozdĺž cesty; zs = znamienko smeru cesty v lokálnom z
+  const c0 = pos(...P(0, 0), 0), c1 = pos(...P(0, 1), 0), zs = Math.sign((c1.x - c0.x) * Math.sin(th) + (c1.z - c0.z) * Math.cos(th)) || 1;
+  const mC = new THREE.MeshLambertMaterial({ color: 0xb9b2a8 }), mI = new THREE.MeshLambertMaterial({ color: 0x8f8a82 }), mF = new THREE.MeshLambertMaterial({ color: 0xa69d93 }),
+    mA = new THREE.MeshLambertMaterial({ color: 0x7d7f80 }), mW = new THREE.MeshLambertMaterial({ color: 0xf2f2ee }), mS = new THREE.MeshLambertMaterial({ color: 0x8f9a6a });
   const box = (sx, sy, sz, x, y, z, m = mC) => { const k = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); k.position.set(x, y, z); k.castShadow = k.receiveShadow = true; g.add(k); return k };
-  for (const s of [-1, 1]) box(T, H + .4, sw, 0, (H - .4) / 2, s * (w / 2 + sw / 2));           // bočné časti čela (siahajú aj pod zem)
-  box(T, H - h, w, 0, h + (H - h) / 2, 0);                                                     // preklad nad otvorom
-  box(T + .1, .18, w + 2 * sw + .2, .02, H + .09, 0);                                          // rímsa
-  box(.1, h, w, -.6, h / 2, 0, mD);                                                            // tmavý otvor (tunel)
-  for (const s of [-1, 1]) box(1.2, h, .1, -.3, h / 2, s * w / 2, mD);
-  box(1.2, .1, w, -.3, h, 0, mD);
+  const sw = ts - w / 2;
+  box(Lt, 2, w + .2, 0, -.97, 0, mF);                                                                   // dno (betón, siaha pod terén)
+  for (const s of [-1, 1]) {
+    box(Lt, R + 1.5, sw, 0, (R - 1.5) / 2, s * (w / 2 + sw / 2), [mC, mC, mC, mC, s > 0 ? mC : mI, s > 0 ? mI : mC]); // bočné steny (vnútri tmavší betón)
+    box(.35, .25, 2 * ts, s * (Lt / 2 - .1), R + .12, 0);                                               // rímsa na čele
+    box(.06, .06, 2 * ts, s * (Lt / 2 - .45), R + .55, 0, mW);                                          // zábradlie (madlo)
+    for (let z = -ts + .3; z <= ts; z += 2) box(.06, .5, .06, s * (Lt / 2 - .45), R + .28, z, mW);
+  }
+  box(Lt, R - h, w + .02, 0, h + (R - h) / 2, 0, mI);                                                   // strop
+  // vozovka navrchu: asfalt s okrajovými čiarami a stredovou prerušovanou čiarou (rovnaká fáza ako na terénne)
+  box(Lt - .2, .04, 2 * ts, 0, R + .02, 0, mS); box(rw, .05, 2 * ts, 0, R + .03, 0, mA);
+  for (const s of [-1, 1]) box(.15, .02, 2 * ts, s * (rw / 2 - .35), R + .06, 0, mW);
+  const D0 = O.d0 || 0;
+  for (let k = Math.floor((D0 - ts) / 9) - 1; k * 9 < D0 + ts + 9; k++) { let z0 = Math.max(k * 9 - D0, -ts), z1 = Math.min(k * 9 + 3 - D0, ts); if (z1 - z0 > .05) box(.15, .02, z1 - z0, 0, R + .06, zs * (z0 + z1) / 2, mW) }
   return g;
+}
+
+// tabule vzdialeností na driving range (v246, Martin: namiesto vlajok čísla 50/100/150/200, žlto-čierne).
+// Stoja na osi range: stred odpaliskovej línie + kolmica k lúke; čelom k línii. pos(e,n,h) -> Vector3, ground(e,n) -> výška
+export const RANGE_DIST = [50, 100, 150, 200];
+export function rangeSignSpots(R) {
+  const a = R.tee[0], b = R.tee[R.tee.length - 1], lc = R.tee[R.tee.length >> 1]; let nn = [-(b[1] - a[1]), b[0] - a[0]]; const L = Math.hypot(...nn); nn = [nn[0] / L, nn[1] / L];
+  const mc = R.fan.reduce((s, p) => [s[0] + p[0] / R.fan.length, s[1] + p[1] / R.fan.length], [0, 0]); if ((mc[0] - lc[0]) * nn[0] + (mc[1] - lc[1]) * nn[1] < 0) nn = [-nn[0], -nn[1]];
+  return RANGE_DIST.map(d => ({ d, e: lc[0] + nn[0] * d, n: lc[1] + nn[1] * d, nn }));
+}
+export function buildRangeSigns(THREE, R, pos, ground, filter) {
+  const G = new THREE.Group(), post = new THREE.MeshLambertMaterial({ color: 0x1b1b1b }), pg = new THREE.CylinderGeometry(.07, .07, 1.3, 6), bw = 3, bh = 2;
+  for (const S of rangeSignSpots(R)) { if (filter && !filter(S.e, S.n)) continue;
+    const cv = document.createElement("canvas"); cv.width = 384; cv.height = 256; const x = cv.getContext("2d");
+    x.fillStyle = "#111"; x.fillRect(0, 0, 384, 256); x.fillStyle = "#ffd200"; x.fillRect(14, 14, 356, 228);
+    x.fillStyle = "#111"; x.font = "900 170px Arial, Helvetica, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(String(S.d), 192, 136);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const face = new THREE.MeshLambertMaterial({ map: tex }), edge = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const g = new THREE.Group(), z = ground(S.e, S.n); g.position.copy(pos(S.e, S.n, z));
+    const a = pos(S.e, S.n, 0), b = pos(S.e - S.nn[0], S.n - S.nn[1], 0); g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);   // čelo (+z) k odpaliskovej línii
+    const bd = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, .1), [edge, edge, edge, edge, face, face]); bd.position.y = 1.2 + bh / 2; bd.castShadow = true; g.add(bd);
+    for (const s of [-1, 1]) { const p = new THREE.Mesh(pg, post); p.position.set(s * bw * .32, .6, -.08); g.add(p) }
+    G.add(g) }
+  return G;
 }
 
 // pomocník: zlúči statické meshe skupiny podľa materiálu (clubhouse ~100 objektov -> pár volaní kreslenia)
@@ -184,7 +237,6 @@ export async function buildAreal(THREE, o) {
   // --- vlajky na ostatných greenoch (18-ka červené, akadémia tmavomodré), aktuálna jamka má svoju
   { const F = []; for (const h of READY) if (AP.gc[h - 1] && !(own === "apex" && h === o.hNum)) F.push([...AP.gc[h - 1], 0xd8262a]);
     if (AK) AK.gc.forEach((p, i) => { if (!(own !== "apex" && i + 1 === o.hNum)) F.push([...akp(p), 0x16285a]) });
-    if (AP.range) for (const t of AP.range.targets || []) F.push([t[0], t[1], 0xe0412b]);
     const Fs = F.filter(p => near(p[0], p[1])), N = Fs.length;
     if (N) { const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(.06, .06, 2.1, 4), new THREE.MeshStandardMaterial({ color: 0xf4f4f0 }), N),
         cl = new THREE.InstancedMesh(new THREE.PlaneGeometry(.75, .5), new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide }), N), m = new THREE.Matrix4(), c = new THREE.Color();
@@ -200,8 +252,10 @@ export async function buildAreal(THREE, o) {
       for (let k = 0; k <= 6; k++) for (const z of [-1, 1]) { const po = new THREE.Mesh(pg, pm); po.position.set(-Ln / 2 + k * Ln / 6, Rg.roof.h / 2, z * (Rg.roof.w / 2 - .2)); rg.add(po) }
       G.add(rg) }
     if (Rg.hut) { const hut = new THREE.Mesh(new THREE.BoxGeometry(3, 2.4, 2.2), new THREE.MeshStandardMaterial({ color: 0x8a8478 })); hut.position.copy(V(Rg.hut[0], Rg.hut[1], hA(...Rg.hut) + 1.2)); hut.rotation.y = ang; G.add(hut) } }
-  // --- portály tunela mimo okna jamky (v okne ich kreslí jamka)
-  for (const O of AP.objects || []) if (O.t === "portal" && near(O.p[0], O.p[1])) { const [x, y] = L(...O.p); if (!inWin(x, y, 2)) G.add(buildPortal(THREE, O, V, hA)) }
+  // --- tabule vzdialeností na range (namiesto vlajok)
+  if (AP.range && AP.range.tee) G.add(buildRangeSigns(THREE, AP.range, V, hA, (e, n) => near(e, n)));
+  // --- tunel pod cestou mimo okna jamky (v okne ho kreslí jamka)
+  for (const O of AP.objects || []) if (O.t === "tunnel" && near(O.p[0], O.p[1])) { const [x, y] = L(...O.p); if (!inWin(x, y, 2)) G.add(buildTunnel(THREE, O, V, hA)) }
   // --- clubhouse (ak ho nekreslí jamka): zjednodušený na pár zlúčených objektov
   let CLB = null;
   if (!o.club && AP.clubhouse && near(AP.clubhouse.o[0], AP.clubhouse.o[1])) { const { buildClubhouse } = await import("./clubhouse.js");
