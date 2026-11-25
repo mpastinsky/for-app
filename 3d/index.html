@@ -41,7 +41,7 @@ body.allv .lab.hole{display:block!important}.lab.hole.cur{background:#ffd400;col
 #guard3 small{display:block;font-weight:500;color:#556;font-size:.75rem;line-height:1.3}#r3test{border:0;border-radius:8px;background:#ffe9a8;font:700 .72rem var(--font);padding:3px 7px;margin-right:4px}
 #pop3 .pl{display:flex;align-items:center;gap:6px;width:100%;margin-top:6px;border:0;border-radius:10px;background:#f0f4ee;padding:7px 9px;font:600 .85rem var(--font);text-align:left}#pop3 .pl .ric{width:1.4em;height:1.4em}#pop3 .pl small{font-weight:500;color:#667}
 #top,#bar,#tees,#note{z-index:3}
-#ldpill{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:3;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none}#ldpill i{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:ldsp .8s linear infinite}@keyframes ldsp{to{transform:rotate(360deg)}}
+#ldpill{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:3;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none}#ldpill i,#snappill i{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:ldsp .8s linear infinite}@keyframes ldsp{to{transform:rotate(360deg)}}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
@@ -67,8 +67,10 @@ addEventListener("error",e=>{try{if(window.__3dok)return;let d=document.getEleme
    const h=a.getAttribute("href");if(!h||h[0]==="#"||/^(javascript|mailto|tel|sms|whatsapp):/i.test(h))return;e.preventDefault();forNav(h)});
 })();</script>
 <script>/* plynulý prechod: posledný záber predchádzajúcej obrazovky ostane viditeľný, kým sa nová scéna nevykreslí */
-try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.src=s;
- i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:1;pointer-events:none;transition:opacity .35s";document.body.appendChild(i);const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w)}}catch(e){}</script>
+try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.decoding="sync";i.src=s;
+ i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:50;pointer-events:none;transition:opacity .35s";document.body.appendChild(i);
+ /* záber prekrýva aj lišty a tlačidlá (kým sa nenačítajú, menili sa – preblikávalo); kým sa čaká, beží „Načítavam…“ */
+ const w=document.createElement("div");w.id="snappill";w.innerHTML='<i></i>Načítavam…';w.style.cssText="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:51;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none;transition:opacity .35s";i.__pill=w;document.body.appendChild(w)}}catch(e){}</script>
 <div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div></div>
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
@@ -2828,7 +2830,7 @@ window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(s
  document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
  const done=()=>{document.body.appendChild(i);const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
 
-window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));{const w=document.getElementById("ldpill");if(w)w.remove()}const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}};
+window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));const i=document.getElementById("snapimg");if(i){const w=i.__pill;i.style.opacity="0";if(w)w.style.opacity="0";setTimeout(()=>{i.remove();if(w)w.remove()},400)}};
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
   if(CRS==="apex"||OVQ)snapGo(OVH);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!PLAY){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
 document.querySelectorAll("#holes a").forEach(a=>a.addEventListener("click",ev=>{if(ev.metaKey||ev.ctrlKey)return;ev.preventDefault();snapGo(a.href)}));

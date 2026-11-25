@@ -24,6 +24,7 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
 #note{position:fixed;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 66px);color:#fff;font-size:11px;text-shadow:0 1px 2px #000;opacity:.9;z-index:4}
 #load{position:fixed;inset:0;display:grid;place-items:center;color:#fff;font:600 1rem var(--font);text-shadow:0 1px 3px #000}
 #top,#bar,#tees,#note{z-index:3}
+#ldpill{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:3;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none}#ldpill i,#snappill i{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:ldsp .8s linear infinite}@keyframes ldsp{to{transform:rotate(360deg)}}
 </style>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
@@ -45,8 +46,10 @@ canvas{display:block;touch-action:none;position:fixed;left:0;top:0}
    const h=a.getAttribute("href");if(!h||h[0]==="#"||/^(javascript|mailto|tel|sms|whatsapp):/i.test(h))return;e.preventDefault();forNav(h)});
 })();</script>
 <script>/* plynulý prechod: posledný záber predchádzajúcej obrazovky ostane viditeľný, kým sa nová scéna nevykreslí */
-try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.src=s;
- i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:1;pointer-events:none;transition:opacity .35s";document.body.appendChild(i)}}catch(e){}</script>
+try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.decoding="sync";i.src=s;
+ i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:50;pointer-events:none;transition:opacity .35s";document.body.appendChild(i);
+ /* záber prekrýva aj lišty a tlačidlá (kým sa nenačítajú, menili sa – preblikávalo); kým sa čaká, beží „Načítavam…“ */
+ const w=document.createElement("div");w.id="snappill";w.innerHTML='<i></i>Načítavam…';w.style.cssText="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:51;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none;transition:opacity .35s";i.__pill=w;document.body.appendChild(w)}}catch(e){}</script>
 <div id="top"><a href="../?start=1" aria-label="Späť">‹</a><div style="flex:1;min-width:0"><b>Apex Golf · 18 jamiek + akadémia</b><small>Ťukni na číslo jamky alebo A1–A3</small></div></div>
 <div id="tees"></div>
 <div id="load">Načítavam ihrisko…</div>
@@ -198,7 +201,11 @@ const flyTo=(h,url,TG)=>{const t=TG?TG.t:DATA.pads[h][tIdx],gc=TG?TG.gc:DATA.gc[
   const p1=W(t[0]-u[0]*15,t[1]-u[1]*15,hAt(...t)+6),t1=W(t[0]+u[0]*120,t[1]+u[1]*120,hAt(t[0]+u[0]*120,t[1]+u[1]*120));
   const p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2600;controls.enabled=false;labels.forEach(l=>l.el.style.visibility="hidden");
   const st=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);camera.position.y+=Math.sin(Math.PI*e)*60;
-    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else{controls.enabled=true;labels.forEach(l=>l.el.style.visibility="");forNav(url)}};requestAnimationFrame(st)};
+    controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st);else{
+    // koniec preletu: posledný záber ostane stáť (bez čísel jamiek, bez ďalšieho prekresľovania), kým sa nenačíta jamka – Martin 25.11.: preblikávanie
+    window.__navLock=true;const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);forNav(url)}};requestAnimationFrame(st)};
+// návrat tlačidlom Späť (stránka z pamäte prehliadača): prehľad znova normálne funguje
+addEventListener("pageshow",e=>{if(!e.persisted||!window.__navLock)return;window.__navLock=false;controls.enabled=true;labels.forEach(l=>l.el.style.visibility="");const w=document.getElementById("ldpill");if(w)w.remove()});
 document.getElementById("b-go").onclick=()=>flyTo(READY[0],"./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1");
 for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();if(l.akAll){forNav(l.el.href);return}flyTo(l.ak?0:+l.el.textContent,l.el.href,l.ak)};
 // driving range: ostrejšia textúra (8 px/m) len nad range a cvičnými greenmi pri ňom, strecha nad časťou línie, búdka, vlajky terčov
@@ -340,13 +347,13 @@ const v=new THREE.Vector3();
 let snapDone=false;
 window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
 // pred prechodom na inú 3D obrazovku: posledný záber ostane ako obrázok a 3D scéna sa hneď uvoľní (na mobile naraz len jedna 3D scéna v pamäti – inak sa iPhone zasekol)
-// posledný záber (malý JPEG) pre ďalšiu stránku: po prelete na odpalisko ostane viditeľný, kým sa hra nevykreslí (predtým na sekundu zelená obrazovka)
+// posledný záber (malý JPEG) pre jamku, ktorá sa otvára po prelete – bez neho bola pri načítaní na chvíľu len zelená plocha
 window.__snap=()=>{if(window.__stopped)return null;renderer.render(scene,camera);const D=renderer.domElement,k=Math.min(1,700/Math.max(D.width,D.height)),cv=document.createElement("canvas");cv.width=D.width*k|0;cv.height=D.height*k|0;cv.getContext("2d").drawImage(D,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",.75)};
 window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(scene,camera);u=renderer.domElement.toDataURL("image/jpeg",.85)}catch(e){}
  document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
  const done=()=>{document.body.appendChild(i);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
 
-function frame(){if(window.__stopped)return;if(controls.enabled)controls.update();renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{if(window.__EMB)parent.postMessage({forReady:1},"*");const i=document.getElementById("snapimg");if(i){i.style.opacity="0";setTimeout(()=>i.remove(),400)}})}
+function frame(){if(window.__stopped)return;if(window.__navLock){requestAnimationFrame(frame);return}if(controls.enabled)controls.update();renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{if(window.__EMB)parent.postMessage({forReady:1},"*");const i=document.getElementById("snapimg");if(i){const w=i.__pill;i.style.opacity="0";if(w)w.style.opacity="0";setTimeout(()=>{i.remove();if(w)w.remove()},400)}})}
   if(window.__pinsUpd)window.__pinsUpd();
   for(const l of labels){v.copy(l.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=(v.x+1)/2*innerWidth+"px";l.el.style.top=(1-v.y)/2*innerHeight+"px"}}
   requestAnimationFrame(frame)}
