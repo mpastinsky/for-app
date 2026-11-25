@@ -54,28 +54,28 @@ addEventListener("error",e=>{try{if(window.__3dok)return;let d=document.getEleme
 (function(){const EMB=window.parent!==window;window.__EMB=EMB;let frames=[];
  const abs=u=>new URL(u,location.href).href,in3d=u=>false;   // 3D obrazovky sa otvárajú normálnym načítaním stránky (rámce s dvoma scénami naraz sekali – Martin, v140)
  const snap=u=>{try{if(window.__snap&&/\/3d\//.test(new URL(u,location.href).pathname)){const d=window.__snap();if(d)sessionStorage.setItem("for.snap",d)}}catch(e){}};
- window.forNav=function(url){if(!in3d(url)){snap(url);(EMB?top:window).location.href=abs(url);return}
+ window.forNav=function(url){if(window.__preF&&window.__preF.f){window.__preF.f.remove();window.__preF=null}if(!in3d(url)){snap(url);(EMB?top:window).location.href=abs(url);return}
    if(window.__playHere&&window.__playHere(abs(url)))return;   // tá istá jamka → hra sa spustí hneď, bez nového načítania scény
    if(window.__freeze)window.__freeze();if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
+ // v256 (Martin 25.11.: „načítaj pri 10. jamke aj 11-tu“): ďalšia jamka sa postaví skryto v rámci už počas výsledku jamky (bez vykresľovania),
+ // pri prelete podchodom sa len odkryje – bez zastavenia a bez čakania. Rámec sa zaradí medzi bežné (forReady ho ukáže a starú scénu zastaví).
+ window.__preFrame=function(u,cu){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");f.setAttribute("aria-hidden","true");
+   f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;pointer-events:none;background:transparent";f.__url=cu;f.__pre=1;document.body.appendChild(f);frames.push(f);return f};
  function openFrame(u){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");
    f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f);f.__to=setTimeout(()=>{if(f.style.opacity!=="1")location.href=u},40000)}
  addEventListener("message",e=>{const d=e.data||{};if(EMB)return;
    if(d.forGo)openFrame(d.forGo);
-   if(d.forReady){const f=frames.find(x=>x.contentWindow===e.source);if(!f)return;f.style.opacity="1";try{history.replaceState(null,"",f.__url)}catch(_){}
+   if(d.forPre){const f=frames.find(x=>x.contentWindow===e.source);if(f)f.__ready=1;return}
+   if(d.forReady){const f=frames.find(x=>x.contentWindow===e.source);if(!f)return;f.style.opacity="1";f.style.pointerEvents="";try{history.replaceState(null,"",f.__url)}catch(_){}
      setTimeout(()=>{frames.filter(x=>x!==f).forEach(x=>x.remove());frames=[f];if(window.__hostStop)window.__hostStop()},350)}});
  document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("a[href]");if(!a||e.defaultPrevented||a.target||e.metaKey||e.ctrlKey)return;
    const h=a.getAttribute("href");if(!h||h[0]==="#"||/^(javascript|mailto|tel|sms|whatsapp):/i.test(h))return;e.preventDefault();forNav(h)});
 })();</script>
 <script>/* plynulý prechod: posledný záber predchádzajúcej obrazovky ostane viditeľný, kým sa nová scéna nevykreslí */
 try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.decoding="sync";i.src=s;
- i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:50;pointer-events:none;transition:opacity .35s";
- /* v254: príchod preletom podchodom – čaká sa v tmavom strede tunela; záber je stmavený a pomaly „plachtí“ vpred (žiadny zamrznutý obraz) */
- let TD=0;try{const F=JSON.parse(sessionStorage.getItem("for.tfly")||"null");TD=F&&F.dk&&Date.now()-F.ts<20000?+F.dk:0}catch(e){}
- if(TD){i.style.filter="brightness("+(1-TD).toFixed(2)+")";i.style.transformOrigin="50% 45%";i.animate&&i.animate([{transform:"scale(1)"},{transform:"scale(1.07)"}],{duration:6000,easing:"cubic-bezier(.2,.6,.4,1)",fill:"forwards"});window.__tdk=1}
- document.body.appendChild(i);
+ i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:50;pointer-events:none;transition:opacity .35s";document.body.appendChild(i);
  /* záber prekrýva aj lišty a tlačidlá (kým sa nenačítajú, menili sa – preblikávalo); kým sa čaká, beží „Načítavam…“ */
- const w=document.createElement("div");w.id="snappill";w.innerHTML='<i></i>Načítavam…';w.style.cssText="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:51;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none;transition:opacity .35s";
- if(window.__tdk&&w.animate){w.style.opacity="0";w.animate([{opacity:0},{opacity:1}],{duration:400,delay:2500,fill:"forwards"})}i.__pill=w;document.body.appendChild(w)}}catch(e){}</script>
+ const w=document.createElement("div");w.id="snappill";w.innerHTML='<i></i>Načítavam…';w.style.cssText="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:51;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none;transition:opacity .35s";i.__pill=w;document.body.appendChild(w)}}catch(e){}</script>
 <div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div></div>
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
@@ -90,6 +90,8 @@ import {pcNav} from "./lib/pcnav.js";
 // Akadémia Apex Golf, Báč. Terén z DMR 5.0 (ÚGKK SR, CC BY 4.0), greeny/bunkre/stromy obkreslené zo satelitu
 // a zarovnané na terén. Dáta: akademia.json (ENU metre od greenu 1, x = východ, y = sever).
 const Q=new URLSearchParams(location.search);
+// v256: ?pre=1 = jamka sa stavia skryto v rámci počas výsledku predošlej jamky; nevykresľuje sa, kým ju predošlá jamka v podchode neodkryje (__tgo)
+const PRE=Q.get("pre")==="1"&&window.parent!==window;let PREgo=!PRE;if(PRE)window.__hold=true;
 // ihrisko: ?c=apex = 18-jamkové Apex Báč (apex.json), inak akadémia
 const CRS=Q.get("c")==="apex"?"apex":"akademia",CQ=CRS==="apex"?"c=apex&":"";
 const HQ=CRS!=="apex",OTHL=[];   // vylepšená grafika (zatiaľ akadémia)
@@ -156,7 +158,7 @@ const TEEPL=CRS==="apex"?(()=>{const out=[],src=[...(DATA.teeboxes||[]).map(T=>T
   for(const P of src){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
     if(x1<-400||x0>400||y1<-120||y0>c+150)continue;const hs=[];for(let x=x0;x<=x1;x+=.7)for(let y=y0;y<=y1;y+=.7)if(inPoly([x,y],P))hs.push(raw(x,y));if(!hs.length)continue;
     hs.sort((a,b)=>a-b);out.push({P,bb:[x0-3,x1+3,y0-3,y1+3],z:hs[Math.floor(hs.length*.8)]+.3})}return out})():[];
-// v255: chodníky – terén pod nimi zarovnaný na vyhladený profil (lib/areal.js pathLevel, zdieľaný s okolím); odpalisko má prednosť
+// v256: chodníky – terén pod nimi zarovnaný na vyhladený profil (lib/areal.js pathLevel, zdieľaný s okolím); odpalisko má prednosť
 const PLV=AR&&AR.A.lev,PLO=AR?AR.A.off:[0,0];
 hBump=(x,y)=>{const M=9;let h=0,tee=0;
   for(const T of TEEPL){const bb=T.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,T.P);if(d>3)continue;const w=d<=0?1:1-sstep(d/3);h+=w*(T.z-raw(x,y));tee=1;break}
@@ -2324,8 +2326,7 @@ function startPlay(){
    #p-res h2{margin:.1em 0 .2em;font-size:1.6rem}#p-res table{width:100%;border-collapse:collapse;margin:12px 0;font-size:1rem}
    #p-res td,#p-res th{border-bottom:1px solid #e3e8e5;padding:6px}#p-res .go{display:block;width:100%;min-height:50px;margin-top:8px;border:0;border-radius:12px;font:700 1rem var(--font);background:#0f6b4a;color:#fff;text-decoration:none;line-height:50px}
    #p-res .go.alt{background:#eef3f0;color:#14211a}
-   body.tfly *{visibility:hidden!important}body.tfly canvas:not(#p-map),body.tfly #ldpill,body.tfly #ldpill *,body.tfly #tdk{visibility:visible!important}
-   #tdk{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:2}#ldpill.tdl{opacity:0;animation:tdl .4s 1.6s forwards}@keyframes tdl{to{opacity:1}}
+   body.tfly *{visibility:hidden!important}body.tfly canvas:not(#p-map),body.tfly #ldpill,body.tfly #ldpill *,body.tfly>iframe{visibility:visible!important}
    #p-res .lnk{display:inline-block;margin-top:10px;color:#4b5d55;font-size:.9rem;text-decoration:underline}
    #sc-ov{position:fixed;inset:0;z-index:40;background:rgba(8,20,14,.55);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom))}
    #sc-ov .sc{background:#f3f4ea;color:#14211a;border-radius:16px;width:min(720px,100%);max-height:100%;overflow:auto;padding:16px 12px 14px;box-shadow:0 10px 40px rgba(0,0,0,.45);text-align:center}
@@ -2574,13 +2575,17 @@ function startPlay(){
     if(ONE){const d=n-PAR,nxt=READY[READY.indexOf(hNum)+1];
       $("p-res").innerHTML=`<h2>Jamka ${hNum} dohraná</h2><div>${n} ${n===1?"úder":n<5?"údery":"úderov"} · ${d===0?"na par":d>0?"+"+d+" nad par":d+" pod par"}</div>
       ${nxt?`<a class="go" href="?${CQ}h=${nxt}&t=${tIdx}&play=1&one=1${OVQ}">Ďalšia jamka ${nxt} ›</a>`:`<a class="go" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1${OVQ}">Zopakovať jamku</a>`}${nxt?`<a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1${OVQ}">Zopakovať jamku</a>`:""}
-      <a class="go alt" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="${OVH}">Späť na prehľad</a>`;$("p-res").hidden=false;return}
+      <a class="go alt" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="${OVH}">Späť na prehľad</a>`;$("p-res").hidden=false;setTimeout(preNext,700);return}
     const all=SCA,tot=all.reduce((a,b)=>a+(b||0),0),par=all.reduce((a,x,i)=>x==null?a:a+(PARS[READY[i]-1]||3),0),dd=tot-par;
     const last=hNum===LASTH;const nx=`?${CQ}h=${READY[READY.indexOf(hNum)+1]}&t=${tIdx}&play=1&sc=${READY.slice(0,READY.indexOf(hNum)+1).map(h=>RS[h]||0).join("-")}`;
     $("p-res").innerHTML=`<h2>${last?"Koniec kola":"Jamka "+hNum+" dohraná"}</h2><div>${last?"Spolu "+tot+" úderov · "+(dd===0?"na par":dd>0?"+"+dd+" nad par":dd+" pod par"):"Zatiaľ "+tot+" · "+(dd===0?"na par":dd>0?"+"+dd:dd)}</div>
       ${last?`<a class="go" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="?${CQ}h=${READY[0]}&t=${tIdx}&play=1">Hrať znova</a>`:`<a class="go" href="${nx}">Ďalšia jamka ›</a><a class="go alt" href="#" data-scard>📋 Scorekarta</a>`}
       <a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}">Ukončiť hru</a>`;
-    $("p-res").hidden=false;if(last)setTimeout(()=>{if(!$("sc-ov"))scoreCard(all)},400)}
+    $("p-res").hidden=false;if(last)setTimeout(()=>{if(!$("sc-ov"))scoreCard(all)},400);else setTimeout(preNext,700)}
+  // v256: ďalšia jamka za podchodom sa začne stavať skryto hneď, ako sa ukáže výsledok (hráč číta skóre) – v podchode je potom hotová
+  function preNext(){try{if(window.__preF||!window.__preFrame)return;const a=[...document.querySelectorAll("#p-res a.go[href]")].find(a=>{try{const U=new URL(a.href);return U.searchParams.get("play")==="1"&&+U.searchParams.get("h")!==hNum}catch(e){return false}});
+    if(!a)return;const U=new URL(a.href),nx=+U.searchParams.get("h");if(!tunFor(nx))return;const cu=U.href;U.searchParams.set("pre","1");if(Q.has("dbg"))U.searchParams.set("dbg","1");if(Q.has("tfslow"))U.searchParams.set("tfslow",Q.get("tfslow"));
+    window.__preF={f:window.__preFrame(U.href,cu),nx}}catch(e){}}
   function penalty(t){REC.G.end(S.x,S.y,toPin(),t,1);S.sink=0;S.sinkF=0;S.strokes++;SHOTS.pop();S.x=S.prev[0];S.y=S.prev[1];S.z=gS(S.x,S.y)+R;msg(t);setTimeout(()=>{if(S.mode!=="in")prepare()},900);S.mode="wait"}
   function stopBall(){if(Math.hypot(S.x-PIN[0],S.y-PIN[1])<CUP+.006){S.mode="drop";S.t=0;S.sink=0;return}S.vx=S.vy=0;S.mode="wait";const sf=surf(S.x,S.y);if(sf===SURF.sand&&!S.sinkF)S.sinkF=.12;shotInfo();REC.G.end(S.x,S.y,toPin(),sf.n);
     msg(sf===SURF.green?"Na greene":sf===SURF.sand?"V bunkri":sf===SURF.rough?"V roughu":sf===SURF.collar?"Na lemu greenu":sf.at||"Na "+sf.n);
@@ -2935,9 +2940,12 @@ function startPlay(){
   // spustené z už otvorenej jamky: kamera plynulo priletí z aktuálneho pohľadu za loptičku (nie skok)
   if(window.__from){camP.copy(window.__from.p);camT.copy(window.__from.t);camera.position.copy(camP);camera.lookAt(camT);window.__from=null}
   // v248: príchod preletom cez podchod z predošlej jamky → kamera dokončí let za loptičku
-  {let F=null;try{F=JSON.parse(sessionStorage.getItem("for.tfly")||"null");sessionStorage.removeItem("for.tfly")}catch(e){}
-   if(F&&F.to===hNum&&Date.now()-F.ts<120000&&F.p&&F.t){const Tg=camT.clone(),P=camP.clone();$("p-hit").disabled=true;
-     tunnelIn(F,P,Tg,()=>{camP.copy(camera.position);camT.copy(Tg);if(S.mode==="aim")$("p-hit").disabled=false})}}
+  {const Tg=camT.clone(),P=camP.clone(),tIn=F=>{$("p-hit").disabled=true;
+     tunnelIn(F,P,Tg,()=>{camP.copy(camera.position);camT.copy(Tg);if(S.mode==="aim")$("p-hit").disabled=false})};
+   // v256: vopred postavená jamka – prelet prevezme priamo od predošlej jamky (správa forTgo), hneď sa vykresľuje
+   if(PRE)addEventListener("message",e=>{const F=e.data&&e.data.forTgo;if(!F||PREgo||e.source!==parent)return;PREgo=true;tIn(F);window.__hold=false});
+   else{let F=null;try{F=JSON.parse(sessionStorage.getItem("for.tfly")||"null");sessionStorage.removeItem("for.tfly")}catch(e){}
+   if(F&&F.to===hNum&&Date.now()-F.ts<120000&&F.p&&F.t)tIn(F)}}
   if(Q.has("dbg"))window.__g={tgtHit,TG,rollD,showRes,scoreCard,WIND,flySim,vFor,MARKS,addMark,clearMarks,turnSet:v=>{turn=v},upd:dt=>game.update(dt),sandBurst,cupHit,putSim,puttLine,putNeed,drawAim,info,S,step,ring,setTarget,tgtL,prepare,shoot,PIN,camUpd,CLUBS,setAim,surf,grad,gS,R,ball,camera,renderer,scene,leafBurst,OBST,TRUNKS,BLD,bldHit,splash,pinHit,pin,PINW,OCUPS,HARD,OGRN,SURF};
 }
 
@@ -3002,14 +3010,18 @@ function tunnelGo(href,nx,T,hN){const{O,g,tp}=T,a=O.a*Math.PI/180;let d=[Math.co
     return q2.copy(t0).lerp(q,sstp(0,.22,k))};
   const D=Math.max(4500,Math.min(9000,L/15*1000*1.25));
   document.body.classList.add("tfly");const pr=document.getElementById("p-res");if(pr)pr.hidden=true;
-  // v254 (Martin 25.11.: „v podchode to aj tak stopne a načítava“): jamka 11 je samostatná stránka, jej scéna sa musí postaviť po príchode
-  // (dve plné 3D scény naraz iPhone nezvládal – v140). Čakanie sa preto skryje do tmy v strede podchodu: posledných ~14 m pred stredom
-  // obraz stmavne (ako pri vjazde do tunela), na novej stránke záber tmavý pomaly plachtí vpred a jamka 11 sa rozsvieti pri výjazde.
-  const dk=document.createElement("div");dk.id="tdk";document.body.appendChild(dk);const DK=.82;
-  const lookD=(u,k,p,t)=>{dk.style.opacity=(DK*(1-sstp(0,14,(1-u)*L))).toFixed(3);return look(u,k,p,t)};
-  runFly(pts,lookD,D,trap(.2,.3),p=>{const lk=look(1,1,p);dk.style.opacity=DK;
-    try{sessionStorage.setItem("for.tfly",JSON.stringify({to:nx,ts:Date.now(),v:0,p:[...enu(p.x,-p.z),p.y+H0],t:[...enu(lk.x,-lk.z),lk.y+H0],w:rest,fa:fl+H0,dk:DK}))}catch(e){}
-    window.__hold=true;const w=document.createElement("div");w.id="ldpill";w.className="tdl";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);forNav(href)})}
+  runFly(pts,look,D,trap(.2,.3),p=>{const lk=look(1,1,p);
+    TFLY=()=>{};   // kamera ostane v strede podchodu (hra nepreberie kameru)
+    const F={to:nx,ts:Date.now(),v:0,p:[...enu(p.x,-p.z),p.y+H0],t:[...enu(lk.x,-lk.z),lk.y+H0],w:rest,fa:fl+H0};
+    // v256: jamka 11 už stojí skryto (postavená počas výsledku) → let pokračuje v nej hneď, bez zastavenia a bez načítavania
+    const PF=window.__preF,pf=PF&&PF.nx===nx&&PF.f&&PF.f.isConnected?PF.f:null;let w=null;const t0=performance.now();
+    const fall=()=>{if(pf)pf.remove();window.__preF=null;try{sessionStorage.setItem("for.tfly",JSON.stringify(F))}catch(e){}
+      window.__hold=true;if(!w){w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w)}forNav(href)};
+    if(!pf)return fall();
+    const wt=()=>{if(pf.__ready){try{pf.contentWindow.postMessage({forTgo:F},"*")}catch(e){return fall()}
+        setTimeout(()=>{if(pf.style.opacity!=="1"&&!window.__stopped)fall()},8000);return}   // poistka: keby sa rámec neukázal
+      const el=performance.now()-t0;if(el>1500&&!w){w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w)}
+      if(el>20000)return fall();setTimeout(wt,60)};wt()})}
 // ďalšia jamka: pokračovanie z pokoja (záber nad stromami) rovno dole za loptičku na odpalisku (P, Tg v scéne) – plynulý rozjazd aj dobrzdenie
 function tunnelIn(F,P,Tg,done){if(F.w&&F.w.length)return tunnelIn2(F,P,Tg,done);const p0=W(...loc(F.p),F.p[2]-H0),t0=W(...loc(F.t),F.t[2]-H0),p1=p0.clone().lerp(P,.5);p1.y=Math.max(p1.y,p0.y*.55+P.y*.45);
   const L=new THREE.CatmullRomCurve3([p0,p1,P],false,"centripetal").getLength(),D=L<8?600+L*120:Math.max(2600,Math.min(5500,L/9*1000*1.4)),q=new THREE.Vector3();   // v251: prelet už končí za loptičkou – len jemné doladenie
@@ -3027,14 +3039,11 @@ function tunnelIn2(F,P,Tg,done){
     q.lerp(Tg,sstp(.5,1,u));return q2.copy(t0).lerp(q,sstp(0,.15,k))};
   const D=Math.max(4500,Math.min(9000,L/15*1000*1.3));
   camera.position.copy(p0);camera.lookAt(t0);document.body.classList.add("tfly");
-  // v254: z tmy stredu podchodu sa obraz rozsvieti, kým kamera vyjde z tunela (nadväzuje na stmavený záber z jamky 10)
-  let dk=null,DK=+F.dk||0;if(DK){dk=document.createElement("div");dk.id="tdk";dk.style.opacity=DK;document.body.appendChild(dk)}
-  const lookD=(u,k,p,t)=>{if(dk)dk.style.opacity=(DK*(1-sstp(1.5,13,u*L))).toFixed(3);return look(u,k,p,t)};
-  runFly(pts,lookD,D,trap(.3,.32),()=>{if(dk)dk.remove();document.body.classList.remove("tfly");done()})}
+  runFly(pts,look,D,trap(.3,.32),()=>{document.body.classList.remove("tfly");done()})}
 document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("#p-res a.go[href]");if(!a||!game)return;let U;try{U=new URL(a.href)}catch(_){return}
   const nx=parseInt(U.searchParams.get("h"));if(!nx||nx===hNum||U.searchParams.get("play")!=="1")return;
   if(tunnelOut(a.getAttribute("href"),nx)){e.preventDefault();e.stopImmediatePropagation()}},true);
-let lastT=0;const _bv=new THREE.Vector3();
+let lastT=0,PREsk=0;const _bv=new THREE.Vector3();
 // prechod medzi obrazovkami bez zábleskov: uloží posledný záber, nová stránka ho ukáže, kým sa nevykreslí
 function snapGo(url){forNav(url)}
 window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
@@ -3045,7 +3054,7 @@ window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(s
  document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
  const done=()=>{document.body.appendChild(i);const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
 
-window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));const i=document.getElementById("snapimg");if(i){const w=i.__pill;i.style.opacity="0";if(w)w.style.opacity="0";setTimeout(()=>{i.remove();if(w)w.remove()},400)}};
+window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone||!PREgo)return;snapDone=true;if(window.__EMB)requestAnimationFrame(()=>parent.postMessage({forReady:1},"*"));const i=document.getElementById("snapimg");if(i){const w=i.__pill;i.style.opacity="0";if(w)w.style.opacity="0";setTimeout(()=>{i.remove();if(w)w.remove()},400)}};
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
   if(CRS==="apex"||OVQ)snapGo(OVH);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!PLAY){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
 document.querySelectorAll("#holes a").forEach(a=>a.addEventListener("click",ev=>{if(ev.metaKey||ev.ctrlKey)return;ev.preventDefault();snapGo(a.href)}));
@@ -3055,7 +3064,7 @@ function loop(now){if(window.__stopped)return;const rdt=lastT?(now-lastT)/1000:0
   window.__3dok=1;waveFlag(now/1000);pinWobble(now/1000);pinVis(camera);if(TFLY)TFLY(now);else if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
-     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(PHEAS)PHEAS(dt,now);if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold)renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(PHEAS)PHEAS(dt,now);if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold&&!(window.__preF&&!window.__preF.f.__ready&&!TFLY&&(++PREsk%6)))renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 if(Q.has("dbg"))window.__v={camera,renderer,scene,FADE,PT,controls,loc,hL,W,H0,tunFor,TUNS,tunnelOut,getFly:()=>TFLY,runFly};
 requestAnimationFrame(loop);
 // shadery pre všetko, čo sa ukáže až neskôr (steblá trávy pri zemi, efekty), sa pripravia hneď po načítaní –
@@ -3066,7 +3075,10 @@ function preAll(fade){if(window.__stopped)return null;const hid=[];scene.travers
   let p=null;try{if(fm.length)renderer.compile(scene,camera);for(const M of fm){M.transparent=false;M.depthWrite=true;M.needsUpdate=true}
     p=renderer.compileAsync?renderer.compileAsync(scene,camera):(renderer.compile(scene,camera),null)}catch(e){for(const M of fm){M.transparent=false;M.depthWrite=true;M.needsUpdate=true}}for(const o of hid)o.visible=false;
   if(p&&p.catch)p.catch(()=>{});return p}
-setTimeout(()=>preAll(true),400);
+setTimeout(()=>{const pr=preAll(true);
+  // v256: skrytá jamka: všetky textúry a geometria sa nahrajú do GPU (jeden neviditeľný záber), potom ohlási pripravenosť
+  if(PRE){const rd=()=>{if(window.__stopped)return;try{scene.traverse(o=>{const M=o.material;if(M)for(const k in M){const v=M[k];if(v&&v.isTexture&&renderer.initTexture)renderer.initTexture(v)}});renderer.render(scene,camera)}catch(e){}parent.postMessage({forPre:1},"*")};
+    if(pr&&pr.then)pr.then(rd,rd);else rd()}},400);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // kvalita grafiky podľa výkonu: na telefóne začína strednou (menšie rozlíšenie, menej stebiel); ak je stále pod ~40 fps, zníži sa ešte o stupeň
 // (rozlíšenie 1×, ešte menej stebiel, menšia mapa tieňov). Počas hry sa späť nezvyšuje, aby obraz neskákal. ?q=0/1/2 vynúti stupeň.
