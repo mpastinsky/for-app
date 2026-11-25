@@ -2332,7 +2332,7 @@ function startPlay(){
     // loptička
     mg.fillStyle="#fff";mg.strokeStyle="#1d6fd6";mg.lineWidth=1.5;mg.beginPath();mg.arc(mx(S.x),my(S.y),3,0,7);mg.fill();mg.stroke()}
   const tv=new THREE.Vector3();
-  function hudTick(){mapF++;if(arcM.visible)arcW();if(ring.visible)rollD.scale.setScalar(Math.min(5,Math.max(1,camera.position.distanceTo(rollD.position)/26)));if(ring.visible)ring.scale.setScalar(Math.min(5,Math.max(1,camera.position.distanceTo(ring.position)/22)));if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
+  function hudTick(){mapF++;if(arcM.visible)arcW();if(ring.visible)rollD.scale.setScalar(Math.min(5,Math.max(.2,camera.position.distanceTo(rollD.position)/26)));if(ring.visible)ring.scale.setScalar(Math.min(5,Math.max(.15,camera.position.distanceTo(ring.position)/22)));   // v235 (Martin: pri veľkom zoome krúžok menší, aby sa dalo mieriť presne do jamky): min. mierka 1 → .15if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
     const T=$("p-tgt");if(S.mode!=="aim"){T.hidden=true;return}
     const putt=!CLUBS[S.club].a,X=putt?PIN[0]:TG.x,Y=putt?PIN[1]:TG.y,el=gS(X,Y)-gS(S.x,S.y);
     {const rr=putt?.6:2*ring.scale.x+.3,px=Math.cos(S.aim)*rr,py=-Math.sin(S.aim)*rr;tv.set(X+px,gS(X+px,Y+py)+(putt?.3:.1),-(Y+py)).project(camera)}if(tv.z>1||Math.abs(tv.x)>1.05||Math.abs(tv.y)>1.05){T.hidden=true;return}
@@ -2766,11 +2766,11 @@ function startPlay(){
   for(const ev of["pointerup","pointercancel"])addEventListener(ev,e=>{PT2.delete(e.pointerId);if(pz&&PT2.size<2){pz=null;tap=null;drag=null;dragT=false}},true);
   // chytenie dopadovej zóny prstom: vždy (aj po priblížení) sa dá ťahať – cieľ ide presne pod prst, bez prepínania pohľadu
   const camAnchor=()=>{if(S.zoom>0&&!S.ca&&CLUBS[S.club].a)S.ca=[TG.x,TG.y,S.aim,TG.L||tgtL()]};
-  let ringDrag=false;const nearRing=(cx,cy)=>{if(!CLUBS[S.club].a||!ring.visible)return false;tv.set(TG.x,gS(TG.x,TG.y),-TG.y).project(camera);
+  let ringDrag=false,rOff=[0,0];const nearRing=(cx,cy)=>{if(!CLUBS[S.club].a||!ring.visible)return false;tv.set(TG.x,gS(TG.x,TG.y),-TG.y).project(camera);
     const px=(tv.x+1)/2*innerWidth,py=(1-tv.y)/2*innerHeight;if(Math.hypot(cx-px,cy-py)<48)return true;const h=tgtHit(cx,cy);return!!h&&Math.hypot(h.point.x-TG.x,-h.point.z-TG.y)<2*ring.scale.x+1};
-  addEventListener("pointermove",e=>{if(!ringDrag||pz||S.mode!=="aim"||SW)return;const h=tgtHit(e.clientX,e.clientY);if(h)setTarget(h.point.x,-h.point.z)},true);
+  addEventListener("pointermove",e=>{if(!ringDrag||pz||S.mode!=="aim"||SW)return;const h=tgtHit(e.clientX+rOff[0],e.clientY+rOff[1]);if(h)setTarget(h.point.x,-h.point.z)},true);
   addEventListener("pointerup",()=>{if(ringDrag){ringDrag=false;tap=null;drag=null;dragT=false}},true);
-  renderer.domElement.addEventListener("pointerdown",e=>{if(pz)return;ringDrag=S.mode==="aim"&&!SW&&(S.zoom>.5||S.orb)&&nearRing(e.clientX,e.clientY);if(ringDrag)controls.enabled=false;if(ringDrag)camAnchor();   // bez priblíženia funguje ťahanie ako doteraz (do strán smer, hore/dole dĺžka)
+  renderer.domElement.addEventListener("pointerdown",e=>{if(pz)return;ringDrag=S.mode==="aim"&&!SW&&(S.zoom>.5||S.orb)&&nearRing(e.clientX,e.clientY);if(ringDrag){controls.enabled=false;tv.set(TG.x,gS(TG.x,TG.y),-TG.y).project(camera);rOff=[(tv.x+1)/2*innerWidth-e.clientX,(1-tv.y)/2*innerHeight-e.clientY]}if(ringDrag)camAnchor();   // v235: stred krúžku drží odstup od prsta (chytíš ho za okraj a jamku vidno, prst ju nezakrýva)   // bez priblíženia funguje ťahanie ako doteraz (do strán smer, hore/dole dĺžka)
     drag=e.clientX;tap=[e.clientX,e.clientY,performance.now(),S.aim];dragT=false;
     if(S.mode==="aim"&&!SW)dragT=true},true);   // (capture: pred OrbitControls, aby chytenie zóny vypnulo kameru) ťahanie kdekoľvek: do strán = smer, hore/dole = vzdialenosť dopadu
   addEventListener("pointermove",e=>{if(!dragT||S.mode!=="aim"||SW||S.zoom>.5||S.orb||ringDrag)return;if(dY==null){dY=e.clientY;return}
