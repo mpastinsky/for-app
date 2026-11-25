@@ -128,11 +128,15 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
     const shopTex = cv(128, 64, (x, w, h) => { x.fillStyle = "#7f9a8a"; x.fillRect(0, 0, w, h); x.fillStyle = "rgba(255,255,255,.18)"; x.fillRect(0, 0, w, h * .45); x.fillStyle = "#26221f"; for (let i = 0; i <= 4; i++)x.fillRect(i * w / 4 - 2, 0, 4, h); x.fillRect(0, 0, w, 4); x.fillRect(0, h - 6, w, 6) });
     shopTex.repeat.set(s / 5, 1); const mSG = M({ map: shopTex, roughness: .2, metalness: .3 });
     add(g, new THREE.BoxGeometry(D, hh, s - 2.2), [mSG, mSG, mBlk, mBlk, mSG, mSG], 0, hh / 2, -1.1, true);
-    add(g, new THREE.BoxGeometry(D + .8, .25, s - 1.8), mBlk, 0, hh + .16, -1.1);   // nad hornou stenou skla (inak z-fighting = blikanie)
+    // strecha (Martin 25.11. foto): drevená doska s trámami vo výške vrcholu oblúka, plynulo nadväzuje na oblúk na konci a kryje celé sklo
+    const zb = s / 2 - 1.9, D2 = 2.4, Hr = hh + .5, z0 = -s / 2 - .4, z1 = zb - D2 * .95 + .05, mWoodD = M({ color: 0x4a3222, roughness: .8 });
+    add(g, new THREE.BoxGeometry(D + .5, .14, z1 - z0), [mWoodD, mWoodD, mWoodD, mMem, mWoodD, mWoodD], 0, Hr + .03, (z0 + z1) / 2, true);
+    for (let k = 0; k <= 4; k++) add(g, new THREE.BoxGeometry(D + .5, .16, .14), mWoodD, 0, Hr - .1, z0 + .1 + k * (z1 - z0 - .2) / 4);
+    add(g, new THREE.BoxGeometry(D, Hr - hh, .12), mWoodD, 0, (hh + Hr) / 2, -s / 2 + .06);
     // na konci dva oblúkové prístrešky chrbtami k sebe (Martin 25.11. foto): prvý strechou nad sklom, druhý otvorený von
-    { const zb = s / 2 - 1.9, D2 = 2.4; for (const [r, dz] of [[-Math.PI / 2, -D2 / 2], [Math.PI / 2, D2 / 2]]) { const eg = new THREE.Group(); eg.position.set(0, 0, zb + dz); eg.rotation.y = r; g.add(eg); shelter(eg, D + .3, D2, hh + .5) } }
+    for (const [r, dz, H2] of [[-Math.PI / 2, -D2 / 2, Hr], [Math.PI / 2, D2 / 2, hh + .1]]) { const eg = new THREE.Group(); eg.position.set(0, 0, zb + dz); eg.rotation.y = r; g.add(eg); shelter(eg, D + .3, D2, H2) }
     add(g, new THREE.CylinderGeometry(.08, .1, 2.2, 8), mSteel, 0, hh + 1.1, s / 2 - 2.4);
-    const L = []; for (const [x, z] of [[-D / 2, -s / 2], [D / 2, -s / 2], [-D / 2, s / 2 - 1], [D / 2, s / 2 - 1]]) L.push(0, hh + 2.1, s / 2 - 2.4, x, hh + .25, z);
+    const L = []; for (const [x, z] of [[-D / 2, -s / 2], [D / 2, -s / 2], [-D / 2, s / 2 - 1], [D / 2, s / 2 - 1]]) L.push(0, hh + 2.1, s / 2 - 2.4, x, Hr + .1, z);
     const lg = new THREE.BufferGeometry(); lg.setAttribute("position", new THREE.Float32BufferAttribute(L, 3)); g.add(new THREE.LineSegments(lg, mCable)) }
   // hlavný vstup (street view): kamenný oblúk okolo presklených dverí v strede SZ fasády, schodík; C.door = v (m od W rohu)
   if (C.door != null) { const g = new THREE.Group(); g.position.copy(P3(0, C.door, 0)); g.rotation.y = RU; G.add(g);
