@@ -12,9 +12,25 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
   const base = Math.min(...[[0, 0], [C.wing, 0], [0, C.L], [C.wing, C.L]].map(([a, b]) => ground(...at(a, b))));
   const M = (o) => new THREE.MeshStandardMaterial(Object.assign({ roughness: .85 }, o));
   const cv = (w, h, f) => { const c = document.createElement("canvas"); c.width = w; c.height = h; f(c.getContext("2d"), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t };
-  // fasáda: svetlá omietka, 2 rady okien s bielymi rámami, sokel
-  const wallTex = cv(128, 128, (g, w, h) => { g.fillStyle = "#faeca8"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - 12, w, 12);
-    for (const y of [22, 72]) { g.fillStyle = "#f8f6f0"; g.fillRect(40, y - 3, 48, 40); g.fillStyle = "#3d4a52"; g.fillRect(44, y, 40, 34); g.fillStyle = "#f8f6f0"; g.fillRect(62, y, 4, 34); g.fillRect(44, y + 14, 40, 3) } });
+  // fasáda podľa fotky vchodu (Martin 25.11.): žltkastá omietka, okná s hrubým bielym ostením a parapetom, 1 okno na podlažie v každej osi,
+  // okná nad sebou v rovnakých osiach, nikdy cez seba (predtým sa 2-okenná dlaždica opakovala 2× na výšku -> 4 rady na 2 podlažia)
+  const winDraw = (g, cx, y0, s) => {   // cx, y0 = stred a spodok okna v px, s = px na meter
+    const ww2 = 1.12 * s, wh = 1.7 * s, fr = .24 * s, x = cx - ww2 / 2, y = y0 - wh;
+    g.fillStyle = "#f7f5ee"; g.fillRect(x - fr, y - fr, ww2 + 2 * fr, wh + 2 * fr);                    // ostenie
+    g.fillStyle = "#dcd6c6"; g.fillRect(x - fr * .35, y - fr * .35, ww2 + fr * .7, wh + fr * .7);     // tieň vnútornej hrany ostenia
+    g.fillStyle = "#f7f5ee"; g.fillRect(x - fr * 1.25, y0 + fr * .6, ww2 + fr * 2.5, .1 * s);          // parapet
+    g.fillStyle = "#3f4c55"; g.fillRect(x, y, ww2, wh);                                                // sklo
+    g.fillStyle = "rgba(255,255,255,.16)"; g.fillRect(x, y, ww2, wh * .45);
+    g.fillStyle = "#fbfbf8"; const b = Math.max(1, .07 * s); g.fillRect(x, y, ww2, b); g.fillRect(x, y0 - b, ww2, b); g.fillRect(x, y, b, wh); g.fillRect(x + ww2 - b, y, b, wh);
+    g.fillRect(cx - b / 2, y, b, wh); g.fillRect(x, y + wh * .3, ww2, b) };                           // stredný stĺpik + priečka
+  const wallTex = cv(128, 128, (g, w, h) => { g.fillStyle = "#faeca8"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - 12, w, 12); winDraw(g, 64, 92, 30) });
+  // celá stena krídla ako jedna textúra: osi okien rovnomerne, alebo od vchodu (door = m od začiatku steny), nad vchodom len horné okno
+  const facadeTex = (len, H, door) => { const s = Math.min(24, 2048 / len), W2 = Math.round(len * s), H2 = Math.round(H * s), BAY = 4.2;
+    let xs = []; if (door != null) { for (let x = door; x > 1.7; x -= BAY) xs.push(x); for (let x = door + BAY; x < len - 1.7; x += BAY) xs.push(x) }
+    else { const n = Math.max(1, Math.round(len / BAY)); for (let i = 0; i < n; i++) xs.push((i + .5) * len / n) }
+    return cv(W2, H2, (g, w, h) => { g.fillStyle = "#faeca8"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - .45 * s, w, .45 * s);
+      g.fillStyle = "#efe2a6"; g.fillRect(0, 0, w, .28 * s); g.fillStyle = "#f3e7b8"; g.fillRect(0, h - H / 2 * s - .12 * s, w, .16 * s);   // rímsa pod strechou, kordónová rímsa medzi podlažiami
+      for (const x of xs) { if (door == null || Math.abs(x - door) > .5) winDraw(g, x * s, h - 1.0 * s, s); winDraw(g, x * s, h - (H / 2 + 1.25) * s, s) } }) };
   const roofTex = cv(64, 64, (g, w, h) => { g.fillStyle = "#d9692f"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 6) { g.fillStyle = "rgba(120,40,10,.35)"; g.fillRect(0, y, w, 1.5) } for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? "255,170,110" : "150,60,25"},.25)`; g.fillRect(Math.random() * w, Math.random() * h, 6, 3) } });
   const glassTex = cv(64, 64, (g, w, h) => { g.fillStyle = "#9fb9c4"; g.fillRect(0, 0, w, h); g.fillStyle = "rgba(255,255,255,.25)"; g.fillRect(0, 0, w, h / 2); g.fillStyle = "#f4f4f0"; for (let x = 0; x < w; x += 16) g.fillRect(x, 0, 3, h); g.fillRect(0, 0, w, 3); g.fillRect(0, h / 2, w, 3) });
   const mGlass = M({ map: glassTex, roughness: .25, metalness: .2 });
@@ -29,13 +45,20 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
     const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals();
     const m = new THREE.Mesh(g, mat); m.material.side = THREE.DoubleSide; return m }
   // krídlo: kváder + valbová strecha; (a0..a1) v smere u, (b0..b1) v smere v
-  function wing(a0, a1, b0, b1, eave, hr, wallM = mWall, roofM = mRoof) {
+  function wing(a0, a1, b0, b1, eave, hr, roofM = mRoof) {
     const ca = (a0 + a1) / 2, cb = (b0 + b1) / 2, A = a1 - a0, B = b1 - b0, [e, n] = at(ca, cb), p = pos(e, n, base);
-    const box = new THREE.BoxGeometry(A, eave, B); const uvA = box.attributes.uv;   // opakovanie textúry podľa rozmeru steny
-    for (let i = 0; i < uvA.count; i++) { const f = Math.floor(i / 4); const sx = f < 2 ? B : A; uvA.setXY(i, uvA.getX(i) * sx / 4.2, uvA.getY(i) * eave / 3.6) }
-    const body = new THREE.Mesh(box, wallM); body.position.set(p.x, p.y + eave / 2, p.z);
+    const box = new THREE.BoxGeometry(A, eave, B);
+    const body = new THREE.Mesh(box, mWall); body.position.set(p.x, p.y + eave / 2, p.z);
     const roof = hipRoof(A + .9, B + .9, hr, roofM); roof.position.set(p.x, p.y + eave, p.z);
     for (const m of [body, roof]) { m.rotation.y = RU; m.castShadow = m.receiveShadow = true; G.add(m); hits.push(m) }
+    // každá bočná stena vlastná textúra (UV 0..1 = celá stena); stena, pri ktorej je hlavný vchod (C.door), má osi okien od vchodu
+    body.updateMatrix(); const P = box.attributes.position, UV = box.attributes.uv, dp = C.door != null ? pos(...at(0, C.door), base) : null, mats = [];
+    for (let f = 0; f < 6; f++) { if (f === 2 || f === 3) { mats.push(mWall); continue }
+      let pa, pb; for (let i = f * 4; i < f * 4 + 4; i++) { if (UV.getY(i) > .5) continue; const v3 = new THREE.Vector3().fromBufferAttribute(P, i).applyMatrix4(body.matrix); if (UV.getX(i) < .5) pa = v3; else pb = v3 }
+      const dx = pb.x - pa.x, dz = pb.z - pa.z, len = Math.hypot(dx, dz); let door = null;
+      if (dp) { const t = ((dp.x - pa.x) * dx + (dp.z - pa.z) * dz) / len, off = Math.abs((dp.x - pa.x) * dz - (dp.z - pa.z) * dx) / len; if (off < 1.5 && t > 0 && t < len) door = t }
+      mats.push(M({ map: facadeTex(len, eave, door) })) }
+    body.material = mats;
     return body }
   const ww = C.ww, E = C.eave, H = C.roof;
   wing(0, ww, 0, C.L, E, H);                                   // hlavné krídlo (SZ fasáda k ihrisku, terasa)

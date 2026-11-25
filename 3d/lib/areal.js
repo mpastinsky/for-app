@@ -63,7 +63,25 @@ export function paintRange(g, R, tx, ty, S, fine) {
 // hlavná cesta (asfalt) a príjazd ku clubhousu
 export function paintRoads(g, roads, tx, ty, S) {
   for (const r of roads || []) { g.lineCap = g.lineJoin = "round"; g.beginPath(); r.p.forEach(([e, n], i) => i ? g.lineTo(tx(e), ty(n)) : g.moveTo(tx(e), ty(n)));
-    g.lineWidth = (r.w + 1.2) * S; g.strokeStyle = "rgba(70,80,50,.45)"; g.stroke(); g.lineWidth = r.w * S; g.strokeStyle = r.t === "main" ? "#7d7f80" : "#a9a291"; g.stroke() }
+    g.lineWidth = (r.w + 1.2) * S; g.strokeStyle = "rgba(70,80,50,.45)"; g.stroke(); g.lineWidth = r.w * S; g.strokeStyle = ROADC[r.t] || ROADC.access; g.stroke() }
+}
+// farby: asfalt, príjazd, betónové rampy k tunelu pod cestou (jamka 11, Martin 25.11.)
+export const ROADC = { main: "#7d7f80", access: "#a9a291", ramp: "#c4b8ae" };
+// portál tunela pod hlavnou cestou (DATA.objects t:"portal"): betónové čelo s tmavým otvorom na konci rampy.
+// O: {p:[e,n], a: smer von (° od východu), w, h}; pos(e,n,h) -> THREE.Vector3, ground(e,n) -> výška
+export function buildPortal(THREE, O, pos, ground) {
+  const ar = O.a * Math.PI / 180, d = [Math.cos(ar), Math.sin(ar)], [e, n] = O.p, w = O.w || 4.2, h = O.h || 2.7;
+  const base = ground(e + d[0] * 2, n + d[1] * 2), top = Math.max(base + h + .7, ground(e - d[0] * 2.5, n - d[1] * 2.5) + .15), H = top - base;
+  const a = pos(e, n, 0), b = pos(e + d[0], n + d[1], 0), g = new THREE.Group(); g.position.copy(pos(e, n, base)); g.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x);
+  const mC = new THREE.MeshLambertMaterial({ color: 0xb9b2a8 }), mD = new THREE.MeshLambertMaterial({ color: 0x15161a }), sw = 1.3, T = .5;
+  const box = (sx, sy, sz, x, y, z, m = mC) => { const k = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m); k.position.set(x, y, z); k.castShadow = k.receiveShadow = true; g.add(k); return k };
+  for (const s of [-1, 1]) box(T, H + .4, sw, 0, (H - .4) / 2, s * (w / 2 + sw / 2));           // bočné časti čela (siahajú aj pod zem)
+  box(T, H - h, w, 0, h + (H - h) / 2, 0);                                                     // preklad nad otvorom
+  box(T + .1, .18, w + 2 * sw + .2, .02, H + .09, 0);                                          // rímsa
+  box(.1, h, w, -.6, h / 2, 0, mD);                                                            // tmavý otvor (tunel)
+  for (const s of [-1, 1]) box(1.2, h, .1, -.3, h / 2, s * w / 2, mD);
+  box(1.2, .1, w, -.3, h, 0, mD);
+  return g;
 }
 
 // pomocník: zlúči statické meshe skupiny podľa materiálu (clubhouse ~100 objektov -> pár volaní kreslenia)
@@ -182,6 +200,8 @@ export async function buildAreal(THREE, o) {
       for (let k = 0; k <= 6; k++) for (const z of [-1, 1]) { const po = new THREE.Mesh(pg, pm); po.position.set(-Ln / 2 + k * Ln / 6, Rg.roof.h / 2, z * (Rg.roof.w / 2 - .2)); rg.add(po) }
       G.add(rg) }
     if (Rg.hut) { const hut = new THREE.Mesh(new THREE.BoxGeometry(3, 2.4, 2.2), new THREE.MeshStandardMaterial({ color: 0x8a8478 })); hut.position.copy(V(Rg.hut[0], Rg.hut[1], hA(...Rg.hut) + 1.2)); hut.rotation.y = ang; G.add(hut) } }
+  // --- portály tunela mimo okna jamky (v okne ich kreslí jamka)
+  for (const O of AP.objects || []) if (O.t === "portal" && near(O.p[0], O.p[1])) { const [x, y] = L(...O.p); if (!inWin(x, y, 2)) G.add(buildPortal(THREE, O, V, hA)) }
   // --- clubhouse (ak ho nekreslí jamka): zjednodušený na pár zlúčených objektov
   let CLB = null;
   if (!o.club && AP.clubhouse && near(AP.clubhouse.o[0], AP.clubhouse.o[1])) { const { buildClubhouse } = await import("./clubhouse.js");
