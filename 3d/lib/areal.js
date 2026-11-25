@@ -60,21 +60,61 @@ export function paintRange(g, R, tx, ty, S, fine) {
   if (R.circle) { const c = R.circle; g.beginPath(); g.arc(tx(c[0]), ty(c[1]), c[2] * S, 0, 7); g.fillStyle = "#efede4"; g.fill();
     if (fine) { g.beginPath(); g.arc(tx(c[0]), ty(c[1]), c[2] * .35 * S, 0, 7); g.strokeStyle = "#c9c5b6"; g.lineWidth = .2 * S; g.stroke() } }
 }
-// hlavná cesta (asfalt) a príjazd ku clubhousu
+// hlavná cesta (asfalt) a príjazd ku clubhousu.
+// v248 (Martin: cesta „kostrbatá, zubatá“): hlavnú cestu už nemaľujeme do textúry terénu (hrubé pixely, zuby na okrajoch),
+// tu len mäkká krajnica pod ňou – samotnú vozovku kreslí 3D pás buildRoad (ostré okraje a čiary pri každom priblížení)
 export function paintRoads(g, roads, tx, ty, S) {
   for (const r of roads || []) { g.lineCap = g.lineJoin = "round"; g.beginPath(); r.p.forEach(([e, n], i) => i ? g.lineTo(tx(e), ty(n)) : g.moveTo(tx(e), ty(n)));
-    g.lineWidth = (r.w + 1.2) * S; g.strokeStyle = "rgba(70,80,50,.45)"; g.stroke(); g.lineWidth = r.w * S; g.strokeStyle = ROADC[r.t] || ROADC.access; g.stroke();
-    if (r.t === "main") roadLines(g, r, tx, ty, S) }
+    if (r.t === "main") { g.lineWidth = (r.w + 3) * S; g.strokeStyle = "rgba(96,104,70,.55)"; g.stroke(); g.lineWidth = (r.w + 1) * S; g.strokeStyle = "#8a887c"; g.stroke(); continue }
+    g.lineWidth = (r.w + 1.2) * S; g.strokeStyle = "rgba(70,80,50,.45)"; g.stroke(); g.lineWidth = r.w * S; g.strokeStyle = ROADC[r.t] || ROADC.access; g.stroke() }
 }
-// vodorovné značenie hlavnej cesty (v246): okrajové plné čiary a stredová prerušovaná 3 m / 6 m medzera (mimo obce), šírka 0,15 m,
-// aspoň 1 px, aby boli vidno aj v hrubej textúre prehľadu
-function roadLines(g, r, tx, ty, S) {
-  const t = g.getTransform(), lw = Math.max(.15 * S, 1 / (Math.hypot(t.a, t.b) || 1)), off = r.w / 2 - .35;
-  const line = (o, dash) => { g.beginPath();
-    for (let i = 0; i < r.p.length; i++) { const [e, n] = r.p[i], A = r.p[Math.max(0, i - 1)], B = r.p[Math.min(r.p.length - 1, i + 1)], de = B[0] - A[0], dn = B[1] - A[1], l = Math.hypot(de, dn) || 1;
-      const x = tx(e - dn / l * o), y = ty(n + de / l * o); i ? g.lineTo(x, y) : g.moveTo(x, y) }
-    g.setLineDash(dash ? [3 * S, 6 * S] : []); g.lineDashOffset = 0; g.stroke() };
-  g.save(); g.lineCap = "butt"; g.strokeStyle = "rgba(245,245,240,.92)"; g.lineWidth = lw; line(off, 0); line(-off, 0); line(0, 1); g.setLineDash([]); g.restore();
+// textúra vozovky (zdieľaná): naprieč celý pás (krajnica + asfalt + krajnica), pozdĺž 18 m = dve prerušované čiary 3 m / 6 m medzera
+const ROAD_SH = 1.1, ROAD_TL = 18; let ROADTEX = null;
+function roadTex(THREE, w) {
+  if (ROADTEX) return ROADTEX;
+  const Wt = w + 2 * ROAD_SH, PX = 256 / Wt, cv = document.createElement("canvas"); cv.width = 256; cv.height = Math.round(ROAD_TL * PX); const g = cv.getContext("2d"), H = cv.height;
+  const X = o => (o + Wt / 2) * PX;                       // o = vzdialenosť od osi (m)
+  let sd = 9; const r = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  // krajnica: štrk, na vonkajšom okraji plynulo do priehľadna (žiadna ostrá hrana na tráve)
+  const gr = g.createLinearGradient(0, 0, 256, 0), f = ROAD_SH / Wt;
+  gr.addColorStop(0, "rgba(128,126,110,0)"); gr.addColorStop(f * .55, "rgba(140,137,120,.9)"); gr.addColorStop(f, "#9a978a"); gr.addColorStop(1 - f, "#9a978a"); gr.addColorStop(1 - f * .55, "rgba(140,137,120,.9)"); gr.addColorStop(1, "rgba(128,126,110,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 256, H);
+  g.fillStyle = "#6f7173"; g.fillRect(X(-w / 2), 0, w * PX, H);                                   // asfalt
+  for (let k = 0; k < 2600; k++) { const v = r(); g.fillStyle = v < .5 ? "rgba(40,42,44,.16)" : "rgba(170,170,165,.13)"; g.fillRect(X(-w / 2) + r() * w * PX, r() * H, 1 + r() * 1.5, 1 + r() * 1.5) }
+  g.fillStyle = "rgba(60,62,64,.25)"; for (const o of [-w / 4, w / 4]) g.fillRect(X(o) - .5 * PX, 0, 1 * PX, H);                 // vyjazdené stopy
+  g.fillStyle = "rgba(246,246,240,.95)"; const lw = Math.max(2, .15 * PX);
+  for (const s of [-1, 1]) g.fillRect(X(s * (w / 2 - .35)) - lw / 2, 0, lw, H);                 // okrajové plné čiary
+  for (let d = 0; d < ROAD_TL; d += 9) g.fillRect(X(0) - lw / 2, H - (d + 3) * PX, lw, 3 * PX);    // stredová prerušovaná 3 m / 6 m
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; ROADTEX = t; return t;
+}
+// 3D pás hlavnej cesty: rovný priečny profil, pozdĺžny profil vyhladený (bez vĺn po mriežke terénu), cez tunel rovno (vozovka na strope tunela).
+// r: {w, p:[[e,n],…]}; pos(e,n,h) -> Vector3; ground(e,n) -> výška; o: {off: nad terénom (m), clip(e,n) -> bool, tunnels:[O], step}
+export function buildRoad(THREE, r, pos, ground, o = {}) {
+  const w = r.w || 9, off = o.off ?? .06, step = o.step || 2, Wt = w + 2 * ROAD_SH, P = r.p, G = new THREE.Group();
+  // vzorky pozdĺž osi (oblúkovou dĺžkou)
+  const S = []; let acc = 0;
+  for (let i = 1; i < P.length; i++) { const [a, b] = [P[i - 1], P[i]], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
+    for (let d = Math.ceil(acc / step - 1e-9) * step - acc; d <= L + 1e-6; d += step) S.push({ e: a[0] + ux * d, n: a[1] + uy * d, s: acc + d, ux, uy }); acc += L }
+  // tunel: os pod cestou nevzorkujeme (DMR tam má otvorený priekop), výška sa preklene
+  const tun = (o.tunnels || []).map(T => { const k = S.reduce((m, q, i) => { const d = Math.hypot(q.e - T.p[0], q.n - T.p[1]); return d < m[0] ? [d, i] : m }, [1e9, -1]); return { s: S[k[1]].s, ts: (T.ts || 7.5) + 3 } });
+  const cl = S.map(q => !o.clip || o.clip(q.e, q.n));
+  const hs = S.map((q, i) => cl[i] && !tun.some(T => Math.abs(q.s - T.s) < T.ts) ? ground(q.e, q.n) : NaN);
+  const ok = hs.map(h => !isNaN(h)); if (!ok.some(x => x)) return G;
+  for (let i = 0; i < hs.length; i++) if (!ok[i]) { let a = i - 1, b = i + 1; while (a >= 0 && !ok[a]) a--; while (b < hs.length && !ok[b]) b++;
+    hs[i] = a < 0 ? hs[b] : b >= hs.length ? hs[a] : hs[a] + (hs[b] - hs[a]) * (i - a) / (b - a) }
+  const K = Math.max(1, Math.round(6 / step)), hm = hs.map((_, i) => { let t = 0, n = 0; for (let j = i - K; j <= i + K; j++) if (j >= 0 && j < hs.length) { t += hs[j]; n++ } return t / n });
+  // pás: 5 vrcholov naprieč (okraj, hrana asfaltu, os…), súvislé úseky len tam, kde je clip
+  const xs = [-Wt / 2, -w / 2, 0, w / 2, Wt / 2], mat = new THREE.MeshLambertMaterial({ map: roadTex(THREE, w), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4, fog: o.fog !== false });
+  let run = [];
+  const flush = () => { if (run.length < 2) { run = []; return } const V = [], U = [], I = [];
+    run.forEach((i, k) => { const q = S[i], nx = -q.uy, ny = q.ux; for (const x of xs) { const v = pos(q.e + nx * x, q.n + ny * x, hm[i] + off); V.push(v.x, v.y, v.z); U.push((x + Wt / 2) / Wt, q.s / ROAD_TL) }
+      if (k) { const b = (k - 1) * 5, c = k * 5; for (let j = 0; j < 4; j++) I.push(b + j, b + j + 1, c + j, b + j + 1, c + j + 1, c + j) } });
+    const gg = new THREE.BufferGeometry(); gg.setAttribute("position", new THREE.Float32BufferAttribute(V, 3)); gg.setAttribute("uv", new THREE.Float32BufferAttribute(U, 2)); gg.setIndex(I); gg.computeVertexNormals();
+    // prednou stranou nahor (poradie vrcholov závisí od pos(): prehľad vs. jamka)
+    if (gg.attributes.normal.getY(0) < 0) { for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t } gg.setIndex(I); gg.computeVertexNormals() }
+    const m = new THREE.Mesh(gg, mat); m.receiveShadow = true; m.renderOrder = 1; G.add(m); run = [] };
+  for (let i = 0; i < S.length; i++) { if (cl[i]) run.push(i); else flush() } flush();
+  return G;
 }
 // farby: asfalt, príjazd, betónové rampy k tunelu pod cestou (jamka 11, Martin 25.11.)
 export const ROADC = { main: "#7d7f80", access: "#a9a291", ramp: "#c4b8ae" };
@@ -90,7 +130,7 @@ export function buildTunnel(THREE, O, pos, ground) {
   const road = (ground(...P(0, ts + 2.5)) + ground(...P(0, -ts - 2.5))) / 2;
   let fl = -1e9; for (let x = -Lt / 2 - 1; x <= Lt / 2 + 1; x += 1) for (let z = -w / 2; z <= w / 2; z += w / 4) fl = Math.max(fl, ground(...P(x, z)));
   const h = Math.min(O.h || 2.7, Math.max(1.6, road - fl - .9)); fl = Math.min(fl, road - h - .9); const R = road - fl;
-  const a = pos(e, n, 0), b = pos(e + d[0], n + d[1], 0), g = new THREE.Group(); g.position.copy(pos(e, n, fl)); const th = Math.atan2(-(b.z - a.z), b.x - a.x); g.rotation.y = th;
+  const a = pos(e, n, 0), b = pos(e + d[0], n + d[1], 0), g = new THREE.Group(); g.position.copy(pos(e, n, fl)); g.userData = { floor: fl, road, h }; const th = Math.atan2(-(b.z - a.z), b.x - a.x); g.rotation.y = th;
   // lokálne: x = os tunela (kolmo na cestu), z = pozdĺž cesty; zs = znamienko smeru cesty v lokálnom z
   const c0 = pos(...P(0, 0), 0), c1 = pos(...P(0, 1), 0), zs = Math.sign((c1.x - c0.x) * Math.sin(th) + (c1.z - c0.z) * Math.cos(th)) || 1;
   const mC = new THREE.MeshLambertMaterial({ color: 0xb9b2a8 }), mI = new THREE.MeshLambertMaterial({ color: 0x8f8a82 }), mF = new THREE.MeshLambertMaterial({ color: 0xa69d93 }),
@@ -105,11 +145,17 @@ export function buildTunnel(THREE, O, pos, ground) {
     for (let z = -ts + .3; z <= ts; z += 2) box(.06, .5, .06, s * (Lt / 2 - .45), R + .28, z, mW);
   }
   box(Lt, R - h, w + .02, 0, h + (R - h) / 2, 0, mI);                                                   // strop
-  // vozovka navrchu: asfalt s okrajovými čiarami a stredovou prerušovanou čiarou (rovnaká fáza ako na terénne)
-  box(Lt - .2, .04, 2 * ts, 0, R + .02, 0, mS); box(rw, .05, 2 * ts, 0, R + .03, 0, mA);
-  for (const s of [-1, 1]) box(.15, .02, 2 * ts, s * (rw / 2 - .35), R + .06, 0, mW);
-  const D0 = O.d0 || 0;
-  for (let k = Math.floor((D0 - ts) / 9) - 1; k * 9 < D0 + ts + 9; k++) { let z0 = Math.max(k * 9 - D0, -ts), z1 = Math.min(k * 9 + 3 - D0, ts); if (z1 - z0 > .05) box(.15, .02, z1 - z0, 0, R + .06, zs * (z0 + z1) / 2, mW) }
+  // v248: vozovku navrchu kreslí pás buildRoad (rovnaká textúra ako celá cesta) – tu len betónová doska mosta
+  box(Lt - .2, .06, 2 * ts, 0, R - .01, 0, mC);
+  // krídla portálov (v248, Martin: podjazd „hrubý“): oporné múry pozdĺž priekopu, vrch kopíruje svah, šikmo klesá od portálu
+  { const T = .4, zw = 2.9 - T;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const pts = []; let x = Lt / 2, top = R + .25;
+      for (let k = 0; k <= 14; k++) { x = Lt / 2 + k; const gt = ground(...P(sx * x, sz * (zw + T + .9))) - fl + .25; top = Math.min(R + .25, Math.max(.35, gt)); pts.push([x - Lt / 2, top]); if (top <= .36 && k > 1) break }
+      const sh = new THREE.Shape(); sh.moveTo(0, -1); for (const [x2, y2] of pts) sh.lineTo(x2, y2); sh.lineTo(pts[pts.length - 1][0], -1); sh.closePath();
+      const gg = new THREE.ExtrudeGeometry(sh, { depth: T, bevelEnabled: false }); const k2 = new THREE.Mesh(gg, mC); k2.castShadow = k2.receiveShadow = true;
+      // tvar je v rovine x-y (x od portálu von), hrúbka pozdĺž z; zrkadlenie pre -x cez rotáciu
+      k2.rotation.y = sx > 0 ? 0 : Math.PI; k2.position.set(sx * Lt / 2, 0, sx > 0 ? (sz > 0 ? zw : -zw - T) : (sz > 0 ? zw + T : -zw)); g.add(k2);}
+  }
   return g;
 }
 
@@ -259,6 +305,8 @@ export async function buildAreal(THREE, o) {
   if (AP.range && AP.range.tee) G.add(buildRangeSigns(THREE, AP.range, V, hA, (e, n) => near(e, n)));
   // --- tunel pod cestou mimo okna jamky (v okne ho kreslí jamka)
   for (const O of AP.objects || []) if (O.t === "tunnel" && near(O.p[0], O.p[1])) { const [x, y] = L(...O.p); if (!inWin(x, y, 2)) G.add(buildTunnel(THREE, O, V, hA)) }
+  // --- hlavná cesta ako 3D pás (v248): ostré okraje a čiary, rovný profil; v okne jamky na jej detailnom teréne
+  for (const r of ar.roads || []) if (r.t === "main") G.add(buildRoad(THREE, r, V, hA, { off: .08, fog: o.groundFog !== false, clip: (e, n) => near(e, n, -8), tunnels: (AP.objects || []).filter(O => O.t === "tunnel") }));
   // --- clubhouse (ak ho nekreslí jamka): zjednodušený na pár zlúčených objektov
   let CLB = null;
   if (!o.club && AP.clubhouse && near(AP.clubhouse.o[0], AP.clubhouse.o[1])) { const { buildClubhouse } = await import("./clubhouse.js");
