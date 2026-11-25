@@ -2209,7 +2209,7 @@ function startPlay(){
    <button id="p-fix" hidden aria-label="Opraviť pitchmark" title="Opraviť pitchmark">🔧 pitchmark</button>
    <div id="p-row"><button id="p-l" aria-label="Mieriť vľavo">◀</button>
      <div id="p-club"><button id="p-cp" aria-label="Kratšia palica">‹</button><span id="p-cn"></span><button id="p-cm" aria-label="Dlhšia palica">›</button></div>
-     <button id="p-r" aria-label="Mieriť vpravo">▶</button><button id="p-z" aria-label="Pozrieť sa na miesto dopadu">🔍</button><button id="p-v" aria-label="Zmeniť pohľad">👁</button></div>
+     <button id="p-r" aria-label="Mieriť vpravo">▶</button><button id="p-z" aria-label="Pozrieť sa na miesto dopadu">🔍</button><button id="p-v" aria-label="Zmeniť pohľad">👁</button><button id="p-rs" aria-label="Zopakovať jamku" title="Zopakovať jamku">↺</button></div>
    <button id="p-hit"><b id="p-ht">Drž a pusti – úder</b></button>
    <div id="p-res" hidden></div>
    <div id="p-meter"><svg viewBox="0 0 240 132"><defs><linearGradient id="pmg" x1="0" x2="1"><stop offset="0" stop-color="#ffd84d"/><stop offset=".6" stop-color="#ff8a2b"/><stop offset="1" stop-color="#e0312b"/></linearGradient></defs>
@@ -2474,7 +2474,7 @@ function startPlay(){
   function showRes(n){RS[hNum]=n;rsSave(RS);SCA=READY.map(h=>RS[h]??null);
     if(ONE){const d=n-PAR,nxt=READY[READY.indexOf(hNum)+1];
       $("p-res").innerHTML=`<h2>Jamka ${hNum} dohraná</h2><div>${n} ${n===1?"úder":n<5?"údery":"úderov"} · ${d===0?"na par":d>0?"+"+d+" nad par":d+" pod par"}</div>
-      ${nxt?`<a class="go" href="?${CQ}h=${nxt}&t=${tIdx}&play=1&one=1${OVQ}">Ďalšia jamka ${nxt} ›</a>`:`<a class="go" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1${OVQ}">Hrať znova</a>`}
+      ${nxt?`<a class="go" href="?${CQ}h=${nxt}&t=${tIdx}&play=1&one=1${OVQ}">Ďalšia jamka ${nxt} ›</a>`:`<a class="go" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1${OVQ}">Zopakovať jamku</a>`}${nxt?`<a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1${OVQ}">Zopakovať jamku</a>`:""}
       <a class="go alt" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="${OVH}">Späť na prehľad</a>`;$("p-res").hidden=false;return}
     const all=SCA,tot=all.reduce((a,b)=>a+(b||0),0),par=all.reduce((a,x,i)=>x==null?a:a+(PARS[READY[i]-1]||3),0),dd=tot-par;
     const last=hNum===LASTH;const nx=`?${CQ}h=${READY[READY.indexOf(hNum)+1]}&t=${tIdx}&play=1&sc=${READY.slice(0,READY.indexOf(hNum)+1).map(h=>RS[h]||0).join("-")}`;
@@ -2746,6 +2746,9 @@ function startPlay(){
   addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea")||S.mode!=="aim"||SW)return;const zi=e.key==="+"||e.key==="=",zo=e.key==="-"||e.key==="_";if(!zi&&!zo)return;
     orbOn();const off=camera.position.clone().sub(controls.target).multiplyScalar(zi?.94:1/.94),L=off.length();if(L<controls.minDistance||L>controls.maxDistance)return;camera.position.copy(controls.target).add(off);controls.update()});
   // 👁 prepína pohľady: pri pate zblízka → zhora → prehľad, inak normálny ↔ prehľad
+  // ↺ zopakovať jamku počas hry: 1. ťuk sa opýta, 2. ťuk do 3 s začne jamku od odpaliska (údery jamky sa vynulujú, kolo ostáva)
+  let rsT=0;$("p-rs").onclick=()=>{if(S.mode==="in")return;const now=Date.now();if(now-rsT>3000){rsT=now;msg("Ťukni ↺ ešte raz = začať jamku znova");setTimeout(()=>{if($("p-msg").textContent.startsWith("Ťukni ↺"))msg("")},3000);return}
+    location.href=ONE?`?${CQ}h=${hNum}&t=${tIdx}&play=1&one=1${OVQ}`:`?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}`};
   $("p-v").onclick=()=>{const putt=!CLUBS[S.club].a;S.view=putt?(S.view===0?2:S.view===2?1:0):(S.view===1?0:1);
     S.zoom=0;msg({0:putt?"Pohľad zblízka":"Pohľad za loptičkou",1:"Prehľad zhora",2:"Pohľad zhora na jamku"}[S.view]);const m=$("p-msg").textContent;setTimeout(()=>{if($("p-msg").textContent===m)msg("")},1300)};
   // potiahnutie prstom po scéne = mierenie
