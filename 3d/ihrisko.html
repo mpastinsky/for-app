@@ -60,7 +60,7 @@ try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("
 // Súradnice ENU (východ, sever) z apex.json – rovnaké ako pri jednotlivých jamkách, aby sa dal neskôr pripojiť celý areál.
 import * as THREE from "three";
 import {OrbitControls} from "./lib/OrbitControls.js";
-import {pcNav,joystick} from "./lib/pcnav.js";
+import {pcNav} from "./lib/pcnav.js";
 const Q=new URLSearchParams(location.search);
 const DATA=await (await fetch("apex.json")).json();
 // 3-jamková Akadémia (Martin 24.11.): vlastné dáta s počiatkom v greene 1 -> posun do ENU 18-ky; jej terén ako ďalšia dlaždica
@@ -193,9 +193,7 @@ const home=land?{pos:W(cx-dist*.35,cn,dist),target:W(cx+dist*.03,cn,0)}:{pos:W(c
 camera.position.copy(home.pos);
 const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(home.target);controls.enableDamping=true;controls.maxPolarAngle=1.35;controls.minDistance=8;controls.maxDistance=dist*1.6;
 // rovnaké ovládanie kamery ako na Akadémii (koliesko ku kurzoru, rýchlosť, tlačidlá ＋ − vľavo dole)
-pcNav(controls,camera,renderer.domElement);controls.update();
-// joystick vľavo dole (Martin 25.11.): let po areáli jedným palcom; stred kamery nepustí ďaleko za okraj ihriska
-joystick(controls,camera,{clamp:q=>{const M=250;q.x=Math.min(e1+M,Math.max(e0-M,q.x));q.z=Math.min(-n0+M,Math.max(-n1-M,q.z))}});
+pcNav(controls,camera,renderer.domElement,{touch:true});controls.update();
 
 document.getElementById("load").remove();
 // ⛳ Hrať kolo: prelet nadol na odpalisko jamky 1, potom hra
