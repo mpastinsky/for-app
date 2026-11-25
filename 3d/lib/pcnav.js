@@ -1,23 +1,20 @@
 // Spoločné ovládanie kamery pre počítač aj dotyk – Akadémia (index.html) aj prehľad 18 jamiek (ihrisko.html) používajú presne toto isté.
 // Koliesko myši / touchpad: priblíženie ku kurzoru, rovnaká rýchlosť; tlačidlá vľavo dole (podržaním sa pohyb opakuje), + − aj na klávesnici.
 import * as THREE from "three";
-export const NAV_CSS=`#nav3{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);display:grid;grid-template-columns:repeat(5,38px);gap:5px;z-index:40}
+export const NAV_CSS=`#nav3{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);display:grid;grid-template-columns:repeat(4,38px);gap:5px;z-index:40}
 #nav3 button{width:38px;height:38px;border:0;border-radius:10px;background:rgba(255,255,255,.88);color:#123;font:700 1.05rem system-ui;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;user-select:none}#nav3 button:hover{background:#fff}
-body.playing #nav3{display:none}
-#nav3.touch{grid-template-columns:repeat(5,44px);gap:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:25}#nav3.touch button{width:44px;height:44px;font-size:1.2rem;touch-action:none;-webkit-user-select:none;-webkit-touch-callout:none}`;
-export function pcNav(controls,camera,dom,opt={}){
+body.playing #nav3{display:none}`;
+export function pcNav(controls,camera,dom){
   const fine=matchMedia("(pointer:fine)").matches;
   if(!document.getElementById("nav3css")){const s=document.createElement("style");s.id="nav3css";s.textContent=NAV_CSS;document.head.appendChild(s)}
-  if(fine)controls.zoomToCursor=true;
-  // tlačidlá: na PC vždy, na telefóne len kde o to Martin požiadal (25.11.: prehľad areálu – posun, otáčanie, sklon, zoom)
-  if(fine||opt.touch){
-    document.body.insertAdjacentHTML("beforeend",`<div id="nav3"><button data-a="rl" title="Otočiť doľava">⟲</button><button data-a="f" title="Dopredu">▲</button><button data-a="rr" title="Otočiť doprava">⟳</button><button data-a="tu" title="Sklopiť pohľad">⤒</button><button data-a="zi" title="Priblížiť">＋</button><button data-a="sl" title="Doľava">◀</button><button data-a="b" title="Dozadu">▼</button><button data-a="sr" title="Doprava">▶</button><button data-a="td" title="Pohľad zhora">⤓</button><button data-a="zo" title="Oddialiť">－</button></div>`);
+  if(fine){controls.zoomToCursor=true;
+    document.body.insertAdjacentHTML("beforeend",`<div id="nav3"><button data-a="rl" title="Otočiť doľava">⟲</button><button data-a="f" title="Dopredu">▲</button><button data-a="rr" title="Otočiť doprava">⟳</button><button data-a="zi" title="Priblížiť">＋</button><button data-a="tu" title="Sklopiť pohľad">⤒</button><button data-a="b" title="Dozadu">▼</button><button data-a="td" title="Pohľad zhora">⤓</button><button data-a="zo" title="Oddialiť">－</button></div>`);
     const sph=new THREE.Spherical(),off=new THREE.Vector3();
     const act=a=>{if(!controls.enabled)return;const T=controls.target,cp=camera.position;off.copy(cp).sub(T);
       if(a==="zi"||a==="zo"){const k=a==="zi"?.9:1/.9;off.multiplyScalar(k);const L=off.length();if(L<controls.minDistance||L>controls.maxDistance)return;cp.copy(T).add(off)}
       else if(a==="rl"||a==="rr"||a==="tu"||a==="td"){sph.setFromVector3(off);if(a==="rl")sph.theta+=.04;if(a==="rr")sph.theta-=.04;if(a==="tu")sph.phi=Math.max(.05,sph.phi-.03);if(a==="td")sph.phi=Math.min(controls.maxPolarAngle,sph.phi+.03);off.setFromSpherical(sph);cp.copy(T).add(off)}
-      else{const f=new THREE.Vector3(-off.x,0,-off.z).normalize(),st=Math.max(1.5,off.length()*.03),d=a==="sl"||a==="sr"?new THREE.Vector3(f.z,0,-f.x).multiplyScalar(a==="sl"?st:-st):f.multiplyScalar(a==="f"?st:-st);T.add(d);cp.add(d)}};
-    let timer=null;const stop=()=>{clearInterval(timer);timer=null};const nav=document.getElementById("nav3");if(!fine)nav.classList.add("touch");
+      else{const d=new THREE.Vector3(-off.x,0,-off.z).normalize().multiplyScalar((a==="f"?1:-1)*Math.max(1.5,off.length()*.03));T.add(d);cp.add(d)}};
+    let timer=null;const stop=()=>{clearInterval(timer);timer=null};const nav=document.getElementById("nav3");
     nav.addEventListener("pointerdown",e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();act(b.dataset.a);stop();timer=setInterval(()=>act(b.dataset.a),30)});
     addEventListener("pointerup",stop);addEventListener("pointercancel",stop);nav.addEventListener("pointerleave",stop);
     // klávesy + − (mimo hry; pri mierení ich obsluhuje hra sama)
