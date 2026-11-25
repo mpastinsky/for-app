@@ -268,7 +268,11 @@ Object.assign(sun.shadow.camera,{left:-220,right:220,top:220,bottom:-220,near:1,
 scene.add(sun,sun.target);
 
 // --- terén + "namaľovaný" povrch (rough, fairway, greeny, bunkre, odpaliská)
-const X0=-170,X1=170,Y0=-70,Y1=c+150,SEG=2;
+// v253 (Martin 25.11.: „pri prelete z 10 na 11 kamera v podchode vidí len tmavú stenu a šedú cestu“): podchod pod cestou ležal tesne za oknom
+// jamky 11 (y −75 až −130 podľa odpaliska, okno od −70) → jamka 11 ho mala len v hrubom okolí (bez tunela, nízke stromy). Okno sa za odpaliskom
+// predĺži tak, aby tunel tesne za odpaliskom (do 170 m) bol v plne postavenej scéne – prelet tam pokračuje už v detailnej grafike.
+const Y0=(()=>{let y0=-70;for(const O of (DATA.objects||[])){if(O.t!=="tunnel")continue;const[x,y]=loc(O.p);if(Math.abs(x)<100&&y<-60&&y>-170)y0=Math.min(y0,Math.floor(y/2)*2-30)}return y0})();
+const X0=-170,X1=170,Y1=c+150,SEG=2;
 // zdieľané s 3D steblami: zem pod steblami je tmavšia (tieň pri koreňoch), aby steblá z nej rástli a nevznášali sa
 const BGU={uC:{value:new THREE.Vector2(1e6,1e6)},uS:{value:22},kT:{value:null},uG:{value:new THREE.Vector4(X0,Y0,X1,Y1)}};
 const geo=new THREE.PlaneGeometry(X1-X0,Y1-Y0,(X1-X0)/SEG,(Y1-Y0)/SEG);geo.rotateX(-Math.PI/2);
