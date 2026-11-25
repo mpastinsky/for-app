@@ -1178,7 +1178,7 @@ for(const O of (DATA.objects||[])){if(O.t!=="hut")continue;const[x,y]=loc(O.p),a
   const sh=new THREE.Shape([new THREE.Vector2(-Wd/2-.35,0),new THREE.Vector2(Wd/2+.35,0),new THREE.Vector2(0,rh)]),rg=new THREE.ExtrudeGeometry(sh,{depth:L+.5,bevelEnabled:false});rg.translate(0,0,-(L+.5)/2);rg.rotateY(Math.PI/2);
   const rf=new THREE.Mesh(rg,mR);rf.position.y=H;rf.castShadow=true;g.add(rf);g.rotation.y=R;g.position.copy(W(x,y,z));scene.add(g);bldAdd(g)}
 // portál tunela pod hlavnou cestou (k jamke 11): v okne jamky na jej detailnom teréne
-if(AR)for(const O of (DATA.objects||[])){if(O.t!=="portal")continue;const[x,y]=loc(O.p);if(!inside(x,y))continue;const g=AR.M.buildPortal(THREE,O,(e,n,h)=>W(...loc([e,n]),h),(e,n)=>hL(...loc([e,n])));scene.add(g);bldAdd(g)}
+if(AR)for(const O of (DATA.objects||[])){if(O.t!=="tunnel")continue;const[x,y]=loc(O.p);if(!inside(x,y))continue;const g=AR.M.buildTunnel(THREE,O,(e,n,h)=>W(...loc([e,n]),h),(e,n)=>hL(...loc([e,n])));scene.add(g);bldAdd(g)}
 for(const O of (DATA.objects||[])){if(O.t!=="shade")continue;const[x,y]=loc(O.p),z=hL(x,y),r=O.r||3,H=2.7,g=new THREE.Group();
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,H,8),new THREE.MeshLambertMaterial({color:0x8a7a62}));pole.position.y=H/2;g.add(pole);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(r,1.1,16,1,true),new THREE.MeshLambertMaterial({color:0xf1eadb,side:THREE.DoubleSide,flatShading:true}));roof.position.y=H+.45;roof.castShadow=true;g.add(roof);
@@ -2373,7 +2373,8 @@ function startPlay(){
     // loptička
     mg.fillStyle="#fff";mg.strokeStyle="#1d6fd6";mg.lineWidth=1.5;mg.beginPath();mg.arc(mx(S.x),my(S.y),3,0,7);mg.fill();mg.stroke()}
   const tv=new THREE.Vector3();
-  function hudTick(){mapF++;if(arcM.visible)arcW();if(ring.visible)rollD.scale.setScalar(Math.min(5,Math.max(.2,camera.position.distanceTo(rollD.position)/26)));if(ring.visible)ring.scale.setScalar(Math.min(5,Math.max(.15,camera.position.distanceTo(ring.position)/22)));   // v235 (Martin: pri veľkom zoome krúžok menší, aby sa dalo mieriť presne do jamky): min. mierka 1 → .15if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
+  function hudTick(){mapF++;if(arcM.visible)arcW();if(ring.visible)rollD.scale.setScalar(Math.min(5,Math.max(.2,camera.position.distanceTo(rollD.position)/26)));if(ring.visible)ring.scale.setScalar(Math.min(5,Math.max(.15,camera.position.distanceTo(ring.position)/22)));   // v235 (Martin: pri veľkom zoome krúžok menší, aby sa dalo mieriť presne do jamky): min. mierka 1 → .15
+    if(mapDirty||((S.mode==="fly"||S.mode==="roll")&&mapF%3===0)){drawMap();mapDirty=0}
     const T=$("p-tgt");if(S.mode!=="aim"){T.hidden=true;return}
     const putt=!CLUBS[S.club].a,X=putt?PIN[0]:TG.x,Y=putt?PIN[1]:TG.y,el=gS(X,Y)-gS(S.x,S.y);
     {const rr=putt?.6:2*ring.scale.x+.3,px=Math.cos(S.aim)*rr,py=-Math.sin(S.aim)*rr;tv.set(X+px,gS(X+px,Y+py)+(putt?.3:.1),-(Y+py)).project(camera)}if(tv.z>1||Math.abs(tv.x)>1.05||Math.abs(tv.y)>1.05){T.hidden=true;return}
