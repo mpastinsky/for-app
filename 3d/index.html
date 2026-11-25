@@ -143,7 +143,14 @@ const BUMPS=[[3.5,4,4.2,.13],[-4,-3,3.6,-.09],[-3,4.5,3.2,.08],[4,-5,3,-.06]];
 // green: terén pod ním vyrovnáme do mierne sklonenej roviny (max ~2 %), pri jamke ešte rovnejšie – ako na skutočnom greene
 const raw=(x,y)=>hENU(...enu(x,y))-H0;
 const GP=(()=>{const e=5,h0=raw(gcx,gcy);let sx=(raw(gcx+e,gcy)-raw(gcx-e,gcy))/(2*e),sy=(raw(gcx,gcy+e)-raw(gcx,gcy-e))/(2*e)+.011;const m=Math.hypot(sx,sy),mx=.015;if(m>mx){sx*=mx/m;sy*=mx/m}return{h0,sx,sy}})();
+// odpaliská 18-ky: rovná, mierne vyvýšená plošina (DMR pod nimi býva naklonený / pri jazere zapadnutý) s mäkkým svahom 3 m
+const TEEPL=CRS==="apex"?(()=>{const out=[],src=[...(DATA.teeboxes||[]).map(T=>T.p.map(loc))];
+  const pd=(DATA.pads[hNum]||[]).map(loc);for(const[px,py]of pd)if(!src.some(P=>inPoly([px,py],P)))src.push([...Array(12)].map((_,i)=>[px+3.2*Math.cos(i*Math.PI/6),py+3.2*Math.sin(i*Math.PI/6)]));
+  for(const P of src){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+    if(x1<-400||x0>400||y1<-120||y0>c+150)continue;const hs=[];for(let x=x0;x<=x1;x+=.7)for(let y=y0;y<=y1;y+=.7)if(inPoly([x,y],P))hs.push(raw(x,y));if(!hs.length)continue;
+    hs.sort((a,b)=>a-b);out.push({P,bb:[x0-3,x1+3,y0-3,y1+3],z:hs[Math.floor(hs.length*.8)]+.3})}return out})():[];
 hBump=(x,y)=>{const M=9;let h=0;
+  for(const T of TEEPL){const bb=T.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,T.P);if(d>3)continue;const w=d<=0?1:1-sstep(d/3);h+=w*(T.z-raw(x,y));break}
   for(const B of myBunkers){const bb=B.bb;if(x<bb[0]||x>bb[1]||y<bb[2]||y>bb[3])continue;const d=sdist(x,y,B);if(d>4)continue;
     if(d>=0){h+=.2*Math.exp(-(((d-.9)/.8)**2))*(B.gd<6?1:.5)}else{h-=.14*sstep(-d/1.5)}}
   if(x<GB.x0-M||x>GB.x1+M||y<GB.y0-M||y>GB.y1+M)return h;
@@ -1151,6 +1158,15 @@ function spBuild(){const m=new THREE.Matrix4(),q=new THREE.Quaternion(),Y=new TH
     [W1,L1].forEach(o=>{o.instanceMatrix.needsUpdate=true;if(o.instanceColor)o.instanceColor.needsUpdate=true;o.computeBoundingSphere();o.castShadow=!PMOB;o.receiveShadow=!PMOB;scene.add(o)})}}
 DATA.trees.forEach(([e,n,r,h,g,kc],k)=>{const[x,y]=loc([e,n]);if(SPC&&kc)spAdd(x,y,r,h,kc,k);else if(PROC[k])procTree(x,y,PROC[k]);else if(HQ&&PT&&!g){const kd=nPick(k,NKINDS),sc=procClone(x,y,kd,h,k*2.39);if(sc)NP[k]={kd,s:sc}}else if(g)bush(x,y,r,h,k);else tree(x,y,r,h,k)});
 // objekty z leteckých záberov (DATA.objects: [{t:"shade",p:[e,n],r}] – slnečník/prístrešok pri odpalisku)
+// hut: {t:"hut",p,L,W,a(° os L od východu),h(odkvap),roof:"light"|"dark",open:1 = len stĺpy} – kôlňa/prístrešok (jamka 9)
+for(const O of (DATA.objects||[])){if(O.t!=="hut")continue;const[x,y]=loc(O.p),ar=O.a*Math.PI/180,[x2,y2]=loc([O.p[0]+Math.cos(ar),O.p[1]+Math.sin(ar)]),R=Math.atan2(y2-y,x2-x),z=hL(x,y)-.1,L=O.L,Wd=O.W,H=O.h||2.4,rh=Math.min(1.6,Wd*.3),g=new THREE.Group();
+  const mW=new THREE.MeshLambertMaterial({color:O.open?0x7a6048:0xe8e2d2}),mR=new THREE.MeshLambertMaterial({color:O.roof==="dark"?0x4b4f55:0xdfe2e2,side:THREE.DoubleSide,flatShading:true});
+  if(O.open){for(const sx of[-1,0,1])for(const sz of[-1,1]){const c=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,H,6),mW);c.position.set(sx*(L/2-.3),H/2,sz*(Wd/2-.3));c.castShadow=true;g.add(c)}
+    const b=new THREE.Mesh(new THREE.BoxGeometry(L*.6,.45,.4),mW);b.position.set(0,.23,-Wd/4);g.add(b)}
+  else{const b=new THREE.Mesh(new THREE.BoxGeometry(L,H,Wd),mW);b.position.y=H/2;b.castShadow=b.receiveShadow=true;g.add(b);
+    const dr=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2),new THREE.MeshLambertMaterial({color:0x5d5245}));dr.position.set(0,1,Wd/2+.01);g.add(dr)}
+  const sh=new THREE.Shape([new THREE.Vector2(-Wd/2-.35,0),new THREE.Vector2(Wd/2+.35,0),new THREE.Vector2(0,rh)]),rg=new THREE.ExtrudeGeometry(sh,{depth:L+.5,bevelEnabled:false});rg.translate(0,0,-(L+.5)/2);rg.rotateY(Math.PI/2);
+  const rf=new THREE.Mesh(rg,mR);rf.position.y=H;rf.castShadow=true;g.add(rf);g.rotation.y=R;g.position.copy(W(x,y,z));scene.add(g)}
 for(const O of (DATA.objects||[])){if(O.t!=="shade")continue;const[x,y]=loc(O.p),z=hL(x,y),r=O.r||3,H=2.7,g=new THREE.Group();
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,H,8),new THREE.MeshLambertMaterial({color:0x8a7a62}));pole.position.y=H/2;g.add(pole);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(r,1.1,16,1,true),new THREE.MeshLambertMaterial({color:0xf1eadb,side:THREE.DoubleSide,flatShading:true}));roof.position.y=H+.45;roof.castShadow=true;g.add(roof);
