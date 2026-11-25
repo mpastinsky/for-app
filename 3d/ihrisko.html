@@ -183,8 +183,8 @@ if(AKD){const at=AKT[tIdx];
   const lg=new THREE.BufferGeometry();lg.setAttribute("position",new THREE.Float32BufferAttribute(arr,3));const ln=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0xffe2a8,dashSize:4,gapSize:3}));ln.computeLineDistances();scene.add(ln);
   const mid=[t[0]*.8+gc[0]*.2,t[1]*.8+gc[1]*.2],el=document.createElement("a");el.className="hole ak";el.textContent="A"+h;el.href="./?h="+h+"&t="+at+"&play=1&one=1&ov="+tIdx;el.dataset.ak=h;document.body.appendChild(el);
   labels.push({el,v:W(mid[0],mid[1],hAt(...mid)+8),ak:{t,gc}})}
- const c=akp([(AKD.gc[0][0]+AKD.gc[1][0]+AKD.gc[2][0])/3,(AKD.gc[0][1]+AKD.gc[1][1]+AKD.gc[2][1])/3]),el=document.createElement("a");el.className="akl";el.textContent="⛳ Akadémia · 3 jamky";el.href="./?h=1&t="+at+"&v=all";document.body.appendChild(el);
- const lo=Math.min(...AKD.greens.flat().map(p=>p[1]))+AKO[1]-45;labels.push({el,v:W(c[0],lo,hAt(c[0],lo)+3),akAll:1})}
+ const c=akp([(AKD.gc[0][0]+AKD.gc[1][0]+AKD.gc[2][0])/3,(AKD.gc[0][1]+AKD.gc[1][1]+AKD.gc[2][1])/3]),el=document.createElement("a");el.className="akl";el.textContent="⛳ Akadémia · 3 jamky";el.href="./?h=1&t="+at+"&v=all";el.hidden=true;   // v234 Martin: popisky Akadémia / Driving range / Kaštieľ preč
+ const lo=Math.min(...AKD.greens.flat().map(p=>p[1]))+AKO[1]-45}
 // kamera: celé ihrisko v zábere
 const cx=(e0+e1)/2,cn=(n0+n1)/2,asp=innerWidth/innerHeight,tv=Math.tan(25*Math.PI/180),land=asp>1.05;
 // na šírku: pohľad od západu (sever vľavo), aby sa dlhé ihrisko zmestilo; na výšku sever hore. Rezerva na lištu hore a tlačidlo dole.
@@ -234,20 +234,20 @@ if(RG){const R=RG,pts=[...R.fan,...R.tee,...((DATA.practice&&DATA.practice.range
  const N=R.targets.length,pole=new THREE.InstancedMesh(new THREE.CylinderGeometry(.06,.06,3,4),new THREE.MeshLambertMaterial({color:0xf4f4f0}),N),
   fl=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.1,.7),new THREE.MeshBasicMaterial({color:0xe0412b,side:THREE.DoubleSide}),N),m=new THREE.Matrix4();
  R.targets.forEach((t,k)=>{const z=hAt(t[0],t[1]);m.makeTranslation(t[0],z+1.5,-t[1]);pole.setMatrixAt(k,m);m.makeTranslation(t[0]+.55,z+2.65,-t[1]);fl.setMatrixAt(k,m)});scene.add(pole,fl);
- const el=document.createElement("a");el.href="#";el.className="rngl";el.textContent="🏌️ Driving range";document.body.appendChild(el);const lc=R.tee[R.tee.length>>1];
+ const el=document.createElement("a");el.href="#";el.className="rngl";el.textContent="🏌️ Driving range";const lc=R.tee[R.tee.length>>1];
  const st=document.createElement("style");st.textContent=".rngl{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:4px 8px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.4);text-decoration:none;z-index:3}";document.head.appendChild(st);
  // klik: prelet nad odpaliskovú líniu s pohľadom na lúku (aj ?range=1)
  const nn=(()=>{const a=R.tee[0],b=R.tee[R.tee.length-1];let n=[-(b[1]-a[1]),b[0]-a[0]];const L=Math.hypot(...n);n=[n[0]/L,n[1]/L];const mc=R.fan.reduce((s,p)=>[s[0]+p[0],s[1]+p[1]],[0,0]).map(v=>v/R.fan.length);if((mc[0]-lc[0])*n[0]+(mc[1]-lc[1])*n[1]<0)n=[-n[0],-n[1]];return n})();
  const view=()=>({p:W(lc[0]-nn[0]*70,lc[1]-nn[1]*70,hAt(...lc)+55),t:W(lc[0]+nn[0]*70,lc[1]+nn[1]*70,hAt(...lc))});
  const go=()=>{const v=view(),p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=2000;controls.enabled=false;
   const st2=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,v.p,e);controls.target.lerpVectors(t0,v.t,e);camera.lookAt(controls.target);if(k<1)requestAnimationFrame(st2);else{controls.enabled=true;controls.update()}};requestAnimationFrame(st2)};
- const ll=[lc[0]+nn[0]*55,lc[1]+nn[1]*55];labels.push({el,v:W(ll[0],ll[1],hAt(...ll)+3)});
+ 
  el.onclick=ev=>{ev.preventDefault();go()};
  if(Q.has("range")){const v=view();camera.position.copy(v.p);controls.target.copy(v.t);camera.lookAt(v.t);controls.update()}}
 // clubhouse Kaštieľ Báč: 3D budova, štítok a klik = menu reštaurácie
 if(DATA.clubhouse){const C=DATA.clubhouse,{buildClubhouse,clubMenu}=await import("./lib/clubhouse.js");
  const CL=buildClubhouse(THREE,C,(e,n,h)=>W(e,n,h),hAt);
- if(CL){scene.add(CL.group);if(Q.has("dbg"))window.__cl={CL,camera,controls,renderer,scene,W,hAt};const el=document.createElement("a");el.href="#";el.className="clubl";el.textContent="🍽 "+C.name;el.onclick=ev=>{ev.preventDefault();clubMenu(C)};document.body.appendChild(el);labels.push({el,v:W(CL.center[0],CL.center[1],CL.top+6)});
+ if(CL){scene.add(CL.group);if(Q.has("dbg"))window.__cl={CL,camera,controls,renderer,scene,W,hAt};const el=document.createElement("a");el.href="#";el.className="clubl";el.textContent="🍽 "+C.name;el.onclick=ev=>{ev.preventDefault();clubMenu(C)};
   const st=document.createElement("style");st.textContent=".clubl{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:4px 8px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.4);text-decoration:none;z-index:3}";document.head.appendChild(st);
   const rc=new THREE.Raycaster(),mv=new THREE.Vector2();let dn=null;
   renderer.domElement.addEventListener("pointerdown",e=>{dn=[e.clientX,e.clientY]});
