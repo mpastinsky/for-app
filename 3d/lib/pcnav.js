@@ -30,3 +30,28 @@ export function pcNav(controls,camera,dom){
   // koliesko/touchpad bez predchádzajúceho kliknutia (napr. pero/dotyk predtým nastavil 1) – pred zoomom vždy rýchlosť pre koliesko
   if(fine)dom.addEventListener("wheel",()=>{controls.zoomSpeed=ZW},{capture:true,passive:true});
 }
+// Joystick (Martin 25.11.: „Aj do prehľadu daj joystick“) – palec ťahá páčku, kamera plynule letí po ihrisku:
+// hore = dopredu v smere pohľadu, dole = dozadu, do strán = bokom. Rýchlosť podľa vychýlenia a výšky kamery (zhora rýchlejšie).
+export function joystick(controls,camera,opt={}){
+  const fine=matchMedia("(pointer:fine)").matches,R=48;
+  const s=document.createElement("style");s.textContent=`#joy3{position:fixed;left:${fine?190:16}px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);width:${2*R+14}px;height:${2*R+14}px;border-radius:50%;background:rgba(15,40,28,.35);border:2px solid rgba(255,255,255,.75);box-shadow:0 2px 10px rgba(0,0,0,.3);z-index:25;touch-action:none;user-select:none;-webkit-user-select:none}
+#joy3 i{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 2px 8px rgba(0,0,0,.4);pointer-events:none}
+#joy3 b{position:absolute;left:0;right:0;text-align:center;color:#fff;font:700 11px system-ui;text-shadow:0 1px 2px #000;pointer-events:none}
+body.playing #joy3{display:none}`;document.head.appendChild(s);
+  const el=document.createElement("div");el.id="joy3";el.title="Joystick: ťahaj a leť po ihrisku";el.innerHTML='<b style="top:3px">▲</b><b style="bottom:3px">▼</b><b style="top:calc(50% - 7px);left:4px;right:auto">◀</b><b style="top:calc(50% - 7px);right:4px;left:auto">▶</b><i></i>';document.body.appendChild(el);
+  const k=el.querySelector("i"),fw=new THREE.Vector3(),rt=new THREE.Vector3(),d=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0);
+  let id=null,c0=null,jx=0,jy=0,last=0;
+  const set=(x,y)=>{const L=Math.hypot(x,y);if(L>R){x*=R/L;y*=R/L}jx=x/R;jy=y/R;k.style.transform=`translate(${x}px,${y}px)`};
+  const tick=t=>{if(id===null)return;const dt=Math.min(.05,(t-last)/1000);last=t;
+    if(controls.enabled&&(jx||jy)){const T=controls.target,cp=camera.position;fw.set(T.x-cp.x,0,T.z-cp.z);if(fw.lengthSq()<1e-6)camera.getWorldDirection(fw).setY(0);fw.normalize();rt.crossVectors(fw,UP).normalize();
+      // mŕtva zóna v strede, potom plynulo (kvadraticky) – jemný posun aj rýchly prelet
+      const m=Math.hypot(jx,jy),g=m<.12?0:((m-.12)/.88)**2/m,sp=Math.max(25,cp.distanceTo(T)*(opt.speed||.35));
+      d.copy(fw).multiplyScalar(-jy*g*sp*dt).addScaledVector(rt,jx*g*sp*dt);
+      if(opt.clamp){const q=T.clone().add(d);opt.clamp(q);d.subVectors(q,T)}
+      T.add(d);cp.add(d)}
+    requestAnimationFrame(tick)};
+  el.addEventListener("pointerdown",e=>{if(id!==null)return;e.preventDefault();e.stopPropagation();id=e.pointerId;el.setPointerCapture(id);const r=el.getBoundingClientRect();c0=[r.left+r.width/2,r.top+r.height/2];set(e.clientX-c0[0],e.clientY-c0[1]);last=performance.now();requestAnimationFrame(tick)});
+  el.addEventListener("pointermove",e=>{if(e.pointerId!==id)return;e.preventDefault();set(e.clientX-c0[0],e.clientY-c0[1])});
+  const up=e=>{if(e.pointerId!==id)return;id=null;set(0,0)};el.addEventListener("pointerup",up);el.addEventListener("pointercancel",up);
+  ["touchstart","touchmove"].forEach(t=>el.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+  return el}
