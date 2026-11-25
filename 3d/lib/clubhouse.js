@@ -106,15 +106,15 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
     const curve = new THREE.CatmullRomCurve3(P.map(([x, y]) => new THREE.Vector3(x + .03, y + .05, 0))), rg = new THREE.TubeGeometry(curve, 16, .09, 5, false);
     for (let b = 0; b <= bays; b++) add(g, rg, mBlk, 0, 0, -len / 2 + b * len / bays);
     add(g, new THREE.BoxGeometry(.5, .1, len + .3), mBlk, P[P.length - 1][0] + .2, Hh + .02, 0) }
-  // [e, n, šírka, rot]: rot=1 → otočený o 90° (otvor k hríbom/terase, Martin 25.11.); každý prístrešok 2 rebrá-polia ≈ 2 vozíky
-  for (const [e, n, s, r] of C.pergolas || []) shelter(grp(e, n, RU + (r ? Math.PI / 2 : 0)), s);
+  // [e, n, šírka, rot]: rot=1 → otvor k hríbom/terase, rot=2 → opačne; dvojice stoja chrbtami k sebe (Martin 25.11.); každý prístrešok 2 rebrá-polia ≈ 2 vozíky
+  for (const [e, n, s, r] of C.pergolas || []) shelter(grp(e, n, RU + (r === 1 ? Math.PI / 2 : r === 2 ? -Math.PI / 2 : 0)), s);
   // presklený obchod / pro shop (foto 7): sklenená kocka s tmavými rámami, plochá tmavá strecha, na konci oblúkové rebro s plachtou, stožiar s lanami
   if (C.shop) { const [e, n, s] = C.shop, g = grp(e, n), D = 4.6, hh = 2.7;
     const shopTex = cv(128, 64, (x, w, h) => { x.fillStyle = "#7f9a8a"; x.fillRect(0, 0, w, h); x.fillStyle = "rgba(255,255,255,.18)"; x.fillRect(0, 0, w, h * .45); x.fillStyle = "#26221f"; for (let i = 0; i <= 4; i++)x.fillRect(i * w / 4 - 2, 0, 4, h); x.fillRect(0, 0, w, 4); x.fillRect(0, h - 6, w, 6) });
     shopTex.repeat.set(s / 5, 1); const mSG = M({ map: shopTex, roughness: .2, metalness: .3 });
     add(g, new THREE.BoxGeometry(D, hh, s - 2.2), [mSG, mSG, mBlk, mBlk, mSG, mSG], 0, hh / 2, -1.1, true);
-    add(g, new THREE.BoxGeometry(D + .8, .25, s - 1.8), mBlk, 0, hh + .12, -1.1);
-    const eg = new THREE.Group(); eg.position.set(0, 0, s / 2 - 2.2 + 1.2); eg.rotation.y = Math.PI / 2; g.add(eg); shelter(eg, D + .3, 2.4, hh + .5);   // oblúkové čelo na konci (foto 7)
+    add(g, new THREE.BoxGeometry(D + .8, .25, s - 1.8), mBlk, 0, hh + .16, -1.1);   // nad hornou stenou skla (inak z-fighting = blikanie)
+    // oblúkové čelo na konci odstránené (Martin 25.11.: je tam len sklenený sklad)
     add(g, new THREE.CylinderGeometry(.08, .1, 2.2, 8), mSteel, 0, hh + 1.1, s / 2 - 2.4);
     const L = []; for (const [x, z] of [[-D / 2, -s / 2], [D / 2, -s / 2], [-D / 2, s / 2 - 1], [D / 2, s / 2 - 1]]) L.push(0, hh + 2.1, s / 2 - 2.4, x, hh + .25, z);
     const lg = new THREE.BufferGeometry(); lg.setAttribute("position", new THREE.Float32BufferAttribute(L, 3)); g.add(new THREE.LineSegments(lg, mCable)) }

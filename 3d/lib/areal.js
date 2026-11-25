@@ -150,7 +150,7 @@ export async function buildAreal(THREE, o) {
     const m = new THREE.Mesh(geo, mat); m.receiveShadow = !mobile; m.frustumCulled = false; G.add(m) }
   // --- stromy: jednoduché koruny (2 inštancované objekty pre všetky); vlastné stromy v okne už kreslí jamka
   const own = A.CRS, TR = [];
-  // v239 (Martin: stromy pri clubhouse vyzerali inak než tie, ktoré hráme): cudzie stromy v okne jamky kreslí jamka svojím detailným generátorom (o.detail), tu ostanú len stromy mimo dosahu hry
+  // v241 (Martin: stromy pri clubhouse vyzerali inak než tie, ktoré hráme): cudzie stromy v okne jamky kreslí jamka svojím detailným generátorom (o.detail), tu ostanú len stromy mimo dosahu hry
   let nd = 0;
   const addT = (e, n, r, h, mine, kc) => { if (!near(e, n)) return; const [x, y] = L(e, n); if (inWin(x, y, 2)) { if (mine) return; if (o.detail && o.detail(x, y, r, h, kc, nd++, 0)) return }
     else if (o.detail && o.band && inWin(x, y, -o.band) && o.detail(x, y, r, h, kc, nd++, hA(e, n) - H0)) return;   // pás za oknom: rovnaký vzhľad, len bez kolízií (loptička tam nedoletí)
