@@ -23,18 +23,18 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
     g.fillStyle = "rgba(255,255,255,.16)"; g.fillRect(x, y, ww2, wh * .45);
     g.fillStyle = "#fbfbf8"; const b = Math.max(1, .07 * s); g.fillRect(x, y, ww2, b); g.fillRect(x, y0 - b, ww2, b); g.fillRect(x, y, b, wh); g.fillRect(x + ww2 - b, y, b, wh);
     g.fillRect(cx - b / 2, y, b, wh); g.fillRect(x, y + wh * .3, ww2, b) };                           // stredný stĺpik + priečka
-  const wallTex = cv(128, 128, (g, w, h) => { g.fillStyle = "#faeca8"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - 12, w, 12); winDraw(g, 64, 92, 30) });
+  const wallTex = cv(128, 128, (g, w, h) => { g.fillStyle = "#f5e098"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - 12, w, 12); winDraw(g, 64, 92, 30) });
   // celá stena krídla ako jedna textúra: osi okien rovnomerne, alebo od vchodu (door = m od začiatku steny), nad vchodom len horné okno
   const facadeTex = (len, H, door) => { const s = Math.min(24, 2048 / len), W2 = Math.round(len * s), H2 = Math.round(H * s), BAY = 4.2;
     let xs = []; if (door != null) { for (let x = door; x > 1.7; x -= BAY) xs.push(x); for (let x = door + BAY; x < len - 1.7; x += BAY) xs.push(x) }
     else { const n = Math.max(1, Math.round(len / BAY)); for (let i = 0; i < n; i++) xs.push((i + .5) * len / n) }
-    return cv(W2, H2, (g, w, h) => { g.fillStyle = "#faeca8"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - .45 * s, w, .45 * s);
+    return cv(W2, H2, (g, w, h) => { g.fillStyle = "#f5e098"; g.fillRect(0, 0, w, h); g.fillStyle = "#e9e4d6"; g.fillRect(0, h - .45 * s, w, .45 * s);
       g.fillStyle = "#efe2a6"; g.fillRect(0, 0, w, .28 * s); g.fillStyle = "#f3e7b8"; g.fillRect(0, h - H / 2 * s - .12 * s, w, .16 * s);   // rímsa pod strechou, kordónová rímsa medzi podlažiami
       for (const x of xs) { if (door == null || Math.abs(x - door) > .5) winDraw(g, x * s, h - 1.0 * s, s); winDraw(g, x * s, h - (H / 2 + 1.25) * s, s) } }) };
   const roofTex = cv(64, 64, (g, w, h) => { g.fillStyle = "#d9692f"; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 6) { g.fillStyle = "rgba(120,40,10,.35)"; g.fillRect(0, y, w, 1.5) } for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? "255,170,110" : "150,60,25"},.25)`; g.fillRect(Math.random() * w, Math.random() * h, 6, 3) } });
   const glassTex = cv(64, 64, (g, w, h) => { g.fillStyle = "#9fb9c4"; g.fillRect(0, 0, w, h); g.fillStyle = "rgba(255,255,255,.25)"; g.fillRect(0, 0, w, h / 2); g.fillStyle = "#f4f4f0"; for (let x = 0; x < w; x += 16) g.fillRect(x, 0, 3, h); g.fillRect(0, 0, w, 3); g.fillRect(0, h / 2, w, 3) });
   const mGlass = M({ map: glassTex, roughness: .25, metalness: .2 });
-  const mWall = M({ map: wallTex }), mRoof = M({ map: roofTex, roughness: .9 }), mRoofB = M({ map: roofTex, roughness: .9 }), mFlat = M({ color: 0x4d535b, roughness: .6 }), mCream = M({ color: 0xf1ead8, side: THREE.DoubleSide }), mPole = M({ color: 0x8a8a86 }), mWood = M({ color: 0x8a6a48 }), mDark = M({ color: 0x5b4a3c }), mWhite = M({ color: 0xfafafa, side: THREE.DoubleSide });
+  const SHADE = 0x6a5622, mWall = M({ map: wallTex, emissive: SHADE }), mRoof = M({ map: roofTex, roughness: .9 }), mRoofB = M({ map: roofTex, roughness: .9 }), mFlat = M({ color: 0x4d535b, roughness: .6 }), mCream = M({ color: 0xf1ead8, side: THREE.DoubleSide }), mPole = M({ color: 0x8a8a86 }), mWood = M({ color: 0x8a6a48 }), mDark = M({ color: 0x5b4a3c }), mWhite = M({ color: 0xfafafa, side: THREE.DoubleSide });
   // valbová strecha nad obdĺžnikom a×b (a pozdĺž lokálneho x), výška hr
   function hipRoof(a, b, hr, mat) {
     const r = Math.min(a, b) / 2, P = [[-a / 2, 0, -b / 2], [a / 2, 0, -b / 2], [a / 2, 0, b / 2], [-a / 2, 0, b / 2]];
@@ -57,7 +57,8 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
       let pa, pb; for (let i = f * 4; i < f * 4 + 4; i++) { if (UV.getY(i) > .5) continue; const v3 = new THREE.Vector3().fromBufferAttribute(P, i).applyMatrix4(body.matrix); if (UV.getX(i) < .5) pa = v3; else pb = v3 }
       const dx = pb.x - pa.x, dz = pb.z - pa.z, len = Math.hypot(dx, dz); let door = null;
       if (dp) { const t = ((dp.x - pa.x) * dx + (dp.z - pa.z) * dz) / len, off = Math.abs((dp.x - pa.x) * dz - (dp.z - pa.z) * dx) / len; if (off < 1.5 && t > 0 && t < len) door = t }
-      mats.push(M({ map: facadeTex(len, eave, door) })) }
+      const nx = dz / len, nz = -dx / len, cx = (pa.x + pb.x) / 2 - body.position.x, cz = (pa.z + pb.z) / 2 - body.position.z, sg = nx * cx + nz * cz > 0 ? 1 : -1;   // vonkajšia normála steny
+      mats.push(M({ map: facadeTex(len, eave, door), emissive: sg * (nx * -.8 + nz * -.6) < 0 ? SHADE : 0x2a2208 })) }   // stena odvrátená od slnka (SZ) – teplejší odtieň, inak v tieni olivovozelená (Martin 26.11.)
     body.material = mats;
     return body }
   const ww = C.ww, E = C.eave, H = C.roof;
@@ -72,17 +73,47 @@ export function buildClubhouse(THREE, C, pos, ground, opt = {}) {
     const m = new THREE.Mesh(g, mat); m.material.side = THREE.DoubleSide; m.castShadow = m.receiveShadow = true; G.add(m); hits.push(m); return m };
   const walls = (poly, h0, h1, mat, rep = 3.2) => { const T = [], U = []; for (let i = 0; i < poly.length - 1; i++) { const [a, b] = [poly[i], poly[i + 1]], L = Math.hypot(b[0] - a[0], b[1] - a[1]) / rep;
       T.push([[a[0], a[1], h0], [b[0], b[1], h0], [b[0], b[1], h1]], [[a[0], a[1], h0], [b[0], b[1], h1], [a[0], a[1], h1]]); U.push(0, 0, L, 0, L, (h1 - h0) / 3.6, 0, 0, L, (h1 - h0) / 3.6, 0, (h1 - h0) / 3.6) } return mesh(T, mat, U) };
-  const c = C.L / 2, b0 = ww, b1 = C.L - ww, d = 6.5, hl = 3.9, hh = 5.6;     // prístavba: hĺbka d, výška pri krajoch hl, pri fasáde hh
+  // v263 podľa fotiek nádvoria (Martin 26.11.: street view + foto 5): presklená sála má ROVNÉ čelo do nádvoria so štítom – strmý stredný štít so špicom,
+  // po stranách miernejšie skosené strechy; žltá omietka, veľké sklá s bielymi rámami, stredný žltý pilier, vchod vpravo od neho; po bokoch nízke žlté spojovacie časti
+  const c = C.L / 2, b0 = ww, b1 = C.L - ww, uF = ww + 9.5, d = uF - ww - .8, hl = 4.0, hh = 4.6;   // uF = čelo sály, d = hĺbka nízkej prístavby
+  const mLow = M({ color: 0x8e8a82, roughness: .8 });
   walls([[ww, b0], [ww + d, b0], [ww + d, b1], [ww, b1]], 0, hl, mWall);
-  mesh([[[ww, b0, hh], [ww + d, b0, hl], [ww + d, b1, hl]], [[ww, b0, hh], [ww + d, b1, hl], [ww, b1, hh]]], mFlat);
-  const gw = 6.2, gH = 4.4, gR = 6.6, u0 = ww + 2, u1 = ww + d + 3, u2 = ww + d + 6.5;   // presklená časť: šírka 2·gw, bočné steny po u1, špic u2
-  walls([[u0, c - gw], [u1, c - gw], [u2, c], [u1, c + gw], [u0, c + gw]], 0, gH, mGlass, 2.2);
-  const R0 = [u0, c, gR], R1 = [u1 - .5, c, gR], A = [u0, c - gw - .3, gH], B = [u1 + .2, c - gw - .3, gH], Pk = [u2 + .45, c, gH], D = [u1 + .2, c + gw + .3, gH], F = [u0, c + gw + .3, gH];
-  const roofUV = []; const rt = [[A, B, R1], [A, R1, R0], [B, Pk, R1], [Pk, D, R1], [D, F, R0], [D, R0, R1]]; for (const t of rt) for (const q of t) roofUV.push(q[0] / 3, q[1] / 3 + q[2] / 3);
-  mesh(rt, mRoofB, roofUV);
-  for (const s of [-1, 1]) for (const k of [0, 1]) { const sk = new THREE.Mesh(new THREE.BoxGeometry(.06, .9, 1.3), mGlass); const p = P3(u0 + 2.2 + k * 1.8, c + s * 3.2, gR - 1.2 - k * .55); sk.position.copy(p); sk.rotation.y = RU; G.add(sk) }   // strešné okná
+  mesh([[[ww, b0, hh], [ww + d, b0, hl], [ww + d, b1, hl]], [[ww, b0, hh], [ww + d, b1, hl], [ww, b1, hh]]], mLow);
+  const gw = 6.6, PR = [[-gw, 4.6], [-2.4, 7.4], [0, 10.0], [2.4, 7.4], [gw, 4.6]], u0 = ww + 1.5;   // profil strechy (x od stredu, výška)
+  const roofH = x => { for (let i = 0; i < PR.length - 1; i++) { const [x0, h0] = PR[i], [x1, h1] = PR[i + 1]; if (x <= x1) return h0 + (h1 - h0) * (x - x0) / (x1 - x0) } return PR[PR.length - 1][1] };
+  const YEL = "#f3dc8c", S2 = 48, FW = Math.round(2 * gw * S2), FH = Math.round(10.2 * S2);
+  const hallTex = cv(FW, FH, (g, w, h) => { const X = x => (x + gw) * S2, Y = y => h - y * S2;
+    g.fillStyle = YEL; g.fillRect(0, 0, w, h); g.fillStyle = "#e4cf86"; g.fillRect(0, Y(.3), w, .3 * S2);   // sokel
+    g.save(); g.beginPath(); g.moveTo(X(-gw), Y(0)); for (const [x, y] of PR) g.lineTo(X(x), Y(y - .55)); g.lineTo(X(gw), Y(0)); g.closePath(); g.clip();
+    const pane = (x0, x1, y0, y1, nx, ny) => { g.fillStyle = "#fbfbf7"; g.fillRect(X(x0) - 3, Y(y1) - 3, X(x1) - X(x0) + 6, Y(y0) - Y(y1) + 6);
+      const gr = g.createLinearGradient(0, Y(y1), 0, Y(y0)); gr.addColorStop(0, "#c3d6e0"); gr.addColorStop(.5, "#97acb8"); gr.addColorStop(1, "#6d7f88"); g.fillStyle = gr; g.fillRect(X(x0), Y(y1), X(x1) - X(x0), Y(y0) - Y(y1));
+      g.fillStyle = "#fbfbf7"; for (let k = 1; k < nx; k++) g.fillRect(X(x0 + (x1 - x0) * k / nx) - 2, Y(y1), 4, Y(y0) - Y(y1)); for (const yy of ny) g.fillRect(X(x0), Y(yy) - 2, X(x1) - X(x0), 4) };
+    for (const s of [-1, 1]) { const P = (a, b) => s < 0 ? [-b, -a] : [a, b];
+      pane(...P(.85, 1.95), s > 0 ? 0 : .3, 9.6, 1, [2.4, 4.6, 6.8]);          // vysoké sklá pri strednom pilieri (vpravo dole vchod)
+      pane(...P(2.35, 2.95), .3, 8.2, 1, [2.4, 4.6]);                           // úzke okno
+      pane(...P(3.3, 6.15), .3, 6.6, 3, [2.5, 2.8]) }                           // veľké presklenie sály
+    g.restore();
+    g.fillStyle = "#fbfbf7"; g.fillRect(X(.85), Y(2.35), X(1.95) - X(.85), 5); g.fillRect(X(1.4) - 2, Y(2.35), 4, 2.35 * S2);   // dvere
+    g.fillStyle = "#3a3a3a"; for (const x of [-.55, .55]) g.fillRect(X(x) - 4, Y(2.9), 8, 12) });                               // lampy pri vchode
+  hallTex.wrapS = hallTex.wrapT = THREE.ClampToEdgeWrapping;
+  const mYel = M({ color: 0xf3dc8c, emissive: SHADE, side: THREE.DoubleSide });
+  { const T = [], U = [], uvOf = (x, y) => [(x + gw) / (2 * gw), y / 10.2];
+    for (let i = 0; i < PR.length - 1; i++) { const [x0, h0] = PR[i], [x1, h1] = PR[i + 1], q = [[x0, 0], [x1, 0], [x1, h1], [x0, h0]];
+      T.push([[uF, c + q[0][0], q[0][1]], [uF, c + q[1][0], q[1][1]], [uF, c + q[2][0], q[2][1]]], [[uF, c + q[0][0], q[0][1]], [uF, c + q[2][0], q[2][1]], [uF, c + q[3][0], q[3][1]]]);
+      for (const k of [0, 1, 2, 0, 2, 3]) U.push(...uvOf(...q[k])) }
+    mesh(T, M({ map: hallTex, roughness: .5, emissive: 0xffffff, emissiveMap: hallTex, emissiveIntensity: .32 }), U) }
+  walls([[u0, c - gw], [uF, c - gw]], 0, 4.6, mYel); walls([[uF, c + gw], [u0, c + gw]], 0, 4.6, mYel);
+  // strecha sály = profil štítu vytiahnutý dozadu ku krídlu, červená škridla; žltá atika (pás) pozdĺž čela
+  { const T = [], U = [], F = [], ov = .35, ub = u0;
+    for (let i = 0; i < PR.length - 1; i++) { const [x0, h0] = PR[i], [x1, h1] = PR[i + 1];
+      T.push([[uF + ov, c + x0, h0], [uF + ov, c + x1, h1], [ub, c + x1, h1]], [[uF + ov, c + x0, h0], [ub, c + x1, h1], [ub, c + x0, h0]]);
+      const sl = Math.hypot(x1 - x0, h1 - h0) / 3; U.push(0, 0, sl, 0, sl, (uF - ub) / 3, 0, 0, sl, (uF - ub) / 3, 0, (uF - ub) / 3);
+      F.push([[uF + ov, c + x0, h0 + .05], [uF + ov, c + x1, h1 + .05], [uF + ov, c + x1, h1 - .5]], [[uF + ov, c + x0, h0 + .05], [uF + ov, c + x1, h1 - .5], [uF + ov, c + x0, h0 - .5]]) }
+    mesh(T, mRoofB, U); mesh(F, mYel) }
+  // stredný piliér mierne vystupuje pred sklo (tieň), končí v špici štítu
+  { const pl = new THREE.Mesh(new THREE.BoxGeometry(.3, 9.0, 1.7), mYel); pl.position.copy(P3(uF + .15, c, 4.5)); pl.rotation.y = RU; G.add(pl); hits.push(pl) }
   // dlažba a trávniky na nádvorí (tenká plocha nad terénom), živé ploty; dva smreky stoja PRED budovou, mimo nádvoria (Martin 24.11.)
-  { const cvC = cv(128, 128, (g, w, h) => { g.fillStyle = "#b9b6ad"; g.fillRect(0, 0, w, h); g.fillStyle = "#6f9a46"; g.fillRect(8, 30, 40, 86); g.fillRect(80, 30, 40, 86); g.fillStyle = "#c9c6bd"; g.fillRect(56, 0, 16, h) });
+  { const cvC = cv(256, 256, (g, w, h) => { g.fillStyle = "#c4beb1"; g.fillRect(0, 0, w, h); g.strokeStyle = "rgba(90,85,75,.25)"; g.lineWidth = 1; for (let k = 0; k <= w; k += 5) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k, h); g.moveTo(0, k); g.lineTo(w, k); g.stroke() } g.fillStyle = "#6f9a46"; g.fillRect(0, 0, 16, h * .8); g.fillRect(w - 16, 0, 16, h * .8) });
     cvC.wrapS = cvC.wrapT = THREE.ClampToEdgeWrapping; const U0 = ww + d, U1 = C.wing, uv = [], T = [[[U0, b0, .06], [U1, b0, .06], [U1, b1, .06]], [[U0, b0, .06], [U1, b1, .06], [U0, b1, .06]]];
     for (const t of T) for (const q of t) uv.push((q[1] - b0) / (b1 - b0), 1 - (q[0] - U0) / (U1 - U0));
     mesh(T, M({ map: cvC, roughness: .95 }), uv);
