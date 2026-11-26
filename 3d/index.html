@@ -2109,6 +2109,10 @@ function startPlay(){
   // palice: dĺžka letu (carry) pri plnej sile a uhol odpalu
   const CLUBS=[...(PAR>3?[{n:"Driver",k:"D",c:215,a:11},{n:"3 drevo",k:"3d",c:195,a:14},{n:"Hybrid",k:"H",c:178,a:18}]:[]),{n:"5 železo",k:"5ž",c:165,a:21},{n:"7 železo",k:"7ž",c:142,a:27},{n:"8 železo",k:"8ž",c:130,a:31},{n:"9 železo",k:"9ž",c:118,a:35},
     {n:"PW",k:"PW",c:102,a:40},{n:"SW",k:"SW",c:72,a:50},{n:"Patovačka",k:"P",c:22,a:0}];
+  // v261 (Martin 26.11.): dolet palíc podľa odpaliska – z predných odpalísk hrajú kratšie odpaľujúci hráči. Koeficienty podľa pomeru dĺžky
+  // ihriska Apex 18 (čierne 6169 m = 100 %, biele 94 %, žlté 88 %, modré 83 %, červené 77 %), zaokrúhlené; patovačka sa nemení.
+  const TEE_DIST={"čierne":1,"biele":.95,"žlté":.9,"modré":.85,"červené":.8},TEE_K=TEE_DIST[TEE_N[tIdx]]??1;
+  CLUBS.forEach(cl=>{if(cl.a)cl.c=Math.round(cl.c*TEE_K)});
   // povrchy: odskok, zachovaná rýchlosť po dopade, trenie pri kotúľaní (m/s²), vplyv na dĺžku úderu
   // g = ako povrch „chytí“ spätnú rotáciu pri prvom dopade (rough menej – tráva medzi loptičkou a palicou). Trenie f: green najmenšie (kotúľa najďalej), fairway, rough, piesok skoro hneď stojí.
   const SURF={green:{n:"green",r:.18,k:.62,f:.56,m:1,g:1},collar:{n:"lem greenu",r:.2,k:.62,f:1.2,m:1,g:1},cut:{n:"prvý kos",r:.22,k:.62,f:1.25,m:.97,g:1},
