@@ -199,7 +199,8 @@ const cx=(e0+e1)/2,cn=(n0+n1)/2,asp=innerWidth/innerHeight,tv=Math.tan(25*Math.P
 const LEN=n1-n0,WID=e1-e0,dist=land?Math.max(LEN/2/(tv*asp),WID/2/tv)*1.08:Math.max(LEN/2/tv,WID/2/(tv*asp))*1.12;
 const home=land?{pos:W(cx-dist*.35,cn,dist),target:W(cx+dist*.03,cn,0)}:{pos:W(cx,cn-dist*.35-dist*.04,dist),target:W(cx,cn-dist*.04,0)};
 camera.position.copy(home.pos);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(home.target);controls.enableDamping=true;controls.maxPolarAngle=1.35;controls.minDistance=8;controls.maxDistance=dist*1.6;
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(home.target);controls.enableDamping=true;controls.maxPolarAngle=1.5;controls.minDistance=5;   // v263 (Martin 26.11.): kamera môže ísť nižšie (bolo 1.35 / 8 m); pod terén ju nepustí strážca vo frame()
+controls.maxDistance=dist*1.6;
 // rovnaké ovládanie kamery ako na Akadémii (koliesko ku kurzoru, rýchlosť, tlačidlá ＋ − vľavo dole)
 pcNav(controls,camera,renderer.domElement);controls.update();
 
@@ -261,11 +262,17 @@ if(DATA.area&&DATA.area.roads){const{buildRoad}=await import("./lib/areal.js");c
 {const{buildPaths,pathList,pathAvoid}=await import("./lib/areal.js");scene.add(buildPaths(THREE,pathList(DATA),W,hAt,{level:PLV,mesh:hMesh,off:.15,step:1.5,clip:(e,n)=>e>e0+4&&e<e1-4&&n>n0+4&&n<n1-4,avoid:pathAvoid(DATA,AKD,AKO)}))}
 if(DATA.clubhouse){const C=DATA.clubhouse,{buildClubhouse,clubMenu}=await import("./lib/clubhouse.js");
  const CL=buildClubhouse(THREE,C,(e,n,h)=>W(e,n,h),hAt);
- if(CL){scene.add(CL.group);if(Q.has("dbg"))window.__cl={CL,camera,controls,renderer,scene,W,hAt};const el=document.createElement("a");el.href="#";el.className="clubl";el.textContent="🍽 "+C.name;el.onclick=ev=>{ev.preventDefault();clubMenu(C)};
+ if(CL){scene.add(CL.group);if(Q.has("dbg"))window.__cl={CL,camera,controls,renderer,scene,W,hAt};const el=document.createElement("a");el.href="#";el.className="clubl";el.textContent="🍽 "+C.name;el.onclick=ev=>{ev.preventDefault();flyClub(()=>clubMenu(C))};
   const st=document.createElement("style");st.textContent=".clubl{position:fixed;transform:translate(-50%,-100%);background:#fff;color:#14211a;font:700 13px var(--font);padding:4px 8px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.4);text-decoration:none;z-index:3}";document.head.appendChild(st);
+  // klik na clubhouse (Martin 26.11.): prelet k budove, pohľad spredu = SZ fasáda s hlavným vchodom (kamenný oblúk), terasa a slnečníky v popredí
+  const flyClub=(done)=>{const v=C.v,u=[v[1],-v[0]],at=(a,b)=>[C.o[0]+u[0]*a+v[0]*b,C.o[1]+u[1]*a+v[1]*b],fv=C.door??C.L/2,[te,tn]=at(1,fv),[pe,pn]=at(-27,fv),h=hAt(te,tn);
+   const p1=W(pe,pn,h+15),t1=W(te,tn,h+4),p0=camera.position.clone(),t0=controls.target.clone(),s0=performance.now(),D=1800;controls.enabled=false;
+   const st=()=>{const k=Math.min(1,(performance.now()-s0)/D),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;camera.position.lerpVectors(p0,p1,e);controls.target.lerpVectors(t0,t1,e);camera.lookAt(controls.target);
+    if(k<1)requestAnimationFrame(st);else{controls.enabled=true;controls.update();if(done)done()}};requestAnimationFrame(st)};
+  window.__flyClub=flyClub;
   const rc=new THREE.Raycaster(),mv=new THREE.Vector2();let dn=null;
   renderer.domElement.addEventListener("pointerdown",e=>{dn=[e.clientX,e.clientY]});
-  renderer.domElement.addEventListener("pointerup",e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>8)return;mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(mv,camera);if(rc.intersectObjects(CL.hits,false).length)clubMenu(C)})
+  renderer.domElement.addEventListener("pointerup",e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>8)return;mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(mv,camera);if(rc.intersectObjects(CL.hits,false).length)flyClub()})
   // z mapy areálu v hlavnom menu (?club=1): kamera rovno nad clubhouse a otvorené menu
   if(Q.has("club")){const[ce,cn]=CL.center,h=hAt(ce,cn);controls.target.copy(W(ce,cn,h));camera.position.copy(W(ce+60,cn-170,h+130));camera.lookAt(controls.target);controls.update();clubMenu(C)}}}
 // ================= MOJA POLOHA (Martin 21.11.): 📍 Ja – modrá značka na celom ihrisku + jamka a vzdialenosť do greenu =================
@@ -368,7 +375,7 @@ window.__freeze=()=>{if(window.__stopped)return;let u=null;try{renderer.render(s
  document.body.style.pointerEvents="none";if(!u){window.__hostStop();return}const i=new Image();i.src=u;i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2;pointer-events:none";
  const done=()=>{document.body.appendChild(i);requestAnimationFrame(()=>window.__hostStop())};(i.decode?i.decode().then(done,done):done())};
 
-function frame(){if(window.__stopped)return;if(window.__navLock){requestAnimationFrame(frame);return}if(controls.enabled)controls.update();renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{if(window.__EMB)parent.postMessage({forReady:1},"*");const i=document.getElementById("snapimg");if(i){const w=i.__pill;i.style.opacity="0";if(w)w.style.opacity="0";setTimeout(()=>{i.remove();if(w)w.remove()},400)}})}
+const GRD=1.8;function frame(){if(window.__stopped)return;if(window.__navLock){requestAnimationFrame(frame);return}if(controls.enabled){controls.update();const g=hAt(camera.position.x,-camera.position.z)+GRD;if(camera.position.y<g)camera.position.y=g}renderer.render(scene,camera);if(!snapDone){snapDone=true;requestAnimationFrame(()=>{if(window.__EMB)parent.postMessage({forReady:1},"*");const i=document.getElementById("snapimg");if(i){const w=i.__pill;i.style.opacity="0";if(w)w.style.opacity="0";setTimeout(()=>{i.remove();if(w)w.remove()},400)}})}
   if(window.__pinsUpd)window.__pinsUpd();
   for(const l of labels){v.copy(l.v).project(camera);const vis=v.z<1&&Math.abs(v.x)<1.05&&Math.abs(v.y)<1.05;l.el.style.display=vis?"block":"none";if(vis){l.el.style.left=(v.x+1)/2*innerWidth+"px";l.el.style.top=(1-v.y)/2*innerHeight+"px"}}
   requestAnimationFrame(frame)}

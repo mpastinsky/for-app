@@ -2086,6 +2086,8 @@ renderer.domElement.addEventListener("pointerdown",()=>{if(fly){fly=null;setOn("
 let PLAY=Q.get("play")==="1",ONE=Q.get("one")==="1";
 // „Späť na prehľad“ po jamke: 18-ka → prehľad celého areálu; akadémia otvorená zo štítka A1–A3 v prehľade 18-ky (ov=odpalisko 18-ky) → späť tam
 const OVV=Q.get("ov"),OVQ=OVV!=null&&/^\d$/.test(OVV)?"&ov="+OVV:"",OVH=CRS==="apex"?"ihrisko.html?t="+tIdx:OVQ?"ihrisko.html?t="+OVV:"?h="+READY[0]+"&t="+tIdx+"&v=all";
+// Ukončiť hru (Martin 26.11.): späť do 3D prehľadu celého areálu (18 jamiek + akadémia), nie na náhľad jamky
+const QUITH=CRS==="apex"?OVH:"ihrisko.html"+(OVQ?"?t="+OVV:"");
 let SC=(Q.get("sc")||"").split("-").filter(x=>x!=="").map(Number).slice(0,hNum-1);
 // údery kola: držia sa aj v prehliadači (pre ihrisko), aby scorekarta ukázala všetky odohrané jamky – aj po návrate do prehľadu,
 // výbere jamky alebo „Vyskúšať jamku“ (predtým len z adresy, ktorá sa pri týchto prechodoch stratila → videlo sa len posledné skóre)
@@ -2601,7 +2603,7 @@ function startPlay(){
     const last=hNum===LASTH;const nx=`?${CQ}h=${READY[READY.indexOf(hNum)+1]}&t=${tIdx}&play=1&sc=${READY.slice(0,READY.indexOf(hNum)+1).map(h=>RS[h]||0).join("-")}`;
     $("p-res").innerHTML=`<h2>${last?"Koniec kola":"Jamka "+hNum+" dohraná"}</h2><div>${last?"Spolu "+tot+" úderov · "+(dd===0?"na par":dd>0?"+"+dd+" nad par":dd+" pod par"):"Zatiaľ "+tot+" · "+(dd===0?"na par":dd>0?"+"+dd:dd)}</div>
       ${last?`<a class="go" href="#" data-scard>📋 Zobraziť scorekartu</a><a class="go alt" href="?${CQ}h=${READY[0]}&t=${tIdx}&play=1">Hrať znova</a>`:`<a class="go" href="${nx}">Ďalšia jamka ›</a><a class="go alt" href="#" data-scard>📋 Scorekarta</a>`}
-      <a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}">Ukončiť hru</a>`;
+      <a class="go alt" href="?${CQ}h=${hNum}&t=${tIdx}&play=1${SC.length?"&sc="+SC.join("-"):""}">Zopakovať jamku</a><a class="go alt" href="${QUITH}">Ukončiť hru</a>`;
     $("p-res").hidden=false;if(last)setTimeout(()=>{if(!$("sc-ov"))scoreCard(all)},400)}
   function penalty(t){REC.G.end(S.x,S.y,toPin(),t,1);S.sink=0;S.sinkF=0;S.strokes++;SHOTS.pop();S.x=S.prev[0];S.y=S.prev[1];S.z=gS(S.x,S.y)+R;msg(t);setTimeout(()=>{if(S.mode!=="in")prepare()},900);S.mode="wait"}
   function stopBall(){if(Math.hypot(S.x-PIN[0],S.y-PIN[1])<CUP+.006){S.mode="drop";S.t=0;S.sink=0;return}S.vx=S.vy=0;S.mode="wait";const sf=surf(S.x,S.y);if(sf===SURF.sand&&!S.sinkF)S.sinkF=.12;shotInfo();REC.G.end(S.x,S.y,toPin(),sf.n);
