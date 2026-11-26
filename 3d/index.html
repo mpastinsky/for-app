@@ -54,7 +54,8 @@ addEventListener("error",e=>{try{if(window.__3dok)return;let d=document.getEleme
 (function(){const EMB=window.parent!==window;window.__EMB=EMB;let frames=[];
  const abs=u=>new URL(u,location.href).href,in3d=u=>false;   // 3D obrazovky sa otvárajú normálnym načítaním stránky (rámce s dvoma scénami naraz sekali – Martin, v140)
  const snap=u=>{try{if(window.__snap&&/\/3d\//.test(new URL(u,location.href).pathname)){const d=window.__snap();if(d)sessionStorage.setItem("for.snap",d)}}catch(e){}};
- window.forNav=function(url){if(!in3d(url)){snap(url);(EMB?top:window).location.href=abs(url);return}
+ // v264: pred odchodom sa 3D scéna hneď uvoľní (posledný záber ostane ako obrázok) – iPhone inak držal v pamäti aj predošlé jamky a nová jamka sa občas vykreslila čierna
+ window.forNav=function(url){if(!in3d(url)){snap(url);try{if(window.__freeze&&!EMB)window.__freeze()}catch(e){}(EMB?top:window).location.href=abs(url);return}
    if(window.__playHere&&window.__playHere(abs(url)))return;   // tá istá jamka → hra sa spustí hneď, bez nového načítania scény
    if(window.__freeze)window.__freeze();if(EMB){parent.postMessage({forGo:abs(url)},"*");return}openFrame(abs(url))};
  function openFrame(u){const f=document.createElement("iframe");f.src=u;f.setAttribute("allow","geolocation; accelerometer; gyroscope");
@@ -3101,13 +3102,24 @@ window.snapGo=snapGo;let snapDone=false;const snapOff=()=>{if(snapDone)return;sn
 {const bk=document.querySelector("#top a");bk.addEventListener("click",ev=>{ev.preventDefault();
   if(CRS==="apex"||OVQ)snapGo(OVH);else if(document.body.classList.contains("allv"))forNav("../?start=1");else if(window.flyDown&&!PLAY){go(views.all);setOn("all");playLbl()}else snapGo("?h="+hNum+"&t="+tIdx+"&v=all")})}
 document.querySelectorAll("#holes a").forEach(a=>a.addEventListener("click",ev=>{if(ev.metaKey||ev.ctrlKey)return;ev.preventDefault();snapGo(a.href)}));
+// v264 (Martin 26.11.: „občas to padne“ – jamka po prelete celá čierna: textúry sa nenahrali, GPU bez pamäte): kontrola po prvých snímkach –
+// stratený kontext, chyba OUT_OF_MEMORY alebo čierna obloha → jedno automatické znovunačítanie (najviac raz za minútu)
+let gpuN=0;function gpuRetry(){let t=0;try{t=+sessionStorage.getItem("for.gpur")||0}catch(e){}if(Date.now()-t<60000)return;try{sessionStorage.setItem("for.gpur",String(Date.now()))}catch(e){}
+  try{window.__hostStop()}catch(e){}location.reload()}
+function gpuCheck(){if(++gpuN!==3)return;try{const gl=renderer.getContext();let bad=gl.isContextLost()||gl.getError()===gl.OUT_OF_MEMORY;
+  if(!bad){const w=gl.drawingBufferWidth,h=gl.drawingBufferHeight,px=new Uint8Array(4);let dk=0;for(let i=1;i<=5;i++){gl.readPixels(Math.floor(w*i/6),h-1-Math.max(1,h*.03|0),1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);if(px[0]+px[1]+px[2]<24)dk++}bad=dk>=4}
+  if(bad)gpuRetry()}catch(e){}}
+renderer.domElement.addEventListener("webglcontextlost",e=>{if(!window.__stopped)gpuRetry()});
+// pri odchode zo stránky (aj do vyrovnávacej pamäte Safari) uvoľniť 3D; pri návrate tlačidlom Späť stránku načítať znova
+addEventListener("pagehide",()=>{try{window.__hostStop()}catch(e){}});
+addEventListener("pageshow",e=>{if(e.persisted&&window.__stopped)location.reload()});
 function loop(now){if(window.__stopped)return;const rdt=lastT?(now-lastT)/1000:0,dt=Math.min(.05,rdt);lastT=now;if(rdt<1)qTick(rdt);if(FPS)FPS(rdt,now);
   if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
     camera.position.copy(curve.getPoint(e));controls.target.copy(W(0,c,hG));if(k>=1)fly=null}
   window.__3dok=1;waveFlag(now/1000);pinWobble(now/1000);pinVis(camera);if(TFLY)TFLY(now);else if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
-     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(PHEAS)PHEAS(dt,now);if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold)renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(PHEAS)PHEAS(dt,now);if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold){renderer.render(scene,camera);if(gpuN<4)gpuCheck()}if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 if(Q.has("dbg"))window.__v={camera,renderer,scene,FADE,PT,controls,loc,hL,W,H0,tunFor,TUNS,tunnelOut,hopOut,NXT,inside,WIN:[X0,X1,Y0,Y1],getFly:()=>TFLY,runFly};
 requestAnimationFrame(loop);
 // shadery pre všetko, čo sa ukáže až neskôr (steblá trávy pri zemi, efekty), sa pripravia hneď po načítaní –
