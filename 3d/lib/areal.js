@@ -397,7 +397,9 @@ export async function buildAreal(THREE, o) {
     const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(P, 3)); geo.setAttribute("uv", new THREE.BufferAttribute(UV, 2));
     geo.setIndex(NX * NY > 65535 ? new THREE.Uint32BufferAttribute(idx, 1) : new THREE.Uint16BufferAttribute(idx, 1)); geo.computeVertexNormals();
     // okraj (posledných 5 riadkov) plynulo klesá k rovine okolia; normály tam smerom hore, inak by svah vyšiel ako tmavý pás na obzore (Martin 24.11.)
-    { const Nn = geo.attributes.normal; for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) if (Math.min(i, j, NX - 1 - i, NY - 1 - j) < 6) Nn.setXYZ(j * NX + i, 0, 1, 0) }
+    // v261: normály mriežky vychádzali obrátene (dole) – zem okolia bola pri pohľade do diaľky tmavá (čierny pás pod stromami na obzore, Martin 26.11.) → otočiť nahor
+    { const Nn = geo.attributes.normal; for (let k = 0; k < Nn.count; k++) if (Nn.getY(k) < 0) Nn.setXYZ(k, -Nn.getX(k), -Nn.getY(k), -Nn.getZ(k));
+      for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) if (Math.min(i, j, NX - 1 - i, NY - 1 - j) < 6) Nn.setXYZ(j * NX + i, 0, 1, 0) }
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 1, fog: o.groundFog !== false });
     mat.onBeforeCompile = sh => { sh.uniforms.uWin = { value: new THREE.Vector4(X0 + .3, Y0 + .3, X1 - .3, Y1 - .3) };
       sh.vertexShader = "varying vec3 vAw;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvAw=(modelMatrix*vec4(transformed,1.)).xyz;");
