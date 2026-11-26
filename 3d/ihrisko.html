@@ -215,7 +215,9 @@ const flyTo=(h,url,TG)=>{const t=TG?TG.t:DATA.pads[h][tIdx],gc=TG?TG.gc:DATA.gc[
     // koniec preletu: posledný záber ostane stáť (bez čísel jamiek, bez ďalšieho prekresľovania), kým sa nenačíta jamka – Martin 25.11.: preblikávanie
     window.__navLock=true;const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);forNav(url)}};requestAnimationFrame(st)};
 // návrat tlačidlom Späť (stránka z pamäte prehliadača): prehľad znova normálne funguje
-addEventListener("pageshow",e=>{if(!e.persisted||!window.__navLock)return;window.__navLock=false;controls.enabled=true;labels.forEach(l=>l.el.style.visibility="");const w=document.getElementById("ldpill");if(w)w.remove()});
+// v264: pri odchode uvoľniť 3D (iPhone pamäť), pri návrate Späť načítať znova
+addEventListener("pagehide",()=>{try{if(window.__hostStop)window.__hostStop()}catch(e){}});
+addEventListener("pageshow",e=>{if(e.persisted&&window.__stopped){location.reload();return}if(!e.persisted||!window.__navLock)return;window.__navLock=false;controls.enabled=true;labels.forEach(l=>l.el.style.visibility="");const w=document.getElementById("ldpill");if(w)w.remove()});
 document.getElementById("b-go").onclick=()=>flyTo(READY[0],"./?c=apex&h="+READY[0]+"&t="+tIdx+"&play=1");
 for(const l of labels)l.el.onclick=ev=>{ev.preventDefault();if(l.akAll){forNav(l.el.href);return}flyTo(l.ak?0:+l.el.textContent,l.el.href,l.ak)};
 // driving range: ostrejšia textúra (8 px/m) len nad range a cvičnými greenmi pri ňom, strecha nad časťou línie, búdka, vlajky terčov
