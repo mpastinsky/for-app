@@ -65,9 +65,9 @@ addEventListener("error",e=>{try{if(window.__3dok)return;let d=document.getEleme
    f.style.cssText="position:fixed;left:0;top:0;width:100%;height:100%;border:0;opacity:0;z-index:1000;transition:opacity .3s;background:#5e8443";f.__url=u;document.body.appendChild(f);frames.push(f);f.__to=setTimeout(()=>{if(f.style.opacity!=="1")location.href=u},40000)}
  addEventListener("message",e=>{const d=e.data||{};if(EMB)return;
    if(d.forGo)openFrame(d.forGo);
-   if(d.forPre){const f=frames.find(x=>x.contentWindow===e.source);if(f)f.__ready=1;return}
+   if(d.forPre){const f=frames.find(x=>x.contentWindow===e.source);if(f){f.__ready=1;f.__ms=performance.now()-(f.__t0||0)}return}
    if(d.forReady){const f=frames.find(x=>x.contentWindow===e.source);if(!f)return;f.style.opacity="1";f.style.pointerEvents="";try{history.replaceState(null,"",f.__url)}catch(_){}
-     const cl=()=>{frames.filter(x=>x!==f).forEach(x=>x.remove());frames=[f];if(window.__hostStop)window.__hostStop()};if(f.__pre)requestAnimationFrame(cl);else setTimeout(cl,350)}});
+     const cl=()=>{frames.filter(x=>x!==f).forEach(x=>x.remove());frames=[f];if(window.__hostStop)window.__hostStop(f.__pre)};if(f.__pre)requestAnimationFrame(cl);else setTimeout(cl,350)}});
  document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("a[href]");if(!a||e.defaultPrevented||a.target||e.metaKey||e.ctrlKey)return;
    const h=a.getAttribute("href");if(!h||h[0]==="#"||/^(javascript|mailto|tel|sms|whatsapp):/i.test(h))return;e.preventDefault();forNav(h)});
 })();</script>
@@ -2587,7 +2587,7 @@ function startPlay(){
   // nie počas výsledku/preletu; let podchodom sa spustí až keď je jamka 11 hotová → počas letu sa nič nestavia
   function preNext(){try{if(window.__preF||!window.__preFrame||!PLAY)return;const nx=READY[READY.indexOf(hNum)+1];if(!nx||!tunFor(nx))return;
     const U=new URL(`?${CQ}h=${nx}&t=${tIdx}&play=1${ONE?"&one=1"+OVQ:""}`,location.href),cu=U.href;U.searchParams.set("pre","1");if(Q.has("dbg"))U.searchParams.set("dbg","1");if(Q.has("tfslow"))U.searchParams.set("tfslow",Q.get("tfslow"));
-    window.__preF={f:window.__preFrame(U.href,cu),nx}}catch(e){}}
+    window.__preF={f:window.__preFrame(U.href,cu),nx};window.__preF.f.__t0=performance.now();setTimeout(()=>window.__warmAll&&window.__warmAll(),200)}catch(e){}}
   function penalty(t){REC.G.end(S.x,S.y,toPin(),t,1);S.sink=0;S.sinkF=0;S.strokes++;SHOTS.pop();S.x=S.prev[0];S.y=S.prev[1];S.z=gS(S.x,S.y)+R;msg(t);setTimeout(()=>{if(S.mode!=="in")prepare()},900);S.mode="wait"}
   function stopBall(){if(Math.hypot(S.x-PIN[0],S.y-PIN[1])<CUP+.006){S.mode="drop";S.t=0;S.sink=0;return}S.vx=S.vy=0;S.mode="wait";const sf=surf(S.x,S.y);if(sf===SURF.sand&&!S.sinkF)S.sinkF=.12;shotInfo();REC.G.end(S.x,S.y,toPin(),sf.n);
     msg(sf===SURF.green?"Na greene":sf===SURF.sand?"V bunkri":sf===SURF.rough?"V roughu":sf===SURF.collar?"Na lemu greenu":sf.at||"Na "+sf.n);
@@ -2972,8 +2972,12 @@ function tunFor(nx){if(CRS!=="apex"||!nx||!DATA.pads[nx]||!TUNS.length)return nu
 function runFly(pts,look,D,prof,done){D*=+(Q.get("tfslow")||1);   // ?tfslow=N: spomalený let (kontrola záberov)
   const cv=new THREE.CatmullRomCurve3(pts,false,"centripetal"),s0=performance.now(),tan=new THREE.Vector3();
   if(camera.near!==.15){camera.near=.15;camera.updateProjectionMatrix()}
+  // v258: počas preletu sa tiene neprepočítavajú (scéna stojí, slnko tiež) – mapa tieňov sa vykreslí raz, nie v každej snímke (polovica práce GPU)
+  renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;FST.s={n:0,t:0,mx:0,j:0};
   const F={cv,L:cv.getLength(),D,s0};runFly.last=F;TFLY=now=>{const k=window.__flyK!=null?window.__flyK:Math.max(0,Math.min(1,(now-s0)/D)),u=Math.min(1,prof(k)),p=cv.getPointAt(u);cv.getTangentAt(u,tan);
-    camera.position.copy(p);camera.lookAt(look(u,k,p,tan));if(k>=1){TFLY=null;done(p)}};return F}
+    camera.position.copy(p);camera.lookAt(look(u,k,p,tan));if(k>=1){TFLY=null;renderer.shadowMap.autoUpdate=true;done(p)}};return F}
+// v258: meranie plynulosti preletu (snímky, najdlhšia snímka, zásekov > 50 ms) – dočasne zobrazené po prelete 10→11
+const FST={s:null,add(dt){const s=this.s;if(!s||!dt||dt>2)return;s.n++;s.t+=dt;s.mx=Math.max(s.mx,dt);if(dt>.05)s.j++},txt(s){return s&&s.n?`${Math.round(s.n/s.t)} fps, max ${Math.round(s.mx*1000)} ms, zásekov ${s.j}`:"–"}};
 // v249 (Martin 25.11.: „prelet ide kostrbato – od jamky vyleť vyššie, zamier do podjazdu, potom hore cez stromy k jamke 11, rovno“):
 // rýchlosť po krivke = lichobežník s mäkkými (kosínusovými) nábehmi – plynulý rozjazd z pokoja, rovnomerný let, plynulé zastavenie nad stromami
 // (tam sa načíta ďalšia jamka a let pokračuje z pokoja). Pohľad = bod 25 m vpredu na krivke (nie dotyčnica – bez zášklbov), na konci k jamke 11.
@@ -2985,7 +2989,7 @@ function tunnelOut(href,nx){const T=tunFor(nx);if(!T||TFLY||tunnelOut.busy)retur
   // v257: ak sa jamka 11 ešte stavia, let počká (tlačidlo ukáže „Pripravujem…“) – stavba počas letu sekala
   const PF=window.__preF,t0=performance.now(),btn=document.querySelector('#p-res a.go[href="'+CSS.escape(href)+'"]');
   const st=()=>{tPre(nx).then(go);setTimeout(()=>go(hENU),1200)};
-  const wt=()=>{if(!PF||!PF.f.isConnected||PF.f.__ready||performance.now()-t0>20000){if(btn&&btn.__t)btn.textContent=btn.__t;return st()}
+  const wt=()=>{if(!PF||!PF.f.isConnected||PF.f.__ready||performance.now()-t0>20000){window.__preWait=performance.now()-t0;if(btn&&btn.__t)btn.textContent=btn.__t;return st()}
     if(btn&&!btn.__t){btn.__t=btn.textContent;btn.textContent="Pripravujem jamku "+nx+"…"}setTimeout(wt,80)};wt();return true}
 function tunnelGo(href,nx,T,hN){const{O,g,tp}=T,a=O.a*Math.PI/180;let d=[Math.cos(a),Math.sin(a)];
   if((tp[0]-O.p[0])*d[0]+(tp[1]-O.p[1])*d[1]<0)d=[-d[0],-d[1]];
@@ -3018,7 +3022,7 @@ function tunnelGo(href,nx,T,hN){const{O,g,tp}=T,a=O.a*Math.PI/180;let d=[Math.co
   const D=Math.max(4500,Math.min(9000,L/15*1000*1.25));
   document.body.classList.add("tfly");const pr=document.getElementById("p-res");if(pr)pr.hidden=true;
   runFly(pts,look,D,trap(.2,.3),p=>{const lk=look(1,1,p);
-    TFLY=()=>{};   // kamera ostane v strede podchodu (hra nepreberie kameru)
+    TFLY=()=>{};renderer.shadowMap.autoUpdate=false;   // kamera ostane v strede podchodu (hra nepreberie kameru)
     const F={to:nx,ts:Date.now(),v:0,p:[...enu(p.x,-p.z),p.y+H0],t:[...enu(lk.x,-lk.z),lk.y+H0],w:rest,fa:fl+H0};
     // v256: jamka 11 už stojí skryto (postavená počas výsledku) → let pokračuje v nej hneď, bez zastavenia a bez načítavania
     const PF=window.__preF,pf=PF&&PF.nx===nx&&PF.f&&PF.f.isConnected?PF.f:null;let w=null;const t0=performance.now();
@@ -3026,6 +3030,7 @@ function tunnelGo(href,nx,T,hN){const{O,g,tp}=T,a=O.a*Math.PI/180;let d=[Math.co
       window.__hold=true;if(!w){w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w)}forNav(href)};
     if(!pf)return fall();
     try{const U=new URL(href,location.href);pf.__url=U.href;F.sc=U.searchParams.get("sc")||""}catch(e){}
+    F.st=FST.txt(FST.s);F.pb=pf.__ms?Math.round(pf.__ms/100)/10:null;F.pw=window.__preWait||0;
     const wt=()=>{if(pf.__ready){try{pf.contentWindow.postMessage({forTgo:F},"*")}catch(e){return fall()}
         setTimeout(()=>{if(pf.style.opacity!=="1"&&!window.__stopped)fall()},20000);return}   // poistka: keby sa rámec neukázal
       const el=performance.now()-t0;if(el>1500&&!w){w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w)}
@@ -3047,14 +3052,25 @@ function tunnelIn2(F,P,Tg,done){
     q.lerp(Tg,sstp(.5,1,u));return q2.copy(t0).lerp(q,sstp(0,.15,k))};
   const D=Math.max(4500,Math.min(9000,L/15*1000*1.3));
   camera.position.copy(p0);camera.lookAt(t0);document.body.classList.add("tfly");
-  runFly(pts,look,D,trap(.3,.32),()=>{document.body.classList.remove("tfly");done()})}
+  runFly(pts,look,D,trap(.3,.32),()=>{document.body.classList.remove("tfly");done();
+    // v258: dočasná správa o plynulosti prechodu (Martin pošle snímku obrazovky)
+    if(F.st){const d=document.createElement("div");d.style.cssText="position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 96px);z-index:3000;background:rgba(0,0,0,.72);color:#fff;font:12px/1.4 ui-monospace,monospace;padding:6px 8px;border-radius:8px;pointer-events:none;white-space:pre-wrap";
+      d.textContent=`Prechod 10→11 (meranie, dočasné)\nlet k podchodu: ${F.st}\nlet k odpalisku: ${FST.txt(FST.s)}\njamka 11 postavená za ${F.pb??"?"} s, čakanie pred letom ${(F.pw/1000).toFixed(1)} s\nzobrazenie ${Math.round(innerWidth)}×${Math.round(innerHeight)}, q${QF.l}`;document.body.appendChild(d);setTimeout(()=>d.remove(),15000)}})}
 document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("#p-res a.go[href]");if(!a||!game)return;let U;try{U=new URL(a.href)}catch(_){return}
   const nx=parseInt(U.searchParams.get("h"));if(!nx||nx===hNum||U.searchParams.get("play")!=="1")return;
   if(tunnelOut(a.getAttribute("href"),nx)){e.preventDefault();e.stopImmediatePropagation()}},true);
 let lastT=0,PREsk=0;const _bv=new THREE.Vector3();
 // prechod medzi obrazovkami bez zábleskov: uloží posledný záber, nová stránka ho ukáže, kým sa nevykreslí
 function snapGo(url){forNav(url)}
-window.__hostStop=()=>{if(window.__stopped)return;window.__stopped=true;try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
+window.__hostStop=soft=>{if(window.__stopped)return;window.__stopped=true;const fin=()=>{try{renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}catch(e){}};
+  // v258: po odkrytí vopred postavenej jamky sa stará scéna len zastaví; uvoľnenie GPU (sekalo v podchode) až keď nová jamka doletí
+  if(soft){renderer.domElement.style.visibility="hidden";setTimeout(fin,12000)}else fin()};
+// v258 (Martin: „seká na začiatku preletu a v podchode“): objekty, ktoré kamera ešte nevidela (podchod, cesta, okolie odpaliska 11),
+// sa nahrávali do GPU až pri prvom zábere počas letu. warmAll ich vykreslí všetky naraz do malého cieľa vopred, keď obraz stojí.
+window.__warmAll=()=>{if(window.__stopped)return;const fc=[],hid=[];try{scene.traverse(o=>{const M=o.material;if(M)for(const k in M){const v=M[k];if(v&&v.isTexture&&renderer.initTexture)renderer.initTexture(v)}
+    if(o.frustumCulled){fc.push(o);o.frustumCulled=false}if(!o.visible){hid.push(o);o.visible=true}});
+  const rt=window.__wrt||(window.__wrt=new THREE.WebGLRenderTarget(8,8)),pr=renderer.getRenderTarget();renderer.setRenderTarget(rt);renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);renderer.setRenderTarget(pr)}catch(e){}
+  for(const o of fc)o.frustumCulled=true;for(const o of hid)o.visible=false};
 // pred prechodom na inú 3D obrazovku: posledný záber ostane ako obrázok a 3D scéna sa hneď uvoľní (na mobile naraz len jedna 3D scéna v pamäti – inak sa iPhone zasekol)
 // posledný záber (malý JPEG) pre ďalšiu stránku, aby pri prechode nepreblikla prázdna obrazovka
 window.__snap=()=>{if(window.__stopped)return null;renderer.render(scene,camera);const D=renderer.domElement,k=Math.min(1,700/Math.max(D.width,D.height)),cv=document.createElement("canvas");cv.width=D.width*k|0;cv.height=D.height*k|0;cv.getContext("2d").drawImage(D,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",.75)};
@@ -3070,7 +3086,7 @@ function loop(now){if(window.__stopped)return;if(!PREgo){requestAnimationFrame(l
 const rdt=lastT?(now-lastT)/1000:0,dt=Math.min(.05,rdt);lastT=now;if(rdt<1)qTick(rdt);if(FPS)FPS(rdt,now);
   if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
     camera.position.copy(curve.getPoint(e));controls.target.copy(W(0,c,hG));if(k>=1)fly=null}
-  window.__3dok=1;waveFlag(now/1000);pinWobble(now/1000);pinVis(camera);if(TFLY)TFLY(now);else if(game)game.update(dt);else{controls.update();
+  window.__3dok=1;waveFlag(now/1000);pinWobble(now/1000);pinVis(camera);if(TFLY){FST.add(rdt);TFLY(now)}else if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
      const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(PHEAS)PHEAS(dt,now);if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold&&!(window.__preF&&!window.__preF.f.__ready&&window.__resOn&&!TFLY&&(++PREsk%6)))renderer.render(scene,camera);if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
@@ -3086,7 +3102,7 @@ function preAll(fade){if(window.__stopped)return null;const hid=[];scene.travers
   if(p&&p.catch)p.catch(()=>{});return p}
 setTimeout(()=>{const pr=preAll(true);
   // v256: skrytá jamka: všetky textúry a geometria sa nahrajú do GPU (jeden neviditeľný záber), potom ohlási pripravenosť
-  if(PRE){const rd=()=>{if(window.__stopped)return;try{scene.traverse(o=>{const M=o.material;if(M)for(const k in M){const v=M[k];if(v&&v.isTexture&&renderer.initTexture)renderer.initTexture(v)}});renderer.render(scene,camera)}catch(e){}parent.postMessage({forPre:1},"*")};
+  if(PRE){const rd=()=>{if(window.__stopped)return;window.__warmAll();parent.postMessage({forPre:1},"*")};
     if(pr&&pr.then)pr.then(rd,rd);else rd()}},400);
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 // kvalita grafiky podľa výkonu: na telefóne začína strednou (menšie rozlíšenie, menej stebiel); ak je stále pod ~40 fps, zníži sa ešte o stupeň
