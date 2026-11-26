@@ -2129,7 +2129,7 @@ function startPlay(){
   // povrchy: odskok, zachovaná rýchlosť po dopade, trenie pri kotúľaní (m/s²), vplyv na dĺžku úderu
   // g = ako povrch „chytí“ spätnú rotáciu pri prvom dopade (rough menej – tráva medzi loptičkou a palicou). Trenie f: green najmenšie (kotúľa najďalej), fairway, rough, piesok skoro hneď stojí.
   const SURF={green:{n:"green",r:.18,k:.62,f:.56,m:1,g:1},collar:{n:"lem greenu",r:.2,k:.62,f:1.2,m:1,g:1},cut:{n:"prvý kos",r:.22,k:.62,f:1.25,m:.97,g:1},
-    fair:{n:"fairway",r:.46,q:1.6,m0:.5,k:.68,kt:.45,k2:.78,f:1.1,m:1,g:1},rough:{n:"rough",r:.3,q:1.6,m0:.45,k:.42,kt:.36,k2:.52,f:3.8,m:.88,g:.8},sand:{n:"bunker",r:.02,k:.12,f:12,m:.72,g:1},
+    fair:{n:"fairway",r:.46,q:1.6,m0:.5,k:.68,kt:.45,k2:.78,f:1.1,m:1,g:1},rough:{n:"rough",r:.42,q:1.5,m0:.55,k:.42,kt:.5,k2:.68,f:2.2,m:.88,g:.8},sand:{n:"bunker",r:.02,k:.12,f:12,m:.72,g:1},
     // v249 (Martin 25.11.: „na ceste/chodníku má skákať omnoho viac“; „na nesprávnom greene, chodníku či ceste sa loptička málo kotúľa“):
     // tvrdé povrchy – vysoký odskok (r), skoro žiadne tlmenie (kt, k2), spätná rotácia chytí menej (g), valenie s malým trením (f) – rýchlejšie než green.
     // Cudzí green (iná jamka, cvičný green) = rovnaký povrch ako green (predtým sa počítal ako rough a pat skoro stál).
@@ -2138,6 +2138,8 @@ function startPlay(){
   // dopad plného úderu (Martin 23.11.: loptička sa kotúľala príliš dlho). Fyzika: náraz do svahu (kolmá a pozdĺžna zložka voči terénu),
   // odskok r, strata rýchlosti v tráve k a pri prvom dopade spätná rotácia – čím viac loftu a rýchlejší úder, tým viac sa loptička „zabrzdí“.
   // Výsledok na rovine (plný úder): driver ~35 m kotúľania na fairway, 7 železo ~9 m, SW ~2,5 m (v196: Martin chcel trochu viac); v200 (24.11.: „dopad na fairway ide krátko“) fairway trenie 1.6→1.1, k .66 – kotúľanie po fairway ~1,5× dlhšie; na greene ďalej, v roughu kratšie.
+  // v265 (Martin 26.11.: „na tráve mimo ihriska /tmavšia zelená/ by loptička mala skočiť viac a ísť ďalej; green nemeniť“): rough – vyšší odskok (r .3→.42, m0 .55),
+  // menšia strata pri dopade (kt .36→.5, k2 .52→.68) a menšie trenie pri valení (f 3.8→2.2). Rovný rough: driver 1. odskok ~22 m / 1,5 m, spolu ~46 m (bolo 19), 7ž ~16 m (7), PW ~9 (3), SW ~5 (2). Fairway a green bez zmeny.
   function bounceV(sf,x,y,vx,vy,vz,n){const vh=Math.hypot(vx,vy);if(vh<1e-4)return[0,0,-vz*sf.r];const ux=vx/vh,uy=vy/vh,[gx,gy]=grad(x,y),sl=Math.max(-.5,Math.min(.5,gx*ux+gy*uy));
     const cs=1/Math.sqrt(1+sl*sl),vn=(-vz+vh*sl)*cs,vt=(vh+vz*sl)*cs;   // do kopca: viac nárazu, menej rýchlosti dopredu; z kopca naopak
     const sp=n===0?Math.min(.95,.52+CLUBS[S.club].a*.007)*Math.min(1,Math.sqrt(Math.hypot(vh,vz)/30))*sf.g:0;
