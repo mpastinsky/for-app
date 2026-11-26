@@ -70,7 +70,8 @@ addEventListener("error",e=>{try{if(window.__3dok)return;let d=document.getEleme
 try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("for.snap");const i=document.createElement("img");i.id="snapimg";i.decoding="sync";i.src=s;
  i.style.cssText="position:fixed;left:0;top:0;width:100vw;height:100vh;object-fit:cover;z-index:50;pointer-events:none;transition:opacity .35s";document.body.appendChild(i);
  /* záber prekrýva aj lišty a tlačidlá (kým sa nenačítajú, menili sa – preblikávalo); kým sa čaká, beží „Načítavam…“ */
- const w=document.createElement("div");w.id="snappill";w.innerHTML='<i></i>Načítavam…';w.style.cssText="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:51;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none;transition:opacity .35s";i.__pill=w;document.body.appendChild(w)}}catch(e){}</script>
+ const w=document.createElement("div");w.id="snappill";w.innerHTML='<i></i>Načítavam…';w.style.cssText="position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);z-index:51;background:rgba(20,30,20,.78);color:#fff;font:600 .95rem system-ui,sans-serif;padding:9px 16px;border-radius:22px;display:flex;align-items:center;gap:9px;pointer-events:none;transition:opacity .35s";if(/"to":/.test(sessionStorage.getItem("for.tfly")||"")&&w.animate){w.style.opacity="0";w.animate([{opacity:0},{opacity:1}],{duration:400,delay:2500,fill:"forwards"})}   /* v260: príchod preletom – bez „Načítavam…“ ak je to rýchle */
+ i.__pill=w;document.body.appendChild(w)}}catch(e){}</script>
 <div id="top"><a href="../?start=1" aria-label="Späť na výber ihriska" style="font-size:1.4rem">‹</a><div style="flex:1"><b id="h-t">Akadémia</b><small id="h-s"></small></div><div id="holes"><a data-h="1" href="?h=1">1</a><a data-h="2" href="?h=2">2</a><a data-h="3" href="?h=3">3</a></div></div>
 <button id="fab3" aria-label="Nahlásiť">⚠️<small>Nahlásiť</small></button>
 <div id="tees"><span>Odpalisko:</span><a data-t="0"><i style="background:#fff"></i>biele</a><a data-t="1"><i style="background:#ffd400"></i>žlté</a><a data-t="2"><i style="background:#e0312b"></i>červené</a></div>
@@ -111,10 +112,21 @@ if(CRS==="apex"){document.getElementById("holes").innerHTML=READY.map(h=>`<a dat
 
 // --- terén
 // terén: pri 18-ke v samostatných dlaždiciach (juh / sever za diaľnicou), načíta sa len tá, ktorú jamka potrebuje
-const TR=DATA.terrain||await (await fetch(DATA.tiles[DATA.holeTile[hNum]])).json(),Hcm=new Int16Array(Uint8Array.from(atob(TR.cm),c=>c.charCodeAt(0)).buffer);
-function hENU(e,n){let c=(e-TR.e0)/TR.step,r=(n-TR.n0)/TR.step;c=Math.min(TR.w-1.001,Math.max(0,c));r=Math.min(TR.h-1.001,Math.max(0,r));
-  const c0=c|0,r0=r|0,fc=c-c0,fr=r-r0,i=r0*TR.w+c0;
-  return TR.base+(Hcm[i]*(1-fc)*(1-fr)+Hcm[i+1]*fc*(1-fr)+Hcm[i+TR.w]*(1-fc)*fr+Hcm[i+TR.w+1]*fc*fr)/100}
+// v260 (Martin 26.11.: „plynulý prelet 10→11 aj za cenu prestavby“): ak za greenom vedie podchod k odpalisku ďalšej jamky, táto jamka
+// má v sebe dostavané plné okolie toho odpaliska (terén aj z dlaždice ďalšej jamky, textúra, stromy) – prelet doletí až na odpalisko
+// v jednej scéne a ďalšia jamka len prevezme záber (žiadne zastavenie v podchode, žiadne dve scény naraz)
+const NXT=(()=>{if(CRS!=="apex"||!DATA.objects)return null;const nx=READY[READY.indexOf(hNum)+1];if(!nx||!DATA.pads[nx]||!DATA.gc[hNum-1])return null;
+  const tp=DATA.pads[nx][Math.min(tIdx,DATA.pads[nx].length-1)],G=DATA.gc[hNum-1],vx=tp[0]-G[0],vy=tp[1]-G[1],l2=vx*vx+vy*vy;if(l2>260*260)return null;
+  for(const O of DATA.objects){if(O.t!=="tunnel")continue;const k=Math.max(0,Math.min(1,((O.p[0]-G[0])*vx+(O.p[1]-G[1])*vy)/l2));if(k>.05&&k<.95&&Math.hypot(G[0]+vx*k-O.p[0],G[1]+vy*k-O.p[1])<60)return{nx,tp}}return null})();
+const ldTile=async k=>{const R=await (await fetch(DATA.tiles[k])).json();R.H=new Int16Array(Uint8Array.from(atob(R.cm),c=>c.charCodeAt(0)).buffer);return R};
+const TR=DATA.terrain||await ldTile(DATA.holeTile[hNum]),Hcm=TR.H||new Int16Array(Uint8Array.from(atob(TR.cm),c=>c.charCodeAt(0)).buffer);
+const TR2=NXT&&DATA.tiles&&DATA.holeTile[NXT.nx]!==DATA.holeTile[hNum]?await ldTile(DATA.holeTile[NXT.nx]):null;
+const tIn=(R,e,n)=>e>=R.e0+1&&n>=R.n0+1&&e<=R.e0+(R.w-2)*R.step&&n<=R.n0+(R.h-2)*R.step;
+function hT(R,H,e,n){let c=(e-R.e0)/R.step,r=(n-R.n0)/R.step;c=Math.min(R.w-1.001,Math.max(0,c));r=Math.min(R.h-1.001,Math.max(0,r));
+  const c0=c|0,r0=r|0,fc=c-c0,fr=r-r0,i=r0*R.w+c0;
+  return R.base+(H[i]*(1-fc)*(1-fr)+H[i+1]*fc*(1-fr)+H[i+R.w]*(1-fc)*fr+H[i+R.w+1]*fc*fr)/100}
+// dlaždice sa v prekryve zhodujú (overené), takže mimo vlastnej dlaždice sa plynulo prejde na dlaždicu ďalšej jamky
+function hENU(e,n){return TR2&&!tIn(TR,e,n)&&tIn(TR2,e,n)?hT(TR2,TR2.H,e,n):hT(TR,Hcm,e,n)}
 
 // --- lokálny rámec jamky: odpalisko (0,0), y = smer na stred greenu, x = vpravo
 const T=DATA.pads[hNum][tIdx],GC=DATA.gc[hNum-1];
@@ -149,7 +161,7 @@ const GP=(()=>{const e=5,h0=raw(gcx,gcy);let sx=(raw(gcx+e,gcy)-raw(gcx-e,gcy))/
 const TEEPL=CRS==="apex"?(()=>{const out=[],src=[...(DATA.teeboxes||[]).map(T=>T.p.map(loc))];
   const pd=(DATA.pads[hNum]||[]).map(loc);for(const[px,py]of pd)if(!src.some(P=>inPoly([px,py],P)))src.push([...Array(12)].map((_,i)=>[px+3.2*Math.cos(i*Math.PI/6),py+3.2*Math.sin(i*Math.PI/6)]));
   for(const P of src){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of P){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
-    if(x1<-400||x0>400||y1<-120||y0>c+150)continue;const hs=[];for(let x=x0;x<=x1;x+=.7)for(let y=y0;y<=y1;y+=.7)if(inPoly([x,y],P))hs.push(raw(x,y));if(!hs.length)continue;
+    if(x1<-400||x0>400||y1<-120||y0>c+150+(NXT?260:0))continue;const hs=[];for(let x=x0;x<=x1;x+=.7)for(let y=y0;y<=y1;y+=.7)if(inPoly([x,y],P))hs.push(raw(x,y));if(!hs.length)continue;
     hs.sort((a,b)=>a-b);out.push({P,bb:[x0-3,x1+3,y0-3,y1+3],z:hs[Math.floor(hs.length*.8)]+.3})}return out})():[];
 // v255: chodníky – terén pod nimi zarovnaný na vyhladený profil (lib/areal.js pathLevel, zdieľaný s okolím); odpalisko má prednosť
 const PLV=AR&&AR.A.lev,PLO=AR?AR.A.off:[0,0];
@@ -275,7 +287,7 @@ scene.add(sun,sun.target);
 // jamky 11 (y −75 až −130 podľa odpaliska, okno od −70) → jamka 11 ho mala len v hrubom okolí (bez tunela, nízke stromy). Okno sa za odpaliskom
 // predĺži tak, aby tunel tesne za odpaliskom (do 170 m) bol v plne postavenej scéne – prelet tam pokračuje už v detailnej grafike.
 const Y0=(()=>{let y0=-70;for(const O of (DATA.objects||[])){if(O.t!=="tunnel")continue;const[x,y]=loc(O.p);if(Math.abs(x)<100&&y<-60&&y>-170)y0=Math.min(y0,Math.floor(y/2)*2-30)}return y0})();
-const X0=-170,X1=170,Y1=c+150,SEG=2;
+const X0=-170,X1=170,SEG=2,Y1=(()=>{let y1=c+150;if(NXT){const[x,y]=loc(NXT.tp);if(Math.abs(x)<120&&y>c-40)y1=Math.max(y1,Math.ceil((y+170)/2)*2)}return y1})();
 // zdieľané s 3D steblami: zem pod steblami je tmavšia (tieň pri koreňoch), aby steblá z nej rástli a nevznášali sa
 const BGU={uC:{value:new THREE.Vector2(1e6,1e6)},uS:{value:22},kT:{value:null},uG:{value:new THREE.Vector4(X0,Y0,X1,Y1)}};
 const geo=new THREE.PlaneGeometry(X1-X0,Y1-Y0,(X1-X0)/SEG,(Y1-Y0)/SEG);geo.rotateX(-Math.PI/2);
@@ -284,27 +296,28 @@ geo.translate((X0+X1)/2,0,-(Y0+Y1)/2);
   // pod jemnou sieťou greenu hrubý terén mierne znížime, aby cez ňu nepresvital (inak ostrý „odrezaný“ okraj pri bunkri)
   if(x>GB.x0-7+m&&x<GB.x1+7-m&&y>GB.y0-7+m&&y<GB.y1+7-m&&!myBunkers.some(B=>inPoly([x,y],B)))h-=.35;
   else if(myBunkers.some(B=>x>B.bb[0]+2.5&&x<B.bb[1]-2.5&&y>B.bb[2]+2.5&&y<B.bb[3]-2.5))h-=.35;p.setY(i,h)}geo.computeVertexNormals()}
-const TEX=2048,cv=document.createElement("canvas");cv.width=cv.height=TEX;const g2=cv.getContext("2d");
-const tx=x=>(x-X0)/(X1-X0)*TEX,ty=y=>(Y1-y)/(Y1-Y0)*TEX,ppm=TEX/(X1-X0);
+const TEX=2048,TEXH=Math.min(3072,Math.max(TEX,Math.round(TEX*(Y1-Y0)/(c+220)/8)*8)),cv=document.createElement("canvas");cv.width=TEX;cv.height=TEXH;   // v260: pri dlhšom okne vyššia textúra (rovnaká ostrosť)
+const g2=cv.getContext("2d");
+const tx=x=>(x-X0)/(X1-X0)*TEX,ty=y=>(Y1-y)/(Y1-Y0)*TEXH,ppm=TEX/(X1-X0);
 function path(P){g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));g2.closePath()}
-g2.fillStyle=STYLE.dry?"#b3ad66":"#86a352";g2.fillRect(0,0,TEX,TEX);
+g2.fillStyle=STYLE.dry?"#b3ad66":"#86a352";g2.fillRect(0,0,TEX,TEXH);
 // textúra trávy: náhodné škvrny
 let seed=7+hNum*13;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
 for(let k=0;k<900;k++){g2.fillStyle=STYLE.dry?(rnd()<.5?"rgba(150,150,80,.10)":"rgba(210,200,140,.10)"):(rnd()<.5?"rgba(90,130,50,.10)":"rgba(150,180,90,.10)");
-  const r=(4+rnd()*10)*ppm;g2.beginPath();g2.arc(rnd()*TEX,rnd()*TEX,r,0,7);g2.fill()}
+  const r=(4+rnd()*10)*ppm;g2.beginPath();g2.arc(rnd()*TEX,rnd()*TEXH,r,0,7);g2.fill()}
 // pokosené plochy: podľa leteckých záberov (jamky 1 a 2), inak odhad
 const MOW=DATA.mow&&DATA.mow[hNum];
-if(MOW){for(const poly of MOW.slice().reverse()){const P=poly.map(loc);g2.save();path(P);g2.clip();g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);
+if(MOW){for(const poly of MOW.slice().reverse()){const P=poly.map(loc);g2.save();path(P);g2.clip();g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEXH);
   g2.fillStyle="rgba(40,90,25,.13)";for(let y=-20;y<c+30;y+=12){const a=ty(y),b2=ty(y+6);g2.fillRect(0,Math.min(a,b2),TEX,Math.abs(a-b2))}
-  g2.fillStyle="rgba(235,255,200,.07)";for(let x=X0;x<X1;x+=12)g2.fillRect(tx(x),0,6*ppm,TEX);g2.restore()}}
+  g2.fillStyle="rgba(235,255,200,.07)";for(let x=X0;x<X1;x+=12)g2.fillRect(tx(x),0,6*ppm,TEXH);g2.restore()}}
 else{const y0=22,y1=f-2,w=12;g2.save();g2.beginPath();g2.moveTo(tx(-w),ty(y0+8));g2.quadraticCurveTo(tx(-w),ty(y0),tx(0),ty(y0));g2.quadraticCurveTo(tx(w),ty(y0),tx(w),ty(y0+8));
  g2.lineTo(tx(w+2),ty(y1-6));g2.quadraticCurveTo(tx(w),ty(y1+2),tx(0),ty(y1+2));g2.quadraticCurveTo(tx(-w),ty(y1+2),tx(-w-2),ty(y1-6));g2.closePath();g2.clip();
- g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);g2.fillStyle="rgba(40,90,25,.15)";for(let y=y0;y<y1+4;y+=12){const a=ty(y),b2=ty(y+6);g2.fillRect(0,Math.min(a,b2),TEX,Math.abs(a-b2))}
- g2.fillStyle="rgba(235,255,200,.07)";for(let x=-w-2;x<w+2;x+=6)g2.fillRect(tx(x),0,3*ppm,TEX);g2.restore()}
+ g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEXH);g2.fillStyle="rgba(40,90,25,.15)";for(let y=y0;y<y1+4;y+=12){const a=ty(y),b2=ty(y+6);g2.fillRect(0,Math.min(a,b2),TEX,Math.abs(a-b2))}
+ g2.fillStyle="rgba(235,255,200,.07)";for(let x=-w-2;x<w+2;x+=6)g2.fillRect(tx(x),0,3*ppm,TEXH);g2.restore()}
 // voda (jazierka)
 const waterL=(DATA.water||[]).map(P=>P.map(loc));
 for(const P of waterL){g2.save();path(P);g2.lineWidth=2.5*ppm;g2.strokeStyle="#6f9a4a";g2.stroke();g2.fillStyle="#3d7397";g2.fill();g2.clip();
-  g2.fillStyle="rgba(255,255,255,.07)";for(let k=0;k<40;k++){g2.beginPath();g2.ellipse(rnd()*TEX,rnd()*TEX,(8+rnd()*20)*ppm,1.2*ppm,0,0,7);g2.fill()}g2.restore()}
+  g2.fillStyle="rgba(255,255,255,.07)";for(let k=0;k<40;k++){g2.beginPath();g2.ellipse(rnd()*TEX,rnd()*TEXH,(8+rnd()*20)*ppm,1.2*ppm,0,0,7);g2.fill()}g2.restore()}
 // okraje jazier (DATA.shores: [{t:"stone"|"gravel",w,p:[[e,n],…]}] – kamenný/štrkový lem podľa 3D záberov mapy.com, jamka 5)
 for(const S of (DATA.shores||[])){let sq=31;const sr=()=>(sq=(sq*16807)%2147483647)/2147483647;const P=S.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;const w=S.w||1.6,gv=S.t==="gravel";
   g2.lineCap=g2.lineJoin="round";g2.beginPath();P.forEach(([x,y],i)=>i?g2.lineTo(tx(x),ty(y)):g2.moveTo(tx(x),ty(y)));g2.lineWidth=w*ppm;g2.strokeStyle=gv?"#a9a185":"#7f7a6c";g2.stroke();
@@ -312,7 +325,7 @@ for(const S of (DATA.shores||[])){let sq=31;const sr=()=>(sq=(sq*16807)%21474836
     for(let k=0;k<L*7;k++){const t=sr(),o=(sr()-.5)*w,x=x1+(x2-x1)*t+nx*o,y=y1+(y2-y1)*t+ny*o,r=(.12+sr()*.28)*ppm,v=sr();
       g2.fillStyle=gv?(v<.5?"#cfc6a8":"#8f8770"):(v<.4?"#b5ad9c":v<.75?"#6a665c":"#958e7e");g2.beginPath();g2.ellipse(tx(x),ty(y),r*1.3,r,t*6,0,7);g2.fill()}}}
 // kreslenie v súradniciach ENU ihriska (metre) priamo do textúry okna: afinný prevod loc() + mierka textúry
-const enuT=()=>{const px=TEX/(X1-X0),py=TEX/(Y1-Y0);g2.setTransform(px*rt[0],-py*u[0],px*rt[1],-py*u[1],px*(-(rt[0]*T[0]+rt[1]*T[1])-X0),py*(Y1+u[0]*T[0]+u[1]*T[1]))};
+const enuT=()=>{const px=TEX/(X1-X0),py=TEXH/(Y1-Y0);g2.setTransform(px*rt[0],-py*u[0],px*rt[1],-py*u[1],px*(-(rt[0]*T[0]+rt[1]*T[1])-X0),py*(Y1+u[0]*T[0]+u[1]*T[1]))};
 // hlavná cesta Báč a príjazd ku clubhousu (apex.json area.roads)
 if(AR&&DATA.area&&DATA.area.roads){g2.save();enuT();AR.M.paintRoads(g2,DATA.area.roads,e=>e,n=>n,1);g2.restore()}
 // cesty pre vozíky (z leteckých záberov; DATA.paths: [{w,p:[[e,n],…]}])
@@ -324,12 +337,12 @@ for(const Pp of (DATA.paths||[])){const P=Pp.p.map(loc);if(!P.some(([x,y])=>x>X0
 const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
 // ostatné jamky v zábere (prehľad „Všetky jamky“): rovnaký vzhľad ako aktuálna jamka – fairway s pásmi kosenia po smere hry,
 // green s prvým kosom, lemom a pásmi 1,2 m, odpaliská
-{const ppx=TEX/(X1-X0),ppy=TEX/(Y1-Y0);
+{const ppx=TEX/(X1-X0),ppy=TEXH/(Y1-Y0);
  const inM=(o,d)=>{g2.setTransform(ppx,0,0,-ppy,-X0*ppx,Y1*ppy);g2.translate(o[0],o[1]);g2.rotate(Math.atan2(-d[0],d[1]))};   // lokálne: v = po smere hry
  READY.forEach(h=>{if(h===hNum||!DATA.greens[h-1])return;
   const pd=(DATA.pads[h]||[]).map(loc),G=DATA.greens[h-1].map(loc),gc=G.reduce((a,p)=>[a[0]+p[0]/G.length,a[1]+p[1]/G.length],[0,0]);
   const o=pd.length?pd.reduce((a,p)=>[a[0]+p[0]/pd.length,a[1]+p[1]/pd.length],[0,0]):gc,L=Math.hypot(gc[0]-o[0],gc[1]-o[1])||1,d=[(gc[0]-o[0])/L,(gc[1]-o[1])/L];
-  for(const poly of ((DATA.mow&&DATA.mow[h])||[]).slice().reverse()){g2.save();path(poly.map(loc));g2.clip();g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEX);inM(o,d);
+  for(const poly of ((DATA.mow&&DATA.mow[h])||[]).slice().reverse()){g2.save();path(poly.map(loc));g2.clip();g2.fillStyle="#74b04a";g2.fillRect(0,0,TEX,TEXH);inM(o,d);
    g2.fillStyle="rgba(40,90,25,.13)";for(let v=-40;v<L+40;v+=12)g2.fillRect(-150,v,300,6);
    g2.fillStyle="rgba(235,255,200,.07)";for(let u=-150;u<150;u+=12)g2.fillRect(u,-40,6,L+80);g2.restore()}
   g2.lineJoin="round";path(G);g2.lineWidth=8*ppx;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
@@ -362,7 +375,7 @@ for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);g2.
    const gx=(hL(x+1,y)-hL(x-1,y))/2*ex,gy=(hL(x,y+1)-hL(x,y-1))/2*ex,n=Math.hypot(gx,gy,1);
    const v=Math.max(0,(-gx*L0[0]-gy*L0[1]+L0[2])/n)/L0[2];const k=(j*ww+i)*4;const val=Math.max(0,Math.min(255,128+(v-1)*300));
    im.data[k]=im.data[k+1]=im.data[k+2]=val;im.data[k+3]=255}}
- sx.putImageData(im,0,0);g2.save();g2.globalCompositeOperation="soft-light";g2.globalAlpha=.7;g2.drawImage(sc2,0,0,TEX,TEX);g2.restore()}
+ sx.putImageData(im,0,0);g2.save();g2.globalCompositeOperation="soft-light";g2.globalAlpha=.7;g2.drawImage(sc2,0,0,TEX,TEXH);g2.restore()}
 const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
 {const p=geo.attributes.position,uv=geo.attributes.uv;for(let i=0;i<p.count;i++){uv.setXY(i,(p.getX(i)-X0)/(X1-X0),(-p.getZ(i)-Y0)/(Y1-Y0))}}
 const ground=new THREE.Mesh(geo,grassDetail(new THREE.MeshStandardMaterial({map:tex,roughness:1}),.2,1));ground.receiveShadow=true;scene.add(ground);
@@ -2324,6 +2337,7 @@ function startPlay(){
    #p-res td,#p-res th{border-bottom:1px solid #e3e8e5;padding:6px}#p-res .go{display:block;width:100%;min-height:50px;margin-top:8px;border:0;border-radius:12px;font:700 1rem var(--font);background:#0f6b4a;color:#fff;text-decoration:none;line-height:50px}
    #p-res .go.alt{background:#eef3f0;color:#14211a}
    body.tfly *{visibility:hidden!important}body.tfly canvas:not(#p-map),body.tfly #ldpill,body.tfly #ldpill *{visibility:visible!important}
+   #ldpill.tdl{opacity:0;animation:tdl .4s 2.5s forwards}@keyframes tdl{to{opacity:1}}
    #p-res .lnk{display:inline-block;margin-top:10px;color:#4b5d55;font-size:.9rem;text-decoration:underline}
    #sc-ov{position:fixed;inset:0;z-index:40;background:rgba(8,20,14,.55);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom))}
    #sc-ov .sc{background:#f3f4ea;color:#14211a;border-radius:16px;width:min(720px,100%);max-height:100%;overflow:auto;padding:16px 12px 14px;box-shadow:0 10px 40px rgba(0,0,0,.45);text-align:center}
@@ -2994,21 +3008,25 @@ function tunnelGo(href,nx,T,hN){const{O,g,tp}=T,a=O.a*Math.PI/180;let d=[Math.co
   // odpaliska 11 nemá dokreslené (len hrubé okolie) → jamka 10 letí len do stredu podchodu a tam (v pokoji, v tuneli) sa načíta jamka 11;
   // zvyšok letu (výjazd, nad stromami, dole za loptičku) už letí jamka 11 vo svojej plne postavenej scéne. Body zvyšku idú v ENU + abs. výške.
   const full=[p0,P1,A0,at(-Lh-7,fl+1.9),at(0,fl+1.7),at(Lh+4,fl+2),W(e1[0],e1[1],e1[2]+12.5),W(mx,my,Math.max(top+14,e1[2]+13)),PA,PC];
-  const rest=full.slice(5,9).map(v=>[...enu(v.x,-v.z),v.y+H0]),pts=full.slice(0,5);
+  // v260: jamka má okolie odpaliska ďalšej jamky dostavané (NXT) → letí sa celá trasa až za loptičku na odpalisku v tejto scéne, bez zastavenia
+  const ONE_SC=!!(NXT&&NXT.nx===nx&&inside(PC.x,-PC.z)&&inside(PA.x,-PA.z));
+  const rest=ONE_SC?[]:full.slice(5,9).map(v=>[...enu(v.x,-v.z),v.y+H0]),pts=ONE_SC?full:full.slice(0,5);
   const LK=TG;
   const dir0=new THREE.Vector3();camera.getWorldDirection(dir0);const t0=p0.clone().addScaledVector(dir0,25),q=new THREE.Vector3(),q2=new THREE.Vector3(),te=new THREE.Vector3();
   const C0=at(0,0),ax=at(1,0).sub(C0);ax.y=0;ax.normalize();const qa=new THREE.Vector3();
-  const cv=new THREE.CatmullRomCurve3(pts,false,"centripetal"),L=cv.getLength();te.copy(ax);
+  const cv=new THREE.CatmullRomCurve3(pts,false,"centripetal"),L=cv.getLength();if(ONE_SC)cv.getTangentAt(1,te);else te.copy(ax);
   const look=(u,k,p)=>{const v=u+25/L;if(v<=1)cv.getPointAt(v,q);else q.copy(pts[pts.length-1]).addScaledVector(te,(v-1)*L);
     q.y=p.y+Math.max(-4,Math.min(1.5,q.y-p.y));   // pri stúpaní nepozerá do neba, pri klesaní nie prudko dole
     // v tuneli a tesne pred ním pozerá rovno po osi (nie do steny), zatáčať začne až za výjazdom
     const ka=(p.x-C0.x)*ax.x+(p.z-C0.z)*ax.z,wt=ka>-Lh-20?1-sstp(Lh-3,Lh+26,ka):0;if(wt>0){qa.copy(p).addScaledVector(ax,25);qa.y=p.y-.4;q.lerp(qa,wt*sstp(-Lh-20,-Lh-8,ka))}
-    return q2.copy(t0).lerp(q,sstp(0,.22,k))};
-  const D=Math.max(4500,Math.min(9000,L/15*1000*1.25));
+    if(ONE_SC)q.lerp(LK,sstp(.55,1,u));   // na konci pohľad presne ako v hre na odpalisku ďalšej jamky
+    return q2.copy(t0).lerp(q,sstp(0,ONE_SC?.12:.22,k))};
+  const D=Math.max(4500,Math.min(ONE_SC?12000:9000,L/15*1000*1.25));
   document.body.classList.add("tfly");const pr=document.getElementById("p-res");if(pr)pr.hidden=true;
   runFly(pts,look,D,trap(.2,.3),p=>{const lk=look(1,1,p);
     try{sessionStorage.setItem("for.tfly",JSON.stringify({to:nx,ts:Date.now(),v:0,p:[...enu(p.x,-p.z),p.y+H0],t:[...enu(lk.x,-lk.z),lk.y+H0],w:rest,fa:fl+H0}))}catch(e){}
-    window.__hold=true;const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';document.body.appendChild(w);forNav(href)})}
+    // v260: kamera už stojí na odpalisku – záber ostane, „Načítavam…“ sa ukáže len keby načítanie trvalo dlho
+    window.__hold=true;const w=document.createElement("div");w.id="ldpill";w.innerHTML='<i></i>Načítavam…';if(ONE_SC)w.className="tdl";document.body.appendChild(w);forNav(href)})}
 // ďalšia jamka: pokračovanie z pokoja (záber nad stromami) rovno dole za loptičku na odpalisku (P, Tg v scéne) – plynulý rozjazd aj dobrzdenie
 function tunnelIn(F,P,Tg,done){if(F.w&&F.w.length)return tunnelIn2(F,P,Tg,done);const p0=W(...loc(F.p),F.p[2]-H0),t0=W(...loc(F.t),F.t[2]-H0),p1=p0.clone().lerp(P,.5);p1.y=Math.max(p1.y,p0.y*.55+P.y*.45);
   const L=new THREE.CatmullRomCurve3([p0,p1,P],false,"centripetal").getLength(),D=L<8?600+L*120:Math.max(2600,Math.min(5500,L/9*1000*1.4)),q=new THREE.Vector3();   // v251: prelet už končí za loptičkou – len jemné doladenie
