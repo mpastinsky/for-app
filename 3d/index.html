@@ -82,7 +82,7 @@ try{const s=sessionStorage.getItem("for.snap");if(s){sessionStorage.removeItem("
 <script type="module">
 import * as THREE from "three";
 import {OrbitControls} from "./lib/OrbitControls.js";
-import {pcNav} from "./lib/pcnav.js";
+import {pcNav,nav3} from "./lib/pcnav.js";
 
 // Akadémia Apex Golf, Báč. Terén z DMR 5.0 (ÚGKK SR, CC BY 4.0), greeny/bunkre/stromy obkreslené zo satelitu
 // a zarovnané na terén. Dáta: akademia.json (ENU metre od greenu 1, x = východ, y = sever).
@@ -351,6 +351,8 @@ for(const Pp of (DATA.paths||[])){const P=Pp.p.map(loc);if(!P.some(([x,y])=>x>X0
   g2.lineWidth=(Pp.w+.6)*ppm;g2.strokeStyle="rgba(70,80,50,.45)";g2.stroke();g2.lineWidth=Pp.w*ppm;g2.strokeStyle="#c8c4b6";g2.stroke();
   g2.lineWidth=Pp.w*.5*ppm;g2.strokeStyle="rgba(255,255,250,.18)";g2.stroke()}
 const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
+// odpalisko so skutočným tvarom (DATA.teeboxes) sa kreslí len svojím tvarom – kruh 4,5 m len pre pads mimo teeboxov (v275)
+const TEEBOX_L=(DATA.teeboxes||[]).map(T=>T.p.map(loc)),inTeeBox=(x,y)=>TEEBOX_L.some(P=>inPoly([x,y],P));
 // ostatné jamky v zábere (prehľad „Všetky jamky“): rovnaký vzhľad ako aktuálna jamka – fairway s pásmi kosenia po smere hry,
 // green s prvým kosom, lemom a pásmi 1,2 m, odpaliská
 {const ppx=TEXW/(X1-X0),ppy=TEXH/(Y1-Y0);
@@ -364,7 +366,7 @@ const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
   g2.lineJoin="round";path(G);g2.lineWidth=8*ppx;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
   path(G);g2.lineWidth=3*ppx;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill();
   g2.save();path(G);g2.clip();inM(gc,d);for(let u=-30;u<30;u+=1.2){g2.fillStyle=(Math.round(u/1.2)&1)?"rgba(255,255,220,.075)":"rgba(20,70,10,.06)";g2.fillRect(u,-30,1.2,60)}g2.restore();
-  pd.forEach(([x,y])=>{g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppx,0,7);g2.fillStyle="#8fd062";g2.fill();g2.lineWidth=.5*ppx;g2.strokeStyle="#5d9a3c";g2.stroke()})})}
+  pd.forEach(([x,y])=>{if(inTeeBox(x,y))return;g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppx,0,7);g2.fillStyle="#8fd062";g2.fill();g2.lineWidth=.5*ppx;g2.strokeStyle="#5d9a3c";g2.stroke()})})}
 // clubhouse okolie: spevnené plochy (terasa, parkovisko) a cvičné greeny pred clubhousom (DATA.paved, DATA.practice – apex.json)
 for(const Q2 of (DATA.paved||[])){const P=Q2.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;path(P);g2.fillStyle=Q2.t==="parking"?"#8d8c86":"#d6ccb5";g2.fill();g2.lineWidth=.4*ppm;g2.strokeStyle="#77746a";g2.stroke()}
 for(const PG of ((DATA.practice&&DATA.practice.greens)||[])){const P=PG.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
@@ -382,7 +384,7 @@ for(const P of allBunkL){path(P);g2.fillStyle="#eadcae";g2.fill();g2.lineWidth=.
 // skutočné tvary odpalísk z leteckých záberov (DATA.teeboxes: [{h,p}], aj boxy mimo zoznamu pads)
 for(const T of (DATA.teeboxes||[])){const P=T.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;path(P);g2.fillStyle="#86c45a";g2.fill();g2.lineWidth=.6*ppm;g2.strokeStyle="#5d9a3c";g2.stroke()}
 // odpaliská
-for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);
+for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);if(inTeeBox(x,y))return;g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);
   g2.fillStyle=(+k===hNum&&j===tIdx)?"#a7e874":(+k===hNum?"#8fd062":"#86c45a");g2.fill();g2.lineWidth=.5*ppm;g2.strokeStyle="#5d9a3c";g2.stroke()});
 // tieňovanie reliéfu (aby boli kopčeky vidno aj zhora)
 {const ww=X1-X0,hh=Y1-Y0,sc2=document.createElement("canvas");sc2.width=ww;sc2.height=hh;const sx=sc2.getContext("2d"),im=sx.createImageData(ww,hh);
@@ -2893,7 +2895,9 @@ function startPlay(){
   function orbOn(){if(S.orb||S.mode!=="aim"||SW)return;S.orb=1;S.zoom=0;S.pan=[0,0];S.ca=null;S.yaw=0;S.zd=1;camera.position.copy(camP);controls.target.copy(camT);
     controls.minDistance=.8;controls.maxDistance=CRS==="apex"?400:650;controls.enabled=true;controls.enableZoom=controls.enablePan=controls.enableRotate=true;controls.update();info()}
   function orbOff(){if(!S.orb)return;S.orb=0;controls.enableZoom=controls.enablePan=controls.enableRotate=false;info()}
-  function orbSync(){const on=S.mode==="aim"&&!SW&&!ringDrag;controls.enabled=on;const o=!!S.orb&&on;controls.enableZoom=controls.enablePan=controls.enableRotate=o}
+  // malé tlačidlá kamery (lib/pcnav.js) aj pri mierení – stlačenie prepne na voľnú kameru (Martin 27.11.)
+  nav3.before=()=>{if(S.mode==="aim"&&!SW&&!S.orb)orbOn()};let aimNav=null;
+  function orbSync(){const on=S.mode==="aim"&&!SW&&!ringDrag;if(on!==aimNav){aimNav=on;document.body.classList.toggle("aimnav",on)}controls.enabled=on;const o=!!S.orb&&on;controls.enableZoom=controls.enablePan=controls.enableRotate=o}
   renderer.domElement.addEventListener("wheel",e=>{if(S.mode!=="aim"||SW)return;e.preventDefault();if(!S.orb)orbOn()},{passive:false,capture:true});   // potom ten istý wheel spracuje OrbitControls (zoom ku kurzoru)
   // klávesy + − = tlačidlá ＋ − na Akadémii (krok .94 k stredu pohľadu)
   addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea")||S.mode!=="aim"||SW)return;const zi=e.key==="+"||e.key==="=",zo=e.key==="-"||e.key==="_";if(!zi&&!zo)return;
