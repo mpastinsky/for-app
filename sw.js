@@ -1,8 +1,9 @@
 // Fairway Live: offline vyrovnávacia pamäť appky (mapové dlaždice sa necachujú).
+// v269: jamka 14 Báč podľa mapy.com – 5 odpalísk pri chodníku, green (hruška), fairway pri rybníku, bunkre pri greene.
 // v268: jamka 13 Báč podľa mapy.com – odpaliská, green, fairway, bunkre, chodníky a rad stromov pri poli.
 // v267: jamky sa otvárajú z cache hneď (aj pri slabom signáli na ihrisku); nová verzia sa na pozadí overí a uloží na ďalšie otvorenie.
 // Pri novej verzii (zmena CACHE) sa appka stiahne nanovo; veľké dáta terénu sa len overia voči starej kópii (stiahnu sa iba zmenené).
-const CACHE = "for-v268";
+const CACHE = "for-v269";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-192.png",
   "leaflet/leaflet.css", "leaflet/leaflet.js",
   "3d/", "3d/index.html", "3d/ihrisko.html",
