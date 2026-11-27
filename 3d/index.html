@@ -3027,7 +3027,9 @@ function tunnelGo(href,nx,T,hN){const{O,g,tp}=T,a=O.a*Math.PI/180;let d=[Math.co
   // odpaliska 11 nemá dokreslené (len hrubé okolie) → jamka 10 letí len do stredu podchodu a tam (v pokoji, v tuneli) sa načíta jamka 11;
   // zvyšok letu (výjazd, nad stromami, dole za loptičku) už letí jamka 11 vo svojej plne postavenej scéne. Body zvyšku idú v ENU + abs. výške.
   const MID=W(mx,my,Math.max(top+14,e1[2]+13));liftOver(MID,PA,PC);
-  const full=[p0,P1,A0,at(-Lh-7,fl+1.9),at(0,fl+1.7),at(Lh+4,fl+2),W(e1[0],e1[1],e1[2]+12.5),MID,PA,PC];
+  // v266 (Martin 27.11.: „v podchode akoby čelom triafame strop“): strop podchodu je nízky (h 1,6 m) → kamera v tuneli v ~55 % výšky, nie 1,7–2 m
+  const cy=Math.min(1.7,(g.userData.h||2.7)*.55);
+  const full=[p0,P1,A0,at(-Lh-7,fl+cy*1.1),at(0,fl+cy),at(Lh+4,fl+cy+.9),W(e1[0],e1[1],e1[2]+12.5),MID,PA,PC];
   // v260: jamka má okolie odpaliska ďalšej jamky dostavané (NXT) → letí sa celá trasa až za loptičku na odpalisku v tejto scéne, bez zastavenia
   const ONE_SC=!!(NXT&&NXT.nx===nx&&inside(PC.x,-PC.z)&&inside(PA.x,-PA.z));
   const rest=ONE_SC?[]:full.slice(5,9).map(v=>[...enu(v.x,-v.z),v.y+H0]),pts=ONE_SC?full:full.slice(0,5);
