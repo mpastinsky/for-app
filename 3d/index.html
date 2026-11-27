@@ -364,7 +364,7 @@ const TURF={cut:"#7cba4b",collar:"#8bc552",green:"#98c552"};
   g2.lineJoin="round";path(G);g2.lineWidth=8*ppx;g2.strokeStyle=TURF.cut;g2.stroke();g2.fillStyle=TURF.cut;g2.fill();
   path(G);g2.lineWidth=3*ppx;g2.strokeStyle=TURF.collar;g2.stroke();g2.fillStyle=TURF.green;g2.fill();
   g2.save();path(G);g2.clip();inM(gc,d);for(let u=-30;u<30;u+=1.2){g2.fillStyle=(Math.round(u/1.2)&1)?"rgba(255,255,220,.075)":"rgba(20,70,10,.06)";g2.fillRect(u,-30,1.2,60)}g2.restore();
-  pd.forEach(([x,y])=>{g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppx,0,7);g2.fillStyle="#8fd062";g2.fill();g2.lineWidth=.5*ppx;g2.strokeStyle="#5d9a3c";g2.stroke()})})}
+  pd.forEach(([x,y])=>{if((DATA.teeboxes||[]).some(T=>inPoly([x,y],T.p.map(loc))))return;g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppx,0,7);g2.fillStyle="#8fd062";g2.fill();g2.lineWidth=.5*ppx;g2.strokeStyle="#5d9a3c";g2.stroke()})})}
 // clubhouse okolie: spevnené plochy (terasa, parkovisko) a cvičné greeny pred clubhousom (DATA.paved, DATA.practice – apex.json)
 for(const Q2 of (DATA.paved||[])){const P=Q2.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;path(P);g2.fillStyle=Q2.t==="parking"?"#8d8c86":"#d6ccb5";g2.fill();g2.lineWidth=.4*ppm;g2.strokeStyle="#77746a";g2.stroke()}
 for(const PG of ((DATA.practice&&DATA.practice.greens)||[])){const P=PG.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;
@@ -382,7 +382,9 @@ for(const P of allBunkL){path(P);g2.fillStyle="#eadcae";g2.fill();g2.lineWidth=.
 // skutočné tvary odpalísk z leteckých záberov (DATA.teeboxes: [{h,p}], aj boxy mimo zoznamu pads)
 for(const T of (DATA.teeboxes||[])){const P=T.p.map(loc);if(!P.some(([x,y])=>x>X0-20&&x<X1+20&&y>Y0-20&&y<Y1+20))continue;path(P);g2.fillStyle="#86c45a";g2.fill();g2.lineWidth=.6*ppm;g2.strokeStyle="#5d9a3c";g2.stroke()}
 // odpaliská
-for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);
+// v275 (Martin 27.11.): kde je skutočný (oválny) tvar odpaliska, kruhy sa nekreslia – len pri odpaliskách bez tvaru
+const TBL=(DATA.teeboxes||[]).map(T=>T.p.map(loc));
+for(const k of [String(hNum)])DATA.pads[k].forEach((p,j)=>{const[x,y]=loc(p);if(TBL.some(P=>inPoly([x,y],P)))return;g2.beginPath();g2.arc(tx(x),ty(y),4.5*ppm,0,7);
   g2.fillStyle=(+k===hNum&&j===tIdx)?"#a7e874":(+k===hNum?"#8fd062":"#86c45a");g2.fill();g2.lineWidth=.5*ppm;g2.strokeStyle="#5d9a3c";g2.stroke()});
 // tieňovanie reliéfu (aby boli kopčeky vidno aj zhora)
 {const ww=X1-X0,hh=Y1-Y0,sc2=document.createElement("canvas");sc2.width=ww;sc2.height=hh;const sx=sc2.getContext("2d"),im=sx.createImageData(ww,hh);
@@ -2878,6 +2880,27 @@ function startPlay(){
   const clubTo=i=>{if(S.mode!=="aim")return;S.club=i;S.man=1;if(S.tl&&S.tl>=carry()-.5)S.tl=0;info();drawAim()};
   $("p-cp").onclick=()=>clubTo((S.club+1)%CLUBS.length);
   $("p-cm").onclick=()=>clubTo((S.club+CLUBS.length-1)%CLUBS.length);
+  let camBtns=()=>{};
+  // v275 (Martin 27.11.): malé tlačidlá kamery aj pri mierení – ako v prehľade (⟲ ⟳ otočiť, ＋ － priblížiť, ⤒ ⤓ sklon), podržaním sa opakuje.
+  // Prepnú na voľnú kameru (rovnako ako koliesko / dva prsty); ↩ = späť za loptičku. Pri švihu, lete a po dohraní sú skryté.
+  {const box=document.createElement("div");box.id="p-cam";
+   box.innerHTML=`<span><button data-a="rl" aria-label="Otočiť doľava" title="Otočiť doľava">⟲</button><button data-a="rr" aria-label="Otočiť doprava" title="Otočiť doprava">⟳</button></span><span><button data-a="zi" aria-label="Priblížiť" title="Priblížiť (+)">＋</button><button data-a="zo" aria-label="Oddialiť" title="Oddialiť (−)">－</button></span><span><button data-a="up" aria-label="Pohľad viac zhora" title="Pohľad viac zhora">⤒</button><button data-a="dn" aria-label="Pohľad nižšie" title="Pohľad nižšie">⤓</button></span><span id="p-cbk"><button data-a="bk" aria-label="Späť za loptičku" title="Späť za loptičku">↩</button></span>`;
+   document.body.appendChild(box);
+   const cs=document.createElement("style");cs.textContent=`#p-cam{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 136px);display:flex;gap:5px;z-index:5;font-family:var(--font)}
+    #p-cam span{display:flex;background:rgba(255,255,255,.88);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.3);overflow:hidden}
+    #p-cam button{width:30px;height:28px;padding:0;border:0;background:transparent;color:#14211a;font:700 .95rem system-ui,sans-serif;line-height:28px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+    #p-cam button+button{border-left:1px solid rgba(20,33,26,.15)}#p-cam button:active{background:rgba(15,107,74,.18)}
+    #p-cam.hid,#p-cbk.hid{display:none}`;document.head.appendChild(cs);
+   const sph=new THREE.Spherical(),off=new THREE.Vector3();
+   const act=a=>{if(S.mode!=="aim"||SW)return;if(a==="bk"){if(S.orb||S.zoom>.5)$("p-z").onclick();return}
+     orbOn();if(!S.orb)return;const T=controls.target,cp=camera.position;off.copy(cp).sub(T);
+     if(a==="zi"||a==="zo"){off.multiplyScalar(a==="zi"?.93:1/.93);const L=off.length();if(L<controls.minDistance||L>controls.maxDistance)return}
+     else{sph.setFromVector3(off);if(a==="rl")sph.theta+=.035;if(a==="rr")sph.theta-=.035;if(a==="up")sph.phi=Math.max(.05,sph.phi-.025);if(a==="dn")sph.phi=Math.min(controls.maxPolarAngle,sph.phi+.025);off.setFromSpherical(sph)}
+     cp.copy(T).add(off);controls.update()};
+   let tm=null;const stop=()=>{clearInterval(tm);tm=null};
+   box.addEventListener("pointerdown",e=>{const b=e.target.closest("button");if(!b)return;e.preventDefault();e.stopPropagation();stop();act(b.dataset.a);if(b.dataset.a!=="bk")tm=setInterval(()=>act(b.dataset.a),30)});
+   for(const ev of["pointerup","pointercancel"])addEventListener(ev,stop);box.addEventListener("pointerleave",stop);
+   let lv="";camBtns=()=>{const v=(S.mode==="aim"&&!SW?"1":"0")+(S.orb||S.zoom>.5?"1":"0");if(v===lv)return;lv=v;box.classList.toggle("hid",v[0]==="0");$("p-cbk").classList.toggle("hid",v[1]==="0")}}
   // PC: šípky hore/dole = palica (hore dlhšia, dole kratšia), cyklicky ako ‹ › (Martin 24.11.); kameru šípky neovládajú
   addEventListener("keydown",e=>{if(e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;if(e.target.closest&&e.target.closest("input,textarea,select")||S.mode!=="aim"||SW||$("p-res").hidden===false)return;e.preventDefault();
     clubTo(e.key==="ArrowUp"?(S.club+CLUBS.length-1)%CLUBS.length:(S.club+1)%CLUBS.length)});
@@ -2948,7 +2971,7 @@ function startPlay(){
     if(S.mode==="aim")$("p-hit").disabled=false;else if(S.mode!=="in"&&!S.rec){S.rec=1;setTimeout(()=>{S.rec=0;if(S.mode==="in")return;try{S.mode="wait";prepare()}catch(_){S.mode="aim";$("p-hit").disabled=false}},1200)}}
   game={ballPos:ball.position,update(dt){try{
       if(S.mode!=="aim"&&S.mode!=="in"){S.nt=(S.nt||0)+dt;if(S.nt>(S.mode==="wait"?8:35)){S.nt=0;try{S.vx=S.vy=S.vz=0;S.sink=0;S.hop=0;if(S.mode!=="wait")S.z=gS(S.x,S.y)+R;S.mode="wait";prepare()}catch(e){gameErr(e)}}}else S.nt=0;
-      hudTick();fxTick(dt);orbSync();
+      hudTick();fxTick(dt);orbSync();camBtns();
       if(turn&&S.mode==="aim"){S.turnT=(S.turnT||0)+dt;S.aim+=turn*dt*Math.min(1.2,.2+S.turnT*.8)*aimK();drawAim()}else S.turnT=0;   // ◀ ▶: podržaním sa otáčanie zrýchľuje
       if(S.pDirty&&S.mode==="aim"&&(!SW||SW.ph===2)&&(++pLast%2===0||!turn)){S.pDirty=0;if(!CLUBS[S.club].a)S.pRes=puttLine(SW?SW.p:putNeed())}
       if(SW){const cl=CLUBS[S.club];
