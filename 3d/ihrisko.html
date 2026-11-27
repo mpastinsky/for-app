@@ -62,12 +62,13 @@ import * as THREE from "three";
 import {OrbitControls} from "./lib/OrbitControls.js";
 import {pcNav} from "./lib/pcnav.js";
 const Q=new URLSearchParams(location.search);
+const b64u8=s=>{const t=atob(s),u=new Uint8Array(t.length);for(let i=0;i<t.length;i++)u[i]=t.charCodeAt(i);return u};   // v267: ~15× rýchlejšie ako Uint8Array.from(atob(s),fn)
 const DATA=await (await fetch("apex.json")).json();
 // 3-jamková Akadémia (Martin 24.11.): vlastné dáta s počiatkom v greene 1 -> posun do ENU 18-ky; jej terén ako ďalšia dlaždica
 const AKD=await fetch("akademia.json").then(r=>r.json()).catch(()=>null),AKO=[(17.368905-DATA.origin[1])*111320*Math.cos(DATA.origin[0]*Math.PI/180),(48.0007065-DATA.origin[0])*111200],akp=p=>[p[0]+AKO[0],p[1]+AKO[1]];
 const AKT=[0,0,1,1,2];   // odpaliská 18-ky (čierne…červené) -> akadémia (zadné, stredné, predné)
-const TILES=await Promise.all(DATA.tiles.map(async f=>{const t=await (await fetch(f)).json();t.H=new Int16Array(Uint8Array.from(atob(t.cm),c=>c.charCodeAt(0)).buffer);return t}));
-if(AKD&&AKD.terrain){const t=Object.assign({},AKD.terrain);t.e0+=AKO[0];t.n0+=AKO[1];t.H=new Int16Array(Uint8Array.from(atob(t.cm),c=>c.charCodeAt(0)).buffer);TILES.push(t)}
+const TILES=await Promise.all(DATA.tiles.map(async f=>{const t=await (await fetch(f)).json();t.H=new Int16Array(b64u8(t.cm).buffer);return t}));
+if(AKD&&AKD.terrain){const t=Object.assign({},AKD.terrain);t.e0+=AKO[0];t.n0+=AKO[1];t.H=new Int16Array(b64u8(t.cm).buffer);TILES.push(t)}
 const TEE_C=DATA.teeColors,tIdx=Math.min(TEE_C.length-1,Math.max(0,Q.has("t")?parseInt(Q.get("t"))||0:2));
 document.getElementById("tees").innerHTML=TEE_C.map((c,j)=>`<a href="?t=${j}" class="${j===tIdx?"on":""}" title="${DATA.teeNames[j]}"><i style="background:${c}"></i></a>`).join("");
 function hENU(e,n){for(const T of TILES){let c=(e-T.e0)/T.step,r=(n-T.n0)/T.step;if(c<0||r<0||c>T.w-1.001||r>T.h-1.001)continue;

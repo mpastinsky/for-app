@@ -4,6 +4,7 @@
 // ostáva bez zmeny – zem okolia sa vo vnútri okna nekreslí (vyrezané trojuholníky + discard na hrane).
 
 // posun akadémie (počiatok green 1) do ENU 18-ky – rovnaký ako v 3d/ihrisko.html
+const b64u8=s=>{const t=atob(s),u=new Uint8Array(t.length);for(let i=0;i<t.length;i++)u[i]=t.charCodeAt(i);return u};   // v267: ~15× rýchlejšie ako Uint8Array.from(atob(s),fn)
 export const akoOf = AP => [(17.368905 - AP.origin[1]) * 111320 * Math.cos(AP.origin[0] * Math.PI / 180), (48.0007065 - AP.origin[0]) * 111200];
 
 // načítanie dát druhého ihriska + nízkeho terénu celého areálu (3d/areal-ter.json, 6 m)
@@ -13,7 +14,7 @@ export async function loadAreal(CRS, DATA) {
   const j = f => fetch(f).then(r => r.ok ? r.json() : null).catch(() => null);
   const [AP, AK, TER] = await Promise.all([CRS === "apex" ? DATA : j("apex.json"), CRS === "apex" ? j("akademia.json") : DATA, j("areal-ter.json")]);
   if (!AP || !TER) return null;
-  TER.H = new Int16Array(Uint8Array.from(atob(TER.cm), c => c.charCodeAt(0)).buffer);
+  TER.H = new Int16Array(b64u8(TER.cm).buffer);
   const AKO = akoOf(AP), off = CRS === "apex" ? [0, 0] : AKO;   // ENU tohto ihriska = ENU 18-ky − off
   // v255: zdieľaný profil chodníkov (z terénu areálu) – rovnaký pre okno jamky (hBump) aj okolie, aby na hrane okna nebol schod
   const lev = pathLevel(pathList(AP), terH(TER), { avoid: pathAvoid(AP, AK, AKO), tunnels: (AP.objects || []).filter(O => O.t === "tunnel") });

@@ -90,6 +90,7 @@ const Q=new URLSearchParams(location.search);
 // ihrisko: ?c=apex = 18-jamkové Apex Báč (apex.json), inak akadémia
 const CRS=Q.get("c")==="apex"?"apex":"akademia",CQ=CRS==="apex"?"c=apex&":"";
 const HQ=CRS!=="apex",OTHL=[];   // vylepšená grafika (zatiaľ akadémia)
+const b64u8=s=>{const t=atob(s),u=new Uint8Array(t.length);for(let i=0;i<t.length;i++)u[i]=t.charCodeAt(i);return u};   // v267: ~15× rýchlejšie ako Uint8Array.from(atob(s),fn)
 const DATA=await (await fetch(CRS+".json")).json();
 // okolie areálu (Martin 24.11.): dáta druhého ihriska + nízky terén celého areálu; akadémii pridáme plochy 18-ky, ktoré zasahujú do jej okna
 // 18-ka: stromy podľa druhov (apex.json trees[k][5]; borovica, tuja, agát, javor, dub, lipa, ker) – lib/species.js, akadémia ho nepoužíva
@@ -123,8 +124,8 @@ const NXT=(()=>{if(CRS!=="apex"||!DATA.objects)return null;const nx=READY[READY.
   // smer hry z odpaliska ďalšej jamky (ohyb alebo green – rovnako ako jej kamera na odpalisku)
   const B=DATA.bend&&DATA.bend[nx],GN=DATA.gc[nx-1]||tp,useB=B&&Math.hypot(B[0]-tp[0],B[1]-tp[1])>45,A=useB?B:GN,al=Math.hypot(A[0]-tp[0],A[1]-tp[1])||1;
   return{nx,tp,tun,ad:[(A[0]-tp[0])/al,(A[1]-tp[1])/al]}})();
-const ldTile=async k=>{const R=await (await fetch(DATA.tiles[k])).json();R.H=new Int16Array(Uint8Array.from(atob(R.cm),c=>c.charCodeAt(0)).buffer);return R};
-const TR=DATA.terrain||await ldTile(DATA.holeTile[hNum]),Hcm=TR.H||new Int16Array(Uint8Array.from(atob(TR.cm),c=>c.charCodeAt(0)).buffer);
+const ldTile=async k=>{const R=await (await fetch(DATA.tiles[k])).json();R.H=new Int16Array(b64u8(R.cm).buffer);return R};
+const TR=DATA.terrain||await ldTile(DATA.holeTile[hNum]),Hcm=TR.H||new Int16Array(b64u8(TR.cm).buffer);
 const TR2=NXT&&DATA.tiles&&DATA.holeTile[NXT.nx]!==DATA.holeTile[hNum]?await ldTile(DATA.holeTile[NXT.nx]):null;
 const tIn=(R,e,n)=>e>=R.e0+1&&n>=R.n0+1&&e<=R.e0+(R.w-2)*R.step&&n<=R.n0+(R.h-2)*R.step;
 function hT(R,H,e,n){let c=(e-R.e0)/R.step,r=(n-R.n0)/R.step;c=Math.min(R.w-1.001,Math.max(0,c));r=Math.min(R.h-1.001,Math.max(0,r));
@@ -155,9 +156,13 @@ for(let k=0;k<3&&green.length<40;k++)green=green.flatMap((p,i)=>{const q=green[(
 let ys=[];for(let i=0;i<green.length;i++){const[a,b]=green[i],[d,e]=green[(i+1)%green.length];if((a<=0)!==(d<=0)){ys.push(b+(e-b)*(0-a)/(d-a))}}
 const f=Math.round(Math.min(...ys)),b=Math.round(Math.max(...ys));
 // vzdialenosť bodu od obrysu (záporná vnútri)
-const inPoly=(pt,poly)=>{let s=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const[a,b]=poly[i],[d,e]=poly[j];if(((b>pt[1])!==(e>pt[1]))&&(pt[0]<(d-a)*(pt[1]-b)/(e-b)+a))s=!s}return s};
-function sdist(x,y,P){let m=1e9;for(let i=0,j=P.length-1;i<P.length;j=i++){const[a,b]=P[j],[d,e]=P[i],vx=d-a,vy=e-b,l=vx*vx+vy*vy;
-  let t=l?((x-a)*vx+(y-b)*vy)/l:0;t=t<0?0:t>1?1:t;const qx=a+t*vx-x,qy=b+t*vy-y;m=Math.min(m,qx*qx+qy*qy)}m=Math.sqrt(m);return inPoly([x,y],P)?-m:m}
+// v267: obrysy sa raz prepíšu do plochého poľa (Float64Array) – rovnaký výpočet, bez tisícov malých polí pri stavbe terénu a pri simulácii letu
+const PF=new WeakMap(),pflat=P=>{let F=PF.get(P);if(!F||F.n!==P.length||F.x0!==P[0][0]){F=new Float64Array(P.length*2);for(let i=0;i<P.length;i++){F[2*i]=P[i][0];F[2*i+1]=P[i][1]}F.n=P.length;F.x0=P[0][0];PF.set(P,F)}return F};
+const inPolyXY=(px,py,poly)=>{if(!poly.length)return false;const F=pflat(poly),n=poly.length;let s=false;for(let i=0,j=n-1;i<n;j=i++){const a=F[2*i],b=F[2*i+1],d=F[2*j],e=F[2*j+1];if(((b>py)!==(e>py))&&(px<(d-a)*(py-b)/(e-b)+a))s=!s}return s};
+const inPoly=(pt,poly)=>inPolyXY(pt[0],pt[1],poly);
+function sdist(x,y,P){const n=P.length;if(!n)return Math.sqrt(1e9);const F=pflat(P);let m=1e9,s=false;for(let i=0,j=n-1;i<n;j=i++){const a=F[2*j],b=F[2*j+1],d=F[2*i],e=F[2*i+1],vx=d-a,vy=e-b,l=vx*vx+vy*vy;
+  let t=l?((x-a)*vx+(y-b)*vy)/l:0;t=t<0?0:t>1?1:t;const qx=a+t*vx-x,qy=b+t*vy-y,q=qx*qx+qy*qy;if(q<m)m=q;
+  if(((e>y)!==(b>y))&&(x<(a-d)*(y-e)/(b-e)+d))s=!s}m=Math.sqrt(m);return s?-m:m}
 const sstep=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
 // --- modelácia greenu na skutočnom teréne: mierny sklon odzadu dopredu, jemné vlnky (do ~30 cm),
 //     zvýšené okraje pri bunkroch a mäkké hrany bunkrov
@@ -2983,7 +2988,7 @@ document.addEventListener("touchmove",e=>{if(e.touches.length>1&&e.target.tagNam
 function sstp(a,b,x){const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)}
 // v251: výšky terénu ďalšej jamky (iná dlaždica terénu) – načítané vopred, aby prelet skončil presne za loptičkou na jej odpalisku
 var TPRE={};function tPre(nx){const k=DATA.holeTile&&DATA.tiles?DATA.holeTile[nx]:null;if(k==null||k===DATA.holeTile[hNum])return Promise.resolve(hENU);
-  if(!TPRE[k])TPRE[k]=fetch(DATA.tiles[k]).then(r=>r.json()).then(R=>{const H=new Int16Array(Uint8Array.from(atob(R.cm),c=>c.charCodeAt(0)).buffer);
+  if(!TPRE[k])TPRE[k]=fetch(DATA.tiles[k]).then(r=>r.json()).then(R=>{const H=new Int16Array(b64u8(R.cm).buffer);
     return(e,n)=>{let c=(e-R.e0)/R.step,r=(n-R.n0)/R.step;c=Math.min(R.w-1.001,Math.max(0,c));r=Math.min(R.h-1.001,Math.max(0,r));const c0=c|0,r0=r|0,fc=c-c0,fr=r-r0,i=r0*R.w+c0;
       return R.base+(H[i]*(1-fc)*(1-fr)+H[i+1]*fc*(1-fr)+H[i+R.w]*(1-fc)*fr+H[i+R.w+1]*fc*fr)/100}}).catch(()=>hENU);return TPRE[k]}
 function tunFor(nx){if(CRS!=="apex"||!nx||!DATA.pads[nx]||!TUNS.length)return null;const tp=DATA.pads[nx][tIdx]||DATA.pads[nx][0],G=DATA.gc[hNum-1],vx=tp[0]-G[0],vy=tp[1]-G[1],l2=vx*vx+vy*vy;
@@ -3121,13 +3126,15 @@ renderer.domElement.addEventListener("webglcontextlost",e=>{if(!window.__stopped
 // pri odchode zo stránky (aj do vyrovnávacej pamäte Safari) uvoľniť 3D; pri návrate tlačidlom Späť stránku načítať znova
 addEventListener("pagehide",()=>{try{window.__hostStop()}catch(e){}});
 addEventListener("pageshow",e=>{if(e.persisted&&window.__stopped)location.reload()});
+// v267: slnko aj tiene stoja, hýbe sa len vlajka/kolík/zver – mapa tieňov sa prekresľuje ~20× za sekundu namiesto každého snímku (menej práce pre GPU, plynulejšia hra)
+let shT=-1e9;
 function loop(now){if(window.__stopped)return;const rdt=lastT?(now-lastT)/1000:0,dt=Math.min(.05,rdt);lastT=now;if(rdt<1)qTick(rdt);if(FPS)FPS(rdt,now);
   if(fly){const k=Math.min(1,(now-fly.t0)/9000),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
     camera.position.copy(curve.getPoint(e));controls.target.copy(W(0,c,hG));if(k>=1)fly=null}
   window.__3dok=1;waveFlag(now/1000);pinWobble(now/1000);pinVis(camera);if(TFLY)TFLY(now);else if(game)game.update(dt);else{controls.update();
     // kamera nesmie ísť pod terén
     {const t=controls.target;t.x=Math.max(X0+5,Math.min(X1-5,t.x));t.z=Math.max(-(Y1-5),Math.min(-(Y0+5),t.z));t.y+=(hL(t.x,-t.z)-t.y)*.15;
-     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(PHEAS)PHEAS(dt,now);if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold){renderer.render(scene,camera);if(gpuN<4)gpuCheck()}if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
+     const cp=camera.position,gh=hL(cp.x,-cp.z)+.45;if(cp.y<gh){cp.y=gh;camera.lookAt(controls.target)}}}{const ch=camera.position.y-hL(camera.position.x,-camera.position.z);for(const l of OTHL)l.visible=ch>25}fadeTrees();if(PHEAS)PHEAS(dt,now);if(BLADES){camera.getWorldDirection(_bv);_bv.y=0;_bv.normalize();const cp=camera.position;BLADES.tick(now/1000,cp.x,-cp.z,_bv.x,-_bv.z,cp.y-hL(cp.x,-cp.z))}if(!window.__hold){if(!TFLY){renderer.shadowMap.autoUpdate=false;if(now-shT>=48||now<shT){renderer.shadowMap.needsUpdate=true;shT=now}}renderer.render(scene,camera);if(gpuN<4)gpuCheck()}if(!snapDone)requestAnimationFrame(snapOff);placeLabels();repTick();requestAnimationFrame(loop)}
 if(Q.has("dbg"))window.__v={camera,renderer,scene,FADE,PT,controls,loc,hL,W,H0,tunFor,TUNS,tunnelOut,hopOut,NXT,inside,WIN:[X0,X1,Y0,Y1],getFly:()=>TFLY,runFly};
 requestAnimationFrame(loop);
 // shadery pre všetko, čo sa ukáže až neskôr (steblá trávy pri zemi, efekty), sa pripravia hneď po načítaní –
