@@ -107,7 +107,9 @@ g.fillStyle="#5f8a3c";g.fillRect(0,0,TW,TH);
 let sd=11;const rnd=()=>((sd=(sd*16807)%2147483647)/2147483647);
 for(let k=0;k<5000;k++){g.fillStyle=rnd()<.5?"rgba(40,70,20,.10)":"rgba(140,170,80,.08)";g.beginPath();g.arc(rnd()*TW,rnd()*TH,(3+rnd()*14)*PPM,0,7);g.fill()}
 for(const h of READY)for(const P of DATA.mow[h]||[]){path(P);g.fillStyle="#76b24a";g.fill()}
-for(const h of READY)for(const p of DATA.pads[h]){g.beginPath();g.arc(tx(p[0]),ty(p[1]),4.5*PPM,0,7);g.fillStyle="#86c45a";g.fill()}
+for(const T of DATA.teeboxes||[]){path(T.p);g.fillStyle="#86c45a";g.fill()}
+{const inP=(x,y,P)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const[a,b]=P[i],[e,f]=P[j];if((b>y)!==(f>y)&&x<(e-a)*(y-b)/(f-b)+a)c=!c}return c};
+ for(const h of READY)for(const p of DATA.pads[h]){if((DATA.teeboxes||[]).some(T=>inP(p[0],p[1],T.p)))continue;g.beginPath();g.arc(tx(p[0]),ty(p[1]),4.5*PPM,0,7);g.fillStyle="#86c45a";g.fill()}}
 for(const P of DATA.water){path(P);g.fillStyle="#3d7397";g.fill();g.lineWidth=2*PPM;g.strokeStyle="#6f9a4a";g.stroke()}
 for(const h of READY){const P=DATA.greens[h-1];path(P);g.lineJoin="round";g.lineWidth=7*PPM;g.strokeStyle="#7cba4b";g.stroke();g.fillStyle="#9fd95e";g.fill()}
 for(const Q of (DATA.paved||[])){path(Q.p);g.fillStyle=Q.t==="parking"?"#8d8c86":"#d6ccb5";g.fill()}
