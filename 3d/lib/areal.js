@@ -163,7 +163,7 @@ function pathSamples(P, step) {
 // paths: [{w, p:[[e,n],…], t?:"path"|"access"|"ramp"}]; pos(e,n,h) -> Vector3; ground(e,n) -> výška;
 // o: {off, step, clip(e,n) -> bool, avoid:[polygóny bunkrov/greenov] (pás sa tam preruší), fog}
 export function buildPaths(THREE, paths, pos, ground, o = {}) {
-  const off = o.off ?? .06, step = o.step || 1, G = new THREE.Group(), V = [], U = [], C = [], I = [], col = new THREE.Color();
+  const off = o.off ?? .06, step = o.step || 1, G = new THREE.Group(), V = [], U = [], C = [], IE = [], IC = [], col = new THREE.Color();
   const AV = (o.avoid || []).filter(P => P && P.length > 2).map(P => { const xs = P.map(p => p[0]), ys = P.map(p => p[1]); return { P, b: [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)] } });
   const sdP = (P, x, y) => { let m = 1e9, c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [a, b] = [P[j], P[i]];
       if ((b[1] > y) !== (a[1] > y) && x < (a[0] - b[0]) * (y - b[1]) / (a[1] - b[1]) + b[0]) c = !c;
@@ -171,34 +171,48 @@ export function buildPaths(THREE, paths, pos, ground, o = {}) {
   const blocked = (e, n, r) => AV.some(A => e > A.b[0] - r && e < A.b[1] + r && n > A.b[2] - r && n < A.b[3] + r && sdP(A.P, e, n) < r);
   // v255 (Martin: chodníky hrboľaté, presakuje tráva): výška = vyhladený pozdĺžny profil (pathLevel), naprieč rovno;
   // nikdy nie pod skutočnou sieťou terénu (o.mesh = presná výška trojuholníkov), aby tráva nepresvitala
-  const LV = o.level, gm = o.mesh || ground; let hc = null;
-  const vert = (e, n, u, v) => { const g0 = gm(e, n), p = pos(e, n, (hc == null ? Math.max(g0, ground(e, n)) : Math.max(hc, g0)) + off); V.push(p.x, p.y, p.z); U.push(u, v); C.push(col.r, col.g, col.b); return V.length / 3 - 1 };
+  const LV = o.level, gm = o.mesh || ground; let hc = null, al = 1;
+  const vert = (e, n, u, v) => { const g0 = gm(e, n), p = pos(e, n, (hc == null ? Math.max(g0, ground(e, n)) : Math.max(hc, g0)) + off); V.push(p.x, p.y, p.z); U.push(u, v); C.push(col.r, col.g, col.b, al); return V.length / 3 - 1 };
   const hcOf = q => { if (!LV) return null; const r = LV.query(q.e, q.n); return r && r.w > .5 ? r.h : null };
+  const sst = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  // v276: dve vrstvy – najprv okraje (tráva → lem) všetkých chodníkov, potom betón všetkých navrch. Kde sa chodníky stretnú/križujú,
+  // betón jedného prekryje lem druhého → plynulé napojenie bez čiar a čapíc cez betón.
   for (const Pp of paths || []) { if (!Pp.p || Pp.p.length < 2) continue;
-    const w = Pp.w || 2.4, hw = w / 2, xs = [-hw - PATH_F, -hw, -hw + PATH_E, hw - PATH_E, hw, hw + PATH_F], S = pathSamples(Pp.p, step);
+    const w = Pp.w || 2.4, hw0 = w / 2, S = pathSamples(Pp.p, step), L = S[S.length - 1].s, ty = [Pp.e0 || "hub", Pp.e1 || "hub"];
     col.setHex(PATHC[Pp.t] || PATHC.path);
-    const ok = S.map(q => (!o.clip || o.clip(q.e, q.n)) && !blocked(q.e, q.n, hw + .25));
+    const ok = S.map(q => (!o.clip || o.clip(q.e, q.n)) && !blocked(q.e, q.n, hw0 + .25));
+    // šírka a priehľadnosť pozdĺž: voľný koniec sa zúži na 60 % a stratí (posledné ~4 m), ústie do iného chodníka/cesty sa rozšíri (oblé rohy)
+    const shape = (q, d0, d1, cut0, cut1) => { let k = 1, a = 1;
+      for (const [d, t, cut] of [[d0, ty[0], cut0], [d1, ty[1], cut1]]) {
+        if (cut) { a *= .25 + .75 * sst(d / 2.5); continue }
+        if (t === "free") { const f = sst(d / 5); k *= .6 + .4 * f; a *= .15 + .85 * sst(d / 4) }
+        else if (t === "t") k += 1.1 / hw0 * (1 - sst(d / 3.5)) }
+      return [k, a] };
     let run = [];
-    const cap = (q, dir, v0) => {   // polkruhové ukončenie (oblé ako reálny chodník)
-      hc = hcOf(q); const c = vert(q.e, q.n, .5, v0), nx = -q.uy, ny = q.ux, R = [hw - PATH_E, hw, hw + PATH_F], UU = [PU[3], PU[4], PU[5]], NA = 8, ring = [];
-      for (let k = 0; k <= NA; k++) { const a = Math.PI * k / NA, ca = Math.cos(a), sa = Math.sin(a) * dir;   // od pravej strany cez čelo k ľavej
+    const cap = (q, dir, v0, k, a) => {   // polkruhové ukončenie (oblé ako reálny chodník)
+      const hw = hw0 * k; hc = hcOf(q); al = a; const c = vert(q.e, q.n, .5, v0), nx = -q.uy, ny = q.ux, R = [hw - PATH_E, hw, hw + PATH_F], UU = [PU[3], PU[4], PU[5]], NA = 8, ring = [];
+      for (let k2 = 0; k2 <= NA; k2++) { const an = Math.PI * k2 / NA, ca = Math.cos(an), sa = Math.sin(an) * dir;   // od pravej strany cez čelo k ľavej
         ring.push(R.map((r, j) => vert(q.e + (nx * ca + q.ux * sa) * r, q.n + (ny * ca + q.uy * sa) * r, UU[j], v0 + sa * r / PATH_TL))) }
-      for (let k = 0; k < NA; k++) { const A = ring[k], B = ring[k + 1]; I.push(c, A[0], B[0]); for (let j = 0; j < 2; j++) I.push(A[j], A[j + 1], B[j + 1], A[j], B[j + 1], B[j]) } };
-    const flush = () => { if (run.length < 3) { run = []; return } const base = [];
-      for (const i of run) { const q = S[i], nx = -q.uy, ny = q.ux; hc = hcOf(q); base.push(xs.map((x, j) => vert(q.e + nx * x, q.n + ny * x, PU[j], q.s / PATH_TL))) }
-      for (let k = 1; k < base.length; k++) for (let j = 0; j < 5; j++) { const a = base[k - 1][j], b = base[k - 1][j + 1], c = base[k][j], d = base[k][j + 1]; I.push(a, b, c, b, d, c) }
-      const q0 = S[run[0]], q1 = S[run[run.length - 1]];
-      if (run[0] === 0) cap(q0, -1, q0.s / PATH_TL); if (run[run.length - 1] === S.length - 1) cap(q1, 1, q1.s / PATH_TL); hc = null; run = [] };
+      for (let k2 = 0; k2 < NA; k2++) { const A = ring[k2], B = ring[k2 + 1]; IC.push(c, A[0], B[0]); for (let j = 0; j < 2; j++) IE.push(A[j], A[j + 1], B[j + 1], A[j], B[j + 1], B[j]) } };
+    const flush = () => { if (run.length < 3) { run = []; return } const base = [], i0 = run[0], i1 = run[run.length - 1], c0 = i0 > 0, c1 = i1 < S.length - 1, sa = S[i0].s, sb = S[i1].s;
+      const sh = run.map(i => { const q = S[i]; return shape(q, c0 ? q.s - sa : q.s, c1 ? sb - q.s : L - q.s, c0, c1) });
+      run.forEach((i, m) => { const q = S[i], nx = -q.uy, ny = q.ux, [k, a] = sh[m], hw = hw0 * k, xs = [-hw - PATH_F, -hw, -hw + PATH_E, hw - PATH_E, hw, hw + PATH_F]; hc = hcOf(q); al = a;
+        base.push(xs.map((x, j) => vert(q.e + nx * x, q.n + ny * x, PU[j], q.s / PATH_TL))) });
+      for (let k = 1; k < base.length; k++) for (let j = 0; j < 5; j++) { const a = base[k - 1][j], b = base[k - 1][j + 1], c = base[k][j], d = base[k][j + 1]; (j === 2 ? IC : IE).push(a, b, c, b, d, c) }
+      const q0 = S[i0], q1 = S[i1];
+      if (!c0 && ty[0] !== "t") cap(q0, -1, q0.s / PATH_TL, ...sh[0]); if (!c1 && ty[1] !== "t") cap(q1, 1, q1.s / PATH_TL, ...sh[sh.length - 1]); hc = null; al = 1; run = [] };
     for (let i = 0; i < S.length; i++) { if (ok[i]) run.push(i); else flush() } flush() }
-  if (!I.length) return G;
-  const gg = new THREE.BufferGeometry(); gg.setAttribute("position", new THREE.Float32BufferAttribute(V, 3)); gg.setAttribute("uv", new THREE.Float32BufferAttribute(U, 2)); gg.setAttribute("color", new THREE.Float32BufferAttribute(C, 3));
-  gg.setIndex(V.length / 3 > 65535 ? new THREE.Uint32BufferAttribute(I, 1) : new THREE.Uint16BufferAttribute(I, 1));
-  const mat = new THREE.MeshLambertMaterial({ map: pathTex(THREE), vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4, fog: o.fog !== false });
+  if (!IE.length && !IC.length) return G;
   // každý trojuholník prednou stranou nahor (poradie vrcholov závisí od pos(): prehľad vs. jamka, a od strany ukončenia)
-  for (let i = 0; i < I.length; i += 3) { const a = I[i] * 3, b = I[i + 1] * 3, c = I[i + 2] * 3, ux = V[b] - V[a], uz = V[b + 2] - V[a + 2], vx = V[c] - V[a], vz = V[c + 2] - V[a + 2];
+  for (const I of [IE, IC]) for (let i = 0; i < I.length; i += 3) { const a = I[i] * 3, b = I[i + 1] * 3, c = I[i + 2] * 3, ux = V[b] - V[a], uz = V[b + 2] - V[a + 2], vx = V[c] - V[a], vz = V[c + 2] - V[a + 2];
     if (uz * vx - ux * vz < 0) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t } }
-  gg.setIndex(V.length / 3 > 65535 ? new THREE.Uint32BufferAttribute(I, 1) : new THREE.Uint16BufferAttribute(I, 1)); gg.computeVertexNormals();
-  const m = new THREE.Mesh(gg, mat); m.receiveShadow = true; m.renderOrder = 1; G.add(m); return G;
+  const big = V.length / 3 > 65535, mkI = I => big ? new THREE.Uint32BufferAttribute(I, 1) : new THREE.Uint16BufferAttribute(I, 1);
+  const pA = new THREE.Float32BufferAttribute(V, 3), uA = new THREE.Float32BufferAttribute(U, 2), cA = new THREE.Float32BufferAttribute(C, 4);
+  const g0 = new THREE.BufferGeometry(); g0.setAttribute("position", pA); g0.setAttribute("uv", uA); g0.setAttribute("color", cA); g0.setIndex(mkI([...IE, ...IC])); g0.computeVertexNormals();
+  const mat = new THREE.MeshLambertMaterial({ map: pathTex(THREE), vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4, fog: o.fog !== false });
+  [[IE, 2], [IC, 3]].forEach(([I, ro]) => { if (!I.length) return; const gg = new THREE.BufferGeometry(); gg.setAttribute("position", pA); gg.setAttribute("uv", uA); gg.setAttribute("color", cA); gg.setAttribute("normal", g0.attributes.normal); gg.setIndex(mkI(I));
+    const m = new THREE.Mesh(gg, mat); m.receiveShadow = true; m.renderOrder = ro; G.add(m) });
+  return G;
 }
 // --- v255: výškový profil chodníkov a zarovnanie terénu pod nimi (Martin 25.11.: chodníky pri podjazde hrboľaté, prerušované, presakuje tráva).
 // Profil: priemer terénu na osi a na okrajoch, vyhladený pozdĺž (≈ σ 4 m); v tuneli pod cestou pripnutý na jeho dno.
@@ -253,7 +267,40 @@ export function pathAvoid(AP, AK, AKO) {
     ...(AK ? [...(AK.bunkers || []).map(B => ak(B.p || B)), ...(AK.greens || []).map(ak)] : [])];
 }
 // typy pre buildPaths: chodníky + príjazd/rampy z area.roads (hlavnú cestu kreslí buildRoad)
-export const pathList = AP => [...(AP.paths || []), ...(((AP.area && AP.area.roads) || []).filter(r => r.t !== "main"))];
+const PNET = new WeakMap();
+export const pathList = AP => { let L = PNET.get(AP); if (!L) { const R = (AP.area && AP.area.roads) || []; L = pathNet([...(AP.paths || []), ...R.filter(r => r.t !== "main")], R.filter(r => r.t === "main")); PNET.set(AP, L) } return L };
+// v276 (Martin 28.11.: chodníky „zle zakončené“ – oblé čapice uprostred, presahy cez iný chodník, dvojité pásy): sieť chodníkov.
+// 1) úseky, ktoré na seba nadväzujú (spoločný koniec len dvoch, rovnaký typ/šírka) = jeden pás, oblúk v zlome namiesto dvoch čapíc;
+// 2) koniec pri inom chodníku (T) sa pritiahne na jeho os (preč presah aj medzera) → e0/e1 = "t" (bez čapice, rozšírené ústie);
+//    koniec pri hlavnej ceste sa skráti na jej okraj → "t"; spoločný bod 3+ koncov → "hub" (čapica, pokryje ju betón ostatných);
+// 3) voľný koniec → "free" (pás sa zúži a stratí v tráve).
+function pathNet(list, mains) {
+  const P = list.filter(p => p.p && p.p.length > 1).map(p => Object.assign({}, p, { p: p.p.map(q => [q[0], q[1]]) }));
+  const D = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]), end = (A, k) => k ? A.p[A.p.length - 1] : A.p[0];
+  const prj = (p, a, b) => { const vx = b[0] - a[0], vy = b[1] - a[1], l = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / l)), q = [a[0] + vx * t, a[1] + vy * t]; return { d: D(p, q), q, t } };
+  const endsAt = pt => { const r = []; P.forEach((B, j) => { for (const k of [0, 1]) if (D(end(B, k), pt) < .6) r.push([j, k]) }); return r };
+  for (let ch = true; ch;) { ch = false;
+    for (let i = 0; i < P.length && !ch; i++) for (const k of [0, 1]) { const A = P[i], E = endsAt(end(A, k)); if (E.length !== 2) continue;
+      const [j, kj] = E.find(([j, kk]) => j !== i || kk !== k); if (j === i) continue; const B = P[j];
+      if ((A.t || "path") !== (B.t || "path") || Math.abs((A.w || 2.4) - (B.w || 2.4)) > .3) continue;
+      const a = k ? A.p : A.p.slice().reverse(), b = kj ? B.p.slice().reverse() : B.p;
+      A.p = [...a, ...b.slice(1)]; A.w = Math.max(A.w || 2.4, B.w || 2.4); P.splice(j, 1); ch = true; break } }
+  for (const A of P) for (const k of [0, 1]) { const key = k ? "e1" : "e0", pt = end(A, k), hw = (A.w || 2.4) / 2;
+    if (endsAt(pt).length > 1) { A[key] = "hub"; continue }
+    // hlavná cesta: skrátiť na okraj vozovky
+    let mr = null; for (const R of mains) for (let i = 1; i < R.p.length; i++) { const r = prj(pt, R.p[i - 1], R.p[i]); if (r.d < (R.w || 9) / 2 + 1.5 && (!mr || r.d < mr.d)) mr = Object.assign(r, { R }) }
+    if (mr) { const Q = k ? A.p.slice().reverse() : A.p, rw = (mr.R.w || 9) / 2 - .3, dR = p => Math.min(...mr.R.p.slice(1).map((b, i) => prj(p, mr.R.p[i], b).d));
+      let i = 0; while (i < Q.length - 1 && dR(Q[i + 1]) < rw) i++;
+      if (i < Q.length - 1) { const a = Q[i], b = Q[i + 1]; let lo = 0, hi = 1; for (let it = 0; it < 24; it++) { const m = (lo + hi) / 2; dR([a[0] + (b[0] - a[0]) * m, a[1] + (b[1] - a[1]) * m]) < rw ? lo = m : hi = m }
+        const N = [[a[0] + (b[0] - a[0]) * hi, a[1] + (b[1] - a[1]) * hi], ...Q.slice(i + 1)]; A.p = k ? N.reverse() : N; A[key] = "t"; continue } }
+    // T: iný chodník blízko (nie jeho koniec) → koniec na jeho os
+    let best = null; P.forEach(B => { if (B === A) return; for (let i = 1; i < B.p.length; i++) { const r = prj(pt, B.p[i - 1], B.p[i]); if (r.d < (B.w || 2.4) / 2 + 2.5 && (!best || r.d < best.d)) best = Object.assign(r, { B }) } });
+    if (!best) { A[key] = "free"; continue }
+    if (hw > 1.75 || D(best.q, end(best.B, 0)) < .6 || D(best.q, end(best.B, 1)) < .6) { A[key] = "hub"; continue }   // široké plochy a styk pri konci: len čapica
+    const Q = k ? A.p.slice().reverse() : A.p.slice(); Q[0] = best.q; while (Q.length > 2 && D(Q[0], Q[1]) < 1.2) Q.splice(1, 1);
+    A.p = k ? Q.reverse() : Q; A[key] = "t" }
+  return P;
+}
 // farby: asfalt, príjazd, betónové rampy k tunelu pod cestou (jamka 11, Martin 25.11.)
 export const ROADC = { main: "#7d7f80", access: "#a9a291", ramp: "#c4b8ae" };
 // tunel pod hlavnou cestou k jamke 11 (DATA.objects t:"tunnel", v246 – Martin: priechodný, nech je vidno skrz).
