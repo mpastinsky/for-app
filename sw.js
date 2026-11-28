@@ -1,4 +1,5 @@
 // Fairway Live: offline vyrovnávacia pamäť appky (mapové dlaždice sa necachujú).
+// v276: chodníky ako sieť – napojenia na os iného chodníka (bez čapíc a presahov), rozšírené ústie, voľné konce sa zúžia a stratia v tráve, betón navrch cez lemy (plynulé križovatky); zmazaný duplicitný chodník pri clubhouse.
 // v275: oválne odpaliská bez kruhových vložiek (kruh len pre pads mimo teeboxov), tvary odpalísk jamiek 1 a 2 podľa mapy.com; malé tlačidlá kamery aj pri mierení (PC).
 // v274: jamka 18 Báč podľa mapy.com – 5 odpalísk (ovály v strednom stĺpci, dĺžky = karta), green ~2 m severnejšie, fairway mimo brehu rybníka, bunkre posunuté ~2 m, chodník pri odpaliskách.
 // v273: jamka 17 – zmazaný úzky pás „fairwayu“ k odpaliskám (podľa Martina nie je fairway).
@@ -9,7 +10,7 @@
 // v268: jamka 13 Báč podľa mapy.com – odpaliská, green, fairway, bunkre, chodníky a rad stromov pri poli.
 // v267: jamky sa otvárajú z cache hneď (aj pri slabom signáli na ihrisku); nová verzia sa na pozadí overí a uloží na ďalšie otvorenie.
 // Pri novej verzii (zmena CACHE) sa appka stiahne nanovo; veľké dáta terénu sa len overia voči starej kópii (stiahnu sa iba zmenené).
-const CACHE = "for-v275";
+const CACHE = "for-v276";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-180.png", "icon-192.png",
   "leaflet/leaflet.css", "leaflet/leaflet.js",
   "3d/", "3d/index.html", "3d/ihrisko.html",
